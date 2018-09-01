@@ -67,8 +67,9 @@ struct token
 };
 
 void lexer_init(struct lexer *lexer, uint8_t *file);
-struct token lexer_get_token(struct lexer *lexer);
+void lexer_destroy(struct lexer *lexer);
 
+struct token lexer_get_token(struct lexer *lexer);
 void lexer_print_token(struct token token, uint8_t *token_value_u8, int token_value_length);
 
 #endif

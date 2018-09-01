@@ -140,3 +140,8 @@ void lexer_init(struct lexer *lexer, uint8_t *file)
     lexer->column = 1;
     lexer->line = 1;
 }
+
+void lexer_destroy(struct lexer *lexer)
+{
+    free(lexer->buffer);
+}

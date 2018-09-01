@@ -10,5 +10,6 @@ int parse_term(struct parser *parser);
 int parse_expression(struct parser *parser);
 
 void parse_string(uint8_t *string);
+void parse_file(uint8_t *file);
 
 #endif

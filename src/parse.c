@@ -79,3 +79,13 @@ void parse_string(uint8_t *string)
     }
 }
 
+void parse_file(uint8_t *file)
+{
+    struct parser parser;
+    parser_init(&parser, file);
+
+    while (!parser_eof(&parser)) {
+        int r = parse_expression(&parser);
+        printf("r = %d\n", r);
+    }
+}

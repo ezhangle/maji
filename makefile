@@ -1,4 +1,4 @@
-FRAMEWORKS     = -I/opt/local/include -L/opt/local/lib -ldl -ldyncall_s
+FRAMEWORKS     =
 BUILD_PATH     = ./bin
 BUILD_FLAGS    = -std=c99 -Wall -g -O0
 MAJI_SRC       = ./src/main.c

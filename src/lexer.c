@@ -3,7 +3,6 @@
 #include "char_util.h"
 #include "string_util.h"
 #include "file_util.h"
-#include <assert.h>
 
 static inline utf8_char
 lexer_advance(struct lexer *lexer)
@@ -105,10 +104,6 @@ struct token lexer_get_token(struct lexer *lexer)
 
 void lexer_print_token(struct token token, uint8_t *token_value_u8, int token_value_length)
 {
-    assert(token.kind == TOKEN_KIND_UNKNOWN |
-           token.kind == TOKEN_KIND_INT_LITERAL |
-           token.kind == TOKEN_KIND_EOF);
-
     char *token_value = (char *)token_value_u8;
 
     switch (token.kind) {

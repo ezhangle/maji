@@ -7,14 +7,12 @@
 static inline utf8_char
 lexer_advance(struct lexer *lexer)
 {
-    int num_bytes;
-    utf8_char uc = utf8_get_char_and_bytes(lexer->at, &num_bytes);
+    utf8_char uc = utf8_next_char(&lexer->at);
     if (uc == '\n') {
         lexer->column = 0;
         ++lexer->line;
     }
     ++lexer->column;
-    lexer->at += num_bytes;
     return uc;
 }
 

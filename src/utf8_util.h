@@ -29,10 +29,12 @@ utf8_get_char_and_bytes(uint8_t *str, int *num_bytes)
 }
 
 static inline utf8_char
-utf8_get_char(uint8_t *str)
+utf8_next_char(uint8_t **str)
 {
     int num_bytes;
-    return utf8_get_char_and_bytes(str, &num_bytes);
+    utf8_char uc = utf8_get_char_and_bytes(*str, &num_bytes);
+    *str += num_bytes;
+    return uc;
 }
 
 static inline void

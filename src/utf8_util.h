@@ -52,7 +52,7 @@ utf8_encode_char(utf8_char uc, uint8_t dst[4])
         dst[0] = (uint8_t)(0xe0 + (uc >> 12));
         dst[1] = (uint8_t)(0x80 + ((uc >> 6) & 0x3f));
         dst[2] = (uint8_t)(0x80 + (uc & 0x3f));
-        dst[3] = 0
+        dst[3] = 0;
     } else if (uc < 0x110000) {
         dst[0] = (uint8_t)(0xf0 + (uc >> 18));
         dst[1] = (uint8_t)(0x80 + ((uc >> 12) & 0x3f));

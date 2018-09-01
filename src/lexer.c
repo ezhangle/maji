@@ -134,7 +134,7 @@ void lexer_print_token(struct token token, uint8_t *token_value_u8, int token_va
         snprintf(token_value, token_value_length, "EOF");
         break;
     case TOKEN_KIND_UNKNOWN:
-        snprintf(token_value, token_value_length, "UNKNOWN(%.*s)", token.length, token.text);
+        snprintf(token_value, token_value_length, "%.*s", token.length, token.text);
         break;
     }
 }

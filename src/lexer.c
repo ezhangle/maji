@@ -66,12 +66,14 @@ struct token lexer_get_token(struct lexer *lexer)
     lexer_advance(lexer);
 
     switch (current) {
-    case '\0': token.kind = TOKEN_KIND_EOF;     break;
+    case '\0': token.kind = TOKEN_KIND_EOF;        break;
 
-    case '+': token.kind = TOKEN_KIND_PLUS;  break;
-    case '-': token.kind = TOKEN_KIND_DASH;  break;
-    case '*': token.kind = TOKEN_KIND_STAR;  break;
-    case '/': token.kind = TOKEN_KIND_SLASH; break;
+    case '+': token.kind = TOKEN_KIND_PLUS;        break;
+    case '-': token.kind = TOKEN_KIND_DASH;        break;
+    case '*': token.kind = TOKEN_KIND_STAR;        break;
+    case '/': token.kind = TOKEN_KIND_SLASH;       break;
+    case '(': token.kind = TOKEN_KIND_OPEN_PAREN;  break;
+    case ')': token.kind = TOKEN_KIND_CLOSE_PAREN; break;
 
     default:
         if (is_digit(current)) {
@@ -121,6 +123,8 @@ void lexer_print_token(struct token token, uint8_t *token_value_u8, int token_va
     case TOKEN_KIND_DASH:
     case TOKEN_KIND_STAR:
     case TOKEN_KIND_SLASH:
+    case TOKEN_KIND_OPEN_PAREN:
+    case TOKEN_KIND_CLOSE_PAREN:
         snprintf(token_value, token_value_length, "%c", token.as.c);
         break;
     case TOKEN_KIND_EOF:

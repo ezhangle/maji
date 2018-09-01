@@ -22,6 +22,9 @@ static const char *token_kind_str[] =
     "FLOAT32_LITERAL",
     "FLOAT64_LITERAL",
 
+    "OPEN_PAREN",
+    "CLOSE_PAREN",
+
     "PLUS",
     "DASH",
     "STAR",
@@ -36,6 +39,9 @@ enum token_kind
     TOKEN_KIND_INT_LITERAL,
     TOKEN_KIND_FLOAT32_LITERAL,
     TOKEN_KIND_FLOAT64_LITERAL,
+
+    TOKEN_KIND_OPEN_PAREN,
+    TOKEN_KIND_CLOSE_PAREN,
 
     TOKEN_KIND_PLUS,
     TOKEN_KIND_DASH,

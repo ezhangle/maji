@@ -8,7 +8,7 @@
 
 int main(int argc, char **argv)
 {
-    uint8_t *buffer = u8"1243 0x3ff 0b111 とあ 0b11";
+    uint8_t *buffer = u8"1243 - 0x3ff * 0b111 とあ 0b11 + 0b1001";
 
     struct lexer lexer = {
         .buffer = buffer,

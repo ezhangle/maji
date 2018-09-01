@@ -61,15 +61,4 @@ utf8_encode_char(utf8_char uc, uint8_t dst[4])
     }
 }
 
-static inline void
-utf8_print_char(utf8_char uc, uint8_t *uc_value_u8, int uc_value_length)
-{
-    uint8_t bytes[4];
-    utf8_encode_char(uc, bytes);
-
-    char *uc_value = (char*)uc_value_u8;
-    snprintf(uc_value, uc_value_length, "%c%c%c%c",
-            bytes[0], bytes[1], bytes[2], bytes[3]);
-}
-
 #endif

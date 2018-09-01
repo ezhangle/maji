@@ -8,6 +8,7 @@ static inline utf8_char
 utf8_get_char_and_bytes(uint8_t *str, int *num_bytes)
 {
     utf8_char uc = *str++;
+
     if (uc < 0x80) {
         *num_bytes = 1;
         return uc;
@@ -32,6 +33,43 @@ utf8_get_char(uint8_t *str)
 {
     int num_bytes;
     return utf8_get_char_and_bytes(str, &num_bytes);
+}
+
+static inline void
+utf8_encode_char(utf8_char uc, uint8_t dst[4])
+{
+    if (uc < 0x80) {
+        dst[0] = (uint8_t)uc;
+        dst[1] = 0;
+        dst[2] = 0;
+        dst[3] = 0;
+    } else if (uc < 0x800) {
+        dst[0] = (uint8_t)(0xc0 + (uc >> 6));
+        dst[1] = (uint8_t)(0x80 + (uc & 0x3f));
+        dst[2] = 0;
+        dst[3] = 0;
+    } else if (uc < 0x10000) {
+        dst[0] = (uint8_t)(0xe0 + (uc >> 12));
+        dst[1] = (uint8_t)(0x80 + ((uc >> 6) & 0x3f));
+        dst[2] = (uint8_t)(0x80 + (uc & 0x3f));
+        dst[3] = 0
+    } else if (uc < 0x110000) {
+        dst[0] = (uint8_t)(0xf0 + (uc >> 18));
+        dst[1] = (uint8_t)(0x80 + ((uc >> 12) & 0x3f));
+        dst[2] = (uint8_t)(0x80 + ((uc >> 6) & 0x3f));
+        dst[3] = (uint8_t)(0x80 + (uc & 0x3f));
+    }
+}
+
+static inline void
+utf8_print_char(utf8_char uc, uint8_t *uc_value_u8, int uc_value_length)
+{
+    uint8_t bytes[4];
+    utf8_encode_char(uc, bytes);
+
+    char *uc_value = (char*)uc_value_u8;
+    snprintf(uc_value, uc_value_length, "%c%c%c%c",
+            bytes[0], bytes[1], bytes[2], bytes[3]);
 }
 
 #endif

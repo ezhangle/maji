@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
-#include <math.h>
+#include <limits.h>
 
 #define u8 (uint8_t*)
 
@@ -77,7 +77,7 @@ intern_string(const uint8_t *a)
     return result;
 }
 
-static const int int_char_table[] =
+static const int char_int_table[] =
 {
     ['0'] = 0x0, ['1'] = 0x1,
     ['2'] = 0x2, ['3'] = 0x3,
@@ -93,21 +93,28 @@ static const int int_char_table[] =
 };
 
 static inline int
-convert_string_count_to_int(const uint8_t *a, size_t length, int base)
+convert_string_count_to_int(const uint8_t *a, size_t length, int base, bool *overflow)
 {
     int result = 0;
+    *overflow = false;
+
     const uint8_t *e = a + length;
     for (const uint8_t *s = a; s < e; ++s) {
-        result += int_char_table[*s] * (pow(base, --length));
+        int digit = char_int_table[*s];
+        if (result > (INT_MAX - digit) / base) {
+            *overflow = true;
+        }
+        result = result * base + digit;
     }
+
     return result;
 }
 
 static inline int
-convert_string_to_int(const uint8_t *a, int base)
+convert_string_to_int(const uint8_t *a, int base, bool *overflow)
 {
     size_t length = length_of_string(a);
-    int value = convert_string_count_to_int(a, length, base);
+    int value = convert_string_count_to_int(a, length, base, overflow);
     return value;
 }
 

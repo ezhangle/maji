@@ -211,20 +211,25 @@ struct token lexer_get_token(struct lexer *lexer)
 
     default:
         if (is_digit(current)) {
+            bool overflow;
             if (*lexer->at && *lexer->at == 'x') {
                 lexer_advance(lexer);
                 lexer_eat_hexadecimal(lexer);
                 token.length = lexer->at - token.text;
-                token.as.i = convert_string_count_to_int(token.text + 2, token.length - 2, 16);
+                token.as.i = convert_string_count_to_int(token.text + 2, token.length - 2, 16, &overflow);
             } else if (*lexer->at && *lexer->at == 'b') {
                 lexer_advance(lexer);
                 lexer_eat_binary(lexer);
                 token.length = lexer->at - token.text;
-                token.as.i = convert_string_count_to_int(token.text + 2, token.length - 2, 2);
+                token.as.i = convert_string_count_to_int(token.text + 2, token.length - 2, 2, &overflow);
             } else {
                 lexer_eat_decimal(lexer);
                 token.length = lexer->at - token.text;
-                token.as.i = convert_string_count_to_int(token.text, token.length, 10);
+                token.as.i = convert_string_count_to_int(token.text, token.length, 10, &overflow);
+            }
+            if (overflow) {
+                printf("#%d:%d integer literal '%.*s' overflow (%d)!\n",
+                       token.line, token.column, token.length, token.text, token.as.i);
             }
             token.kind = TOKEN_KIND_INT_LITERAL;
         } else if (is_identifier(current)) {

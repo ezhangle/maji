@@ -17,6 +17,8 @@ struct lexer
 
 static const char *token_kind_str[] =
 {
+    "IDENTIFIER",
+
     "CHAR_LITERAL",
     "INT_LITERAL",
     "FLOAT32_LITERAL",
@@ -35,6 +37,8 @@ static const char *token_kind_str[] =
 };
 enum token_kind
 {
+    TOKEN_KIND_IDENTIFIER,
+
     TOKEN_KIND_CHAR_LITERAL,
     TOKEN_KIND_INT_LITERAL,
     TOKEN_KIND_FLOAT32_LITERAL,
@@ -64,6 +68,7 @@ struct token
 
     union
     {
+        uint8_t *name;
         utf8_char uc;
         uint8_t c;
         int i;

@@ -25,6 +25,22 @@ is_alpha(char c)
 }
 
 static inline bool
+is_utf8(unsigned char c)
+{
+    bool result = (c >= 0xC0);
+    return result;
+}
+
+static inline bool
+is_identifier(char c)
+{
+    bool result = (is_alpha(c)) ||
+                  (is_utf8(c)) ||
+                  (c == '_');
+    return result;
+}
+
+static inline bool
 is_digit(char c)
 {
     bool result = (c >= '0' && c <= '9');

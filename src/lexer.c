@@ -48,6 +48,14 @@ lexer_eat_binary(struct lexer *lexer)
     }
 }
 
+static inline void
+lexer_eat_identifier(struct lexer *lexer)
+{
+    while (*lexer->at && is_identifier(*lexer->at)) {
+        lexer_advance(lexer);
+    }
+}
+
 struct token lexer_get_token(struct lexer *lexer)
 {
     lexer_eat_whitespace(lexer);
@@ -76,8 +84,12 @@ struct token lexer_get_token(struct lexer *lexer)
     case ')': token.kind = TOKEN_KIND_CLOSE_PAREN; break;
 
     default:
-        if (is_digit(current)) {
-            token.kind = TOKEN_KIND_INT_LITERAL;
+        if (is_identifier(current)) {
+            lexer_eat_identifier(lexer);
+            token.length = lexer->at - token.text;
+            token.as.name = intern_string_count(token.text, token.length);
+            token.kind = TOKEN_KIND_IDENTIFIER;
+        } else if (is_digit(current)) {
             if (*lexer->at && *lexer->at == 'x') {
                 lexer_advance(lexer);
                 lexer_eat_hexadecimal(lexer);
@@ -93,6 +105,7 @@ struct token lexer_get_token(struct lexer *lexer)
                 token.length = lexer->at - token.text;
                 token.as.i = convert_string_count_to_int(token.text, token.length, 10);
             }
+            token.kind = TOKEN_KIND_INT_LITERAL;
         } else {
             token.kind = TOKEN_KIND_UNKNOWN;
         }
@@ -118,6 +131,9 @@ void lexer_print_token(struct token token, uint8_t *token_value_u8, int token_va
         break;
     case TOKEN_KIND_FLOAT64_LITERAL:
         snprintf(token_value, token_value_length, "%f", token.as.f64);
+        break;
+    case TOKEN_KIND_IDENTIFIER:
+        snprintf(token_value, token_value_length, "%s", token.as.name);
         break;
     case TOKEN_KIND_PLUS:
     case TOKEN_KIND_DASH:

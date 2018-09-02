@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <stdbool.h>
 #include <sys/stat.h>
 
@@ -23,7 +24,7 @@ read_file(const uint8_t *file)
     if (!handle) return NULL;
 
     fseek(handle, 0, SEEK_END);
-    int length = ftell(handle);
+    size_t length = ftell(handle);
     fseek(handle, 0, SEEK_SET);
 
     uint8_t *result = malloc(length + 1);

@@ -28,7 +28,6 @@ enum token_kind
     TOKEN_KIND_GT_EQUAL,
     TOKEN_KIND_AND,
     TOKEN_KIND_OR,
-
     TOKEN_KIND_LSHIFT,
     TOKEN_KIND_RSHIFT,
 

@@ -1,6 +1,7 @@
 #include "parser.h"
 #include "buffer.h"
 
+#include <stdarg.h>
 #include <assert.h>
 
 struct token parser_advance(struct parser *parser)
@@ -40,10 +41,38 @@ bool parser_match(struct parser *parser, enum token_kind kind)
     return false;
 }
 
+void parser_consume(struct parser *parser, enum token_kind kind)
+{
+    if (parser_check(parser, kind)) {
+        parser_advance(parser);
+        return;
+    }
+
+    uint8_t at_token_value[255];
+    struct token at_token = parser_peek(parser);
+    lexer_print_token(at_token, at_token_value, sizeof(at_token_value));
+
+    parser_fatal(at_token,
+                 "expected token %s, but got '%s' (%s)\n",
+                 token_kind_str[kind],
+                 at_token_value,
+                 token_kind_str[at_token.kind]);
+}
+
 bool parser_eof(struct parser *parser)
 {
     struct token token = parser_peek(parser);
     return token.kind == TOKEN_KIND_EOF;
+}
+
+void parser_fatal(struct token token, const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    printf("#%d:%d ", token.line, token.column);
+    vprintf(format, args);
+    va_end(args);
+    exit(1);
 }
 
 void parser_init(struct parser *parser, uint8_t *file)

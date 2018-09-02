@@ -8,7 +8,7 @@ int parse_primary(struct parser *parser)
         return parser_previous(parser).as.i;
     } else if (parser_match(parser, TOKEN_KIND_OPEN_PAREN)) {
         int result = parse_expression(parser);
-        parser_match(parser, TOKEN_KIND_CLOSE_PAREN);
+        parser_consume(parser, TOKEN_KIND_CLOSE_PAREN);
         return result;
     }
     assert(false);

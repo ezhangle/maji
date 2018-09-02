@@ -68,20 +68,109 @@ struct token lexer_get_token(struct lexer *lexer)
         .length = num_bytes,
         .column = lexer->column,
         .line   = lexer->line,
-        .as.uc  = current
+        .as.uc  = current,
+        .kind   = current
     };
 
     lexer_advance(lexer);
 
     switch (current) {
-    case '\0': token.kind = TOKEN_KIND_EOF;        break;
+    case '\0': token.kind = TOKEN_KIND_EOF; break;
 
-    case '+': token.kind = TOKEN_KIND_PLUS;        break;
-    case '-': token.kind = TOKEN_KIND_DASH;        break;
-    case '*': token.kind = TOKEN_KIND_STAR;        break;
-    case '/': token.kind = TOKEN_KIND_SLASH;       break;
-    case '(': token.kind = TOKEN_KIND_OPEN_PAREN;  break;
-    case ')': token.kind = TOKEN_KIND_CLOSE_PAREN; break;
+    case '(': case ')':
+    case '[': case ']':
+    case '{': case '}':
+        break;
+
+    case ':':
+        if (*lexer->at && *lexer->at == '=') {
+            lexer_advance(lexer);
+            token.length = lexer->at - token.text;
+            token.kind = TOKEN_KIND_COLON_ASSIGN;
+        }
+        break;
+    case '+':
+        if (*lexer->at && *lexer->at == '=') {
+            lexer_advance(lexer);
+            token.length = lexer->at - token.text;
+            token.kind = TOKEN_KIND_ADD_ASSIGN;
+        }
+        break;
+    case '-':
+        if (*lexer->at && *lexer->at == '=') {
+            lexer_advance(lexer);
+            token.length = lexer->at - token.text;
+            token.kind = TOKEN_KIND_SUB_ASSIGN;
+        }
+        break;
+    case '*':
+        if (*lexer->at && *lexer->at == '=') {
+            lexer_advance(lexer);
+            token.length = lexer->at - token.text;
+            token.kind = TOKEN_KIND_MUL_ASSIGN;
+        }
+        break;
+    case '/':
+        if (*lexer->at && *lexer->at == '=') {
+            lexer_advance(lexer);
+            token.length = lexer->at - token.text;
+            token.kind = TOKEN_KIND_DIV_ASSIGN;
+        }
+        break;
+    case '%':
+        if (*lexer->at && *lexer->at == '=') {
+            lexer_advance(lexer);
+            token.length = lexer->at - token.text;
+            token.kind = TOKEN_KIND_MOD_ASSIGN;
+        }
+        break;
+
+    case '|':
+        if (*lexer->at && *lexer->at == '=') {
+            lexer_advance(lexer);
+            token.length = lexer->at - token.text;
+            token.kind = TOKEN_KIND_OR_ASSIGN;
+        }
+        break;
+    case '&':
+        if (*lexer->at && *lexer->at == '=') {
+            lexer_advance(lexer);
+            token.length = lexer->at - token.text;
+            token.kind = TOKEN_KIND_AND_ASSIGN;
+        }
+        break;
+    case '^':
+        if (*lexer->at && *lexer->at == '=') {
+            lexer_advance(lexer);
+            token.length = lexer->at - token.text;
+            token.kind = TOKEN_KIND_XOR_ASSIGN;
+        }
+        break;
+    case '~':
+        if (*lexer->at && *lexer->at == '=') {
+            lexer_advance(lexer);
+            token.length = lexer->at - token.text;
+            token.kind = TOKEN_KIND_NOT_ASSIGN;
+        }
+        break;
+    case '<':
+        if ((lexer->at[0] && lexer->at[0] == '<') &&
+            (lexer->at[1] && lexer->at[1] == '=')) {
+            lexer_advance(lexer);
+            lexer_advance(lexer);
+            token.length = lexer->at - token.text;
+            token.kind = TOKEN_KIND_LSHIFT_ASSIGN;
+        }
+        break;
+    case '>':
+        if ((lexer->at[0] && lexer->at[0] == '>') &&
+            (lexer->at[1] && lexer->at[1] == '=')) {
+            lexer_advance(lexer);
+            lexer_advance(lexer);
+            token.length = lexer->at - token.text;
+            token.kind = TOKEN_KIND_RSHIFT_ASSIGN;
+        }
+        break;
 
     default:
         if (is_digit(current)) {
@@ -120,34 +209,20 @@ void lexer_print_token(struct token token, uint8_t *token_value_u8, int token_va
     char *token_value = (char *)token_value_u8;
 
     switch (token.kind) {
-    case TOKEN_KIND_CHAR_LITERAL:
-        snprintf(token_value, token_value_length, "%c", token.as.c);
-        break;
-    case TOKEN_KIND_INT_LITERAL:
-        snprintf(token_value, token_value_length, "%d", token.as.i);
-        break;
-    case TOKEN_KIND_FLOAT32_LITERAL:
-        snprintf(token_value, token_value_length, "%f", token.as.f32);
-        break;
-    case TOKEN_KIND_FLOAT64_LITERAL:
-        snprintf(token_value, token_value_length, "%f", token.as.f64);
-        break;
     case TOKEN_KIND_IDENTIFIER:
         snprintf(token_value, token_value_length, "%s", token.as.name);
         break;
-    case TOKEN_KIND_PLUS:
-    case TOKEN_KIND_DASH:
-    case TOKEN_KIND_STAR:
-    case TOKEN_KIND_SLASH:
-    case TOKEN_KIND_OPEN_PAREN:
-    case TOKEN_KIND_CLOSE_PAREN:
-        snprintf(token_value, token_value_length, "%c", token.as.c);
+    case TOKEN_KIND_INT_LITERAL:
+        snprintf(token_value, token_value_length, "%d", token.as.i);
         break;
     case TOKEN_KIND_EOF:
         snprintf(token_value, token_value_length, "EOF");
         break;
     case TOKEN_KIND_UNKNOWN:
         snprintf(token_value, token_value_length, "%.*s", token.length, token.text);
+        break;
+    default:
+        snprintf(token_value, token_value_length, "%c", token.as.c);
         break;
     }
 }

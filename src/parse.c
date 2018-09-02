@@ -6,9 +6,9 @@ int parse_primary(struct parser *parser)
 {
     if (parser_match(parser, TOKEN_KIND_INT_LITERAL)) {
         return parser_previous(parser).as.i;
-    } else if (parser_match(parser, TOKEN_KIND_OPEN_PAREN)) {
+    } else if (parser_match(parser, '(')) {
         int result = parse_expression(parser);
-        parser_consume(parser, TOKEN_KIND_CLOSE_PAREN);
+        parser_consume(parser, ')');
         return result;
     }
     assert(false);
@@ -16,7 +16,7 @@ int parse_primary(struct parser *parser)
 
 int parse_unary(struct parser *parser)
 {
-    if (parser_match(parser, TOKEN_KIND_DASH)) {
+    if (parser_match(parser, '-')) {
         return -parse_unary(parser);
     }
     return parse_primary(parser);
@@ -25,13 +25,13 @@ int parse_unary(struct parser *parser)
 int parse_factor(struct parser *parser)
 {
     int lhs = parse_unary(parser);
-    while ((parser_match(parser, TOKEN_KIND_STAR)) ||
-           (parser_match(parser, TOKEN_KIND_SLASH))) {
+    while ((parser_match(parser, '*')) ||
+           (parser_match(parser, '/'))) {
         struct token op = parser_previous(parser);
         int rhs = parse_unary(parser);
-        if (op.kind == TOKEN_KIND_STAR) {
+        if (op.kind == '*') {
             lhs *= rhs;
-        } else if (op.kind == TOKEN_KIND_SLASH) {
+        } else if (op.kind == '/') {
             lhs /= rhs;
         }
     }
@@ -41,13 +41,13 @@ int parse_factor(struct parser *parser)
 int parse_term(struct parser *parser)
 {
     int lhs = parse_factor(parser);
-    while ((parser_match(parser, TOKEN_KIND_PLUS)) ||
-           (parser_match(parser, TOKEN_KIND_DASH))) {
+    while ((parser_match(parser, '+')) ||
+           (parser_match(parser, '-'))) {
         struct token op = parser_previous(parser);
         int rhs = parse_factor(parser);
-        if (op.kind == TOKEN_KIND_PLUS) {
+        if (op.kind == '+') {
             lhs += rhs;
-        } else if (op.kind == TOKEN_KIND_DASH) {
+        } else if (op.kind == '-') {
             lhs -= rhs;
         }
     }

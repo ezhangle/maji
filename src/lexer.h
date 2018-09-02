@@ -15,42 +15,29 @@ struct lexer
     int line;
 };
 
-static const char *token_kind_str[] =
-{
-    "IDENTIFIER",
-
-    "CHAR_LITERAL",
-    "INT_LITERAL",
-    "FLOAT32_LITERAL",
-    "FLOAT64_LITERAL",
-
-    "OPEN_PAREN",
-    "CLOSE_PAREN",
-
-    "PLUS",
-    "DASH",
-    "STAR",
-    "SLASH",
-
-    "EOF",
-    "UNKNOWN"
-};
 enum token_kind
 {
-    TOKEN_KIND_IDENTIFIER,
+    // NOTE(koekeishiya): Tokens with ascii value less than 127 use
+    // the ascii value as token_kind as well
+    TOKEN_KIND_IDENTIFIER = 128,
 
-    TOKEN_KIND_CHAR_LITERAL,
     TOKEN_KIND_INT_LITERAL,
-    TOKEN_KIND_FLOAT32_LITERAL,
-    TOKEN_KIND_FLOAT64_LITERAL,
 
-    TOKEN_KIND_OPEN_PAREN,
-    TOKEN_KIND_CLOSE_PAREN,
+    TOKEN_KIND_ASSIGN,
 
-    TOKEN_KIND_PLUS,
-    TOKEN_KIND_DASH,
-    TOKEN_KIND_STAR,
-    TOKEN_KIND_SLASH,
+    TOKEN_KIND_COLON_ASSIGN,
+    TOKEN_KIND_ADD_ASSIGN,
+    TOKEN_KIND_SUB_ASSIGN,
+    TOKEN_KIND_MUL_ASSIGN,
+    TOKEN_KIND_DIV_ASSIGN,
+    TOKEN_KIND_MOD_ASSIGN,
+
+    TOKEN_KIND_OR_ASSIGN,
+    TOKEN_KIND_AND_ASSIGN,
+    TOKEN_KIND_XOR_ASSIGN,
+    TOKEN_KIND_NOT_ASSIGN,
+    TOKEN_KIND_LSHIFT_ASSIGN,
+    TOKEN_KIND_RSHIFT_ASSIGN,
 
     TOKEN_KIND_EOF,
     TOKEN_KIND_UNKNOWN

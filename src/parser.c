@@ -52,11 +52,7 @@ void parser_consume(struct parser *parser, enum token_kind kind)
     struct token at_token = parser_peek(parser);
     lexer_print_token(at_token, at_token_value, sizeof(at_token_value));
 
-    parser_fatal(at_token,
-                 "expected token %s, but got '%s' (%s)\n",
-                 token_kind_str[kind],
-                 at_token_value,
-                 token_kind_str[at_token.kind]);
+    parser_fatal(at_token, "expected token '%c', but got '%s'\n", kind, at_token_value);
 }
 
 bool parser_eof(struct parser *parser)

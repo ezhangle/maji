@@ -84,12 +84,7 @@ struct token lexer_get_token(struct lexer *lexer)
     case ')': token.kind = TOKEN_KIND_CLOSE_PAREN; break;
 
     default:
-        if (is_identifier(current)) {
-            lexer_eat_identifier(lexer);
-            token.length = lexer->at - token.text;
-            token.as.name = intern_string_count(token.text, token.length);
-            token.kind = TOKEN_KIND_IDENTIFIER;
-        } else if (is_digit(current)) {
+        if (is_digit(current)) {
             if (*lexer->at && *lexer->at == 'x') {
                 lexer_advance(lexer);
                 lexer_eat_hexadecimal(lexer);
@@ -106,6 +101,11 @@ struct token lexer_get_token(struct lexer *lexer)
                 token.as.i = convert_string_count_to_int(token.text, token.length, 10);
             }
             token.kind = TOKEN_KIND_INT_LITERAL;
+        } else if (is_identifier(current)) {
+            lexer_eat_identifier(lexer);
+            token.length = lexer->at - token.text;
+            token.as.name = intern_string_count(token.text, token.length);
+            token.kind = TOKEN_KIND_IDENTIFIER;
         } else {
             token.kind = TOKEN_KIND_UNKNOWN;
         }

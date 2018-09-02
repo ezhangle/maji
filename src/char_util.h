@@ -16,31 +16,6 @@ is_whitespace(char c)
 }
 
 static inline bool
-is_alpha(char c)
-{
-    bool result = ((c >= 'a' && c <= 'z') ||
-                   (c >= 'A' && c <= 'Z'));
-    return result;
-
-}
-
-static inline bool
-is_utf8(unsigned char c)
-{
-    bool result = (c >= 0xC0);
-    return result;
-}
-
-static inline bool
-is_identifier(char c)
-{
-    bool result = (is_alpha(c)) ||
-                  (is_utf8(c)) ||
-                  (c == '_');
-    return result;
-}
-
-static inline bool
 is_digit(char c)
 {
     bool result = (c >= '0' && c <= '9');
@@ -61,6 +36,39 @@ static inline bool
 is_binary(char c)
 {
     bool result = (c >= '0' && c <= '1');
+    return result;
+}
+
+static inline bool
+is_alpha(char c)
+{
+    bool result = ((c >= 'a' && c <= 'z') ||
+                   (c >= 'A' && c <= 'Z'));
+    return result;
+
+}
+
+static inline bool
+is_utf8(unsigned char c)
+{
+    bool result = (c >= 0xC0);
+    return result;
+}
+
+static inline bool
+is_alpha_num(char c)
+{
+    bool result = ((is_alpha(c)) ||
+                   (is_digit(c)));
+    return result;
+}
+
+static inline bool
+is_identifier(char c)
+{
+    bool result = (is_alpha_num(c)) ||
+                  (is_utf8(c)) ||
+                  (c == '_');
     return result;
 }
 

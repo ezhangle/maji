@@ -20,10 +20,7 @@ enum token_kind
     // NOTE(koekeishiya): Tokens with ascii value less than 127 use
     // the ascii value as token_kind as well
     TOKEN_KIND_IDENTIFIER = 128,
-
     TOKEN_KIND_INT_LITERAL,
-
-    TOKEN_KIND_ASSIGN,
 
     TOKEN_KIND_COLON_ASSIGN,
     TOKEN_KIND_ADD_ASSIGN,
@@ -31,7 +28,6 @@ enum token_kind
     TOKEN_KIND_MUL_ASSIGN,
     TOKEN_KIND_DIV_ASSIGN,
     TOKEN_KIND_MOD_ASSIGN,
-
     TOKEN_KIND_OR_ASSIGN,
     TOKEN_KIND_AND_ASSIGN,
     TOKEN_KIND_XOR_ASSIGN,

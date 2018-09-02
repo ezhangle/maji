@@ -215,11 +215,25 @@ void lexer_print_token(struct token token, uint8_t *token_value_u8, int token_va
     case TOKEN_KIND_INT_LITERAL:
         snprintf(token_value, token_value_length, "%d", token.as.i);
         break;
+    case TOKEN_KIND_COLON_ASSIGN:
+    case TOKEN_KIND_ADD_ASSIGN:
+    case TOKEN_KIND_SUB_ASSIGN:
+    case TOKEN_KIND_MUL_ASSIGN:
+    case TOKEN_KIND_DIV_ASSIGN:
+    case TOKEN_KIND_MOD_ASSIGN:
+    case TOKEN_KIND_OR_ASSIGN:
+    case TOKEN_KIND_AND_ASSIGN:
+    case TOKEN_KIND_XOR_ASSIGN:
+    case TOKEN_KIND_NOT_ASSIGN:
+    case TOKEN_KIND_LSHIFT_ASSIGN:
+    case TOKEN_KIND_RSHIFT_ASSIGN:
+        snprintf(token_value, token_value_length, "%.*s", token.length, token.text);
+        break;
     case TOKEN_KIND_EOF:
         snprintf(token_value, token_value_length, "EOF");
         break;
     case TOKEN_KIND_UNKNOWN:
-        snprintf(token_value, token_value_length, "%.*s", token.length, token.text);
+        snprintf(token_value, token_value_length, "UNKNOWN_TOKEN(%.*s)", token.length, token.text);
         break;
     default:
         snprintf(token_value, token_value_length, "%c", token.as.c);

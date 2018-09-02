@@ -77,45 +77,4 @@ intern_string(const uint8_t *a)
     return result;
 }
 
-static const int char_int_table[] =
-{
-    ['0'] = 0x0, ['1'] = 0x1,
-    ['2'] = 0x2, ['3'] = 0x3,
-    ['4'] = 0x4, ['5'] = 0x5,
-    ['6'] = 0x6, ['7'] = 0x7,
-    ['8'] = 0x8, ['9'] = 0x9,
-    ['a'] = 0xA, ['A'] = 0xA,
-    ['b'] = 0xB, ['B'] = 0xB,
-    ['c'] = 0xC, ['C'] = 0xC,
-    ['d'] = 0xD, ['D'] = 0xD,
-    ['e'] = 0xE, ['E'] = 0xE,
-    ['f'] = 0xF, ['F'] = 0xF,
-};
-
-static inline int
-convert_string_count_to_int(const uint8_t *a, size_t length, int base, bool *overflow)
-{
-    int result = 0;
-    *overflow = false;
-
-    const uint8_t *e = a + length;
-    for (const uint8_t *s = a; s < e; ++s) {
-        int digit = char_int_table[*s];
-        if (result > (INT_MAX - digit) / base) {
-            *overflow = true;
-        }
-        result = result * base + digit;
-    }
-
-    return result;
-}
-
-static inline int
-convert_string_to_int(const uint8_t *a, int base, bool *overflow)
-{
-    size_t length = length_of_string(a);
-    int value = convert_string_count_to_int(a, length, base, overflow);
-    return value;
-}
-
 #endif

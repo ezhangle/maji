@@ -32,6 +32,7 @@ int parse_factor(struct parser *parser)
         if (op.kind == '*') {
             lhs *= rhs;
         } else if (op.kind == '/') {
+            assert(rhs != 0);
             lhs /= rhs;
         }
     }

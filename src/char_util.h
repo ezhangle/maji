@@ -20,7 +20,13 @@ is_digit(char c)
 {
     bool result = (c >= '0' && c <= '9');
     return result;
+}
 
+static inline bool
+is_octal(char c)
+{
+    bool result = (c >= '0' && c <= '7');
+    return result;
 }
 
 static inline bool
@@ -45,7 +51,6 @@ is_alpha(char c)
     bool result = ((c >= 'a' && c <= 'z') ||
                    (c >= 'A' && c <= 'Z'));
     return result;
-
 }
 
 static inline bool

@@ -4,6 +4,31 @@
 #include "string_util.h"
 #include "file_util.h"
 
+static const int char_int_table[] =
+{
+    ['0'] = 0x0, ['1'] = 0x1,
+    ['2'] = 0x2, ['3'] = 0x3,
+    ['4'] = 0x4, ['5'] = 0x5,
+    ['6'] = 0x6, ['7'] = 0x7,
+    ['8'] = 0x8, ['9'] = 0x9,
+    ['a'] = 0xA, ['A'] = 0xA,
+    ['b'] = 0xB, ['B'] = 0xB,
+    ['c'] = 0xC, ['C'] = 0xC,
+    ['d'] = 0xD, ['D'] = 0xD,
+    ['e'] = 0xE, ['E'] = 0xE,
+    ['f'] = 0xF, ['F'] = 0xF,
+};
+
+#define CHECK_DIGIT_FUNC(name) bool name(char c)
+typedef CHECK_DIGIT_FUNC(check_digit_func);
+static check_digit_func *check_digit[] =
+{
+    [2]  = is_binary,
+    [8]  = is_octal,
+    [10] = is_digit,
+    [16] = is_hexadecimal,
+};
+
 static inline utf8_char
 lexer_advance(struct lexer *lexer)
 {
@@ -24,28 +49,45 @@ lexer_eat_whitespace(struct lexer *lexer)
     }
 }
 
-static inline void
-lexer_eat_decimal(struct lexer *lexer)
+static inline bool
+lexer_eat_integer(struct lexer *lexer, struct token *token)
 {
-    while (*lexer->at && is_digit(*lexer->at)) {
-        lexer_advance(lexer);
-    }
-}
+    bool overflow = false;
+    int value = 0;
+    int base = 10;
 
-static inline void
-lexer_eat_hexadecimal(struct lexer *lexer)
-{
-    while (*lexer->at && is_hexadecimal(*lexer->at)) {
+    if (*lexer->at && *lexer->at == 'x') {
         lexer_advance(lexer);
+        base = 16;
+    } else if (*lexer->at && *lexer->at == 'o') {
+        lexer_advance(lexer);
+        base = 8;
+    } else if (*lexer->at && *lexer->at == 'b') {
+        lexer_advance(lexer);
+        base = 2;
+    } else {
+        //
+        // NOTE(koekeishiya): We already traversed past the first
+        // digit if the literal is in base10.. We move back one
+        // so that our parsing below will work as expected.
+        //
+        --lexer->at;
     }
-}
 
-static inline void
-lexer_eat_binary(struct lexer *lexer)
-{
-    while (*lexer->at && is_binary(*lexer->at)) {
-        lexer_advance(lexer);
+    while (*lexer->at && check_digit[base](*lexer->at)) {
+        uint8_t c = lexer_advance(lexer);
+        int digit = char_int_table[c];
+        if (value > (INT_MAX - digit) / base) {
+            overflow = true;
+        }
+        value = value * base + digit;
     }
+
+    token->length = lexer->at - token->text;
+    token->kind = TOKEN_KIND_INT_LITERAL;
+    token->as.i = value;
+
+    return overflow;
 }
 
 static inline void
@@ -211,27 +253,11 @@ struct token lexer_get_token(struct lexer *lexer)
 
     default:
         if (is_digit(current)) {
-            bool overflow;
-            if (*lexer->at && *lexer->at == 'x') {
-                lexer_advance(lexer);
-                lexer_eat_hexadecimal(lexer);
-                token.length = lexer->at - token.text;
-                token.as.i = convert_string_count_to_int(token.text + 2, token.length - 2, 16, &overflow);
-            } else if (*lexer->at && *lexer->at == 'b') {
-                lexer_advance(lexer);
-                lexer_eat_binary(lexer);
-                token.length = lexer->at - token.text;
-                token.as.i = convert_string_count_to_int(token.text + 2, token.length - 2, 2, &overflow);
-            } else {
-                lexer_eat_decimal(lexer);
-                token.length = lexer->at - token.text;
-                token.as.i = convert_string_count_to_int(token.text, token.length, 10, &overflow);
-            }
+            bool overflow = lexer_eat_integer(lexer, &token);
             if (overflow) {
                 printf("#%d:%d integer literal '%.*s' overflow (%d)!\n",
                        token.line, token.column, token.length, token.text, token.as.i);
             }
-            token.kind = TOKEN_KIND_INT_LITERAL;
         } else if (is_identifier(current)) {
             lexer_eat_identifier(lexer);
             token.length = lexer->at - token.text;

@@ -72,6 +72,7 @@ lexer_eat_integer(struct lexer *lexer, struct token *token)
         // so that our parsing below will work as expected.
         //
         --lexer->at;
+        --lexer->line;
     }
 
     while (*lexer->at && check_digit[base](*lexer->at)) {

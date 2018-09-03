@@ -16,7 +16,7 @@ is_whitespace(char c)
 }
 
 static inline bool
-is_digit(char c)
+is_decimal(char c)
 {
     bool result = (c >= '0' && c <= '9');
     return result;
@@ -64,7 +64,7 @@ static inline bool
 is_alpha_num(char c)
 {
     bool result = ((is_alpha(c)) ||
-                   (is_digit(c)));
+                   (is_decimal(c)));
     return result;
 }
 

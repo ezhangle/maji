@@ -25,7 +25,7 @@ static check_digit_func *check_digit[] =
 {
     [2]  = is_binary,
     [8]  = is_octal,
-    [10] = is_digit,
+    [10] = is_decimal,
     [16] = is_hexadecimal,
 };
 
@@ -253,7 +253,7 @@ struct token lexer_get_token(struct lexer *lexer)
         break;
 
     default:
-        if (is_digit(current)) {
+        if (is_decimal(current)) {
             bool overflow = lexer_eat_integer(lexer, &token);
             if (overflow) {
                 printf("#%d:%d integer literal '%.*s' overflow (%d)!\n",

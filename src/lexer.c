@@ -56,21 +56,26 @@ lexer_eat_integer(struct lexer *lexer, struct token *token)
     int value = 0;
     int base = 10;
 
-    if (*lexer->at && *lexer->at == 'x') {
-        lexer_advance(lexer);
-        base = 16;
-    } else if (*lexer->at && *lexer->at == 'o') {
-        lexer_advance(lexer);
-        base = 8;
-    } else if (*lexer->at && *lexer->at == 'b') {
-        lexer_advance(lexer);
-        base = 2;
-    } else {
+    if (*token->text == '0') {
+        if (*lexer->at && *lexer->at == 'x') {
+            lexer_advance(lexer);
+            base = 16;
+        } else if (*lexer->at && *lexer->at == 'o') {
+            lexer_advance(lexer);
+            base = 8;
+        } else if (*lexer->at && *lexer->at == 'b') {
+            lexer_advance(lexer);
+            base = 2;
+        }
+    }
+
+    if (base == 10) {
+
         //
         // NOTE(koekeishiya): We already traversed past the first
-        // digit if the literal is in base10.. We move back one
-        // so that our parsing below will work as expected.
+        // We move back one so that our parsing below will work as expected.
         //
+
         --lexer->at;
         --lexer->column;
     }

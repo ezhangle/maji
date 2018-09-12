@@ -75,6 +75,14 @@ lexer_eat_block_comment(struct lexer *lexer)
 }
 
 static inline void
+lexer_eat_line_comment(struct lexer *lexer)
+{
+    while (*lexer->at && *lexer->at != '\n') {
+        lexer_advance(lexer);
+    }
+}
+
+static inline void
 lexer_eat_string(struct lexer *lexer)
 {
     while (*lexer->at && *lexer->at != '"') {
@@ -230,6 +238,10 @@ struct token lexer_get_token(struct lexer *lexer)
             lexer_advance(lexer);
             token.length = lexer->at - token.text;
             token.kind = TOKEN_KIND_DIV_ASSIGN;
+        } else if (*lexer->at && *lexer->at == '/') {
+            lexer_advance(lexer);
+            lexer_eat_line_comment(lexer);
+            token = lexer_get_token(lexer);
         } else if (*lexer->at && *lexer->at == '*') {
             lexer_advance(lexer);
             lexer_eat_block_comment(lexer);

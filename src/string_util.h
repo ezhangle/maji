@@ -66,12 +66,12 @@ static uint8_t escape_char_map[] =
 };
 
 static inline uint8_t *
-resolve_string_count(const uint8_t *a, int length)
+resolve_string_count(const uint8_t *a, size_t length)
 {
     uint8_t *result = malloc(length + 1);
     uint8_t *cursor = result;
 
-    for (int i = 0; i < length; ++i) {
+    for (size_t i = 0; i < length; ++i) {
         if (a[i] == '\\') {
             *cursor++ = escape_char_map[a[++i]];
         } else {

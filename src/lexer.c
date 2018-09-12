@@ -49,6 +49,21 @@ lexer_eat_whitespace(struct lexer *lexer)
     }
 }
 
+static inline void
+lexer_eat_string(struct lexer *lexer)
+{
+    while (*lexer->at && *lexer->at != '"') {
+        if (*lexer->at == '\\') {
+            lexer_advance(lexer);
+        }
+        lexer_advance(lexer);
+    }
+
+    if (*lexer->at && *lexer->at == '"') {
+        lexer_advance(lexer);
+    }
+}
+
 static inline bool
 lexer_eat_integer(struct lexer *lexer, struct token *token)
 {
@@ -128,6 +143,19 @@ struct token lexer_get_token(struct lexer *lexer)
     case '(': case ')':
     case '[': case ']':
     case '{': case '}':
+        break;
+
+    case '"':
+        lexer_eat_string(lexer);
+        token.length = lexer->at - token.text;
+        if (token.length <= 2) {
+            token.as.string = u8"";
+        } else {
+            uint8_t *resolved_string = resolve_string_count(token.text + 1, token.length - 2);
+            token.as.string = intern_string(resolved_string);
+            free(resolved_string);
+        }
+        token.kind = TOKEN_KIND_STRING_LITERAL;
         break;
 
     case '=':
@@ -288,6 +316,9 @@ void lexer_print_token(struct token token, uint8_t *token_value_u8, int token_va
         break;
     case TOKEN_KIND_INT_LITERAL:
         snprintf(token_value, token_value_length, "%d", token.as.i);
+        break;
+    case TOKEN_KIND_STRING_LITERAL:
+        snprintf(token_value, token_value_length, "%s", token.as.string);
         break;
     case TOKEN_KIND_EOF:
         snprintf(token_value, token_value_length, "EOF");

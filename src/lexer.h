@@ -21,6 +21,7 @@ enum token_kind
     // the ascii value as token_kind as well
     TOKEN_KIND_IDENTIFIER = 128,
     TOKEN_KIND_INT_LITERAL,
+    TOKEN_KIND_STRING_LITERAL,
 
     TOKEN_KIND_EQUAL,
     TOKEN_KIND_NOT_EQUAL,
@@ -60,6 +61,7 @@ struct token
 
     union
     {
+        uint8_t *string;
         uint8_t *name;
         utf8_char uc;
         uint8_t c;

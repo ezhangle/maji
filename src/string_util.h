@@ -51,6 +51,46 @@ same_string(const uint8_t *a, const uint8_t *b)
     return result;
 }
 
+static uint8_t escape_char_map[] =
+{
+    ['"'] = '"',
+
+    ['\\'] = '\\',
+
+    ['0'] = '\0',
+    ['n'] = '\n',
+    ['r'] = '\r',
+    ['t'] = '\t',
+    ['v'] = '\v',
+    ['f'] = '\f',
+};
+
+static inline uint8_t *
+resolve_string_count(const uint8_t *a, int length)
+{
+    uint8_t *result = malloc(length + 1);
+    uint8_t *cursor = result;
+
+    for (int i = 0; i < length; ++i) {
+        if (a[i] == '\\') {
+            *cursor++ = escape_char_map[a[++i]];
+        } else {
+            *cursor++ = a[i];
+        }
+    }
+
+    *cursor = '\0';
+    return result;
+}
+
+static inline uint8_t *
+resolve_string(const uint8_t *a)
+{
+    size_t length = length_of_string(a);
+    uint8_t *result = resolve_string_count(a, length);
+    return result;
+}
+
 static inline uint8_t *
 intern_string_count(const uint8_t *string, size_t length)
 {

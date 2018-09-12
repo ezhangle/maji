@@ -6,6 +6,12 @@ int parse_primary(struct parser *parser)
 {
     if (parser_match(parser, TOKEN_KIND_INT_LITERAL)) {
         return parser_previous(parser).as.i;
+    } else if (parser_match(parser, TOKEN_KIND_STRING_LITERAL)) {
+        printf("lexed_token: '%.*s'\nstring_literal: '%s'\n",
+                parser_previous(parser).length,
+                parser_previous(parser).text,
+                parser_previous(parser).as.string);
+        return 0;
     } else if (parser_match(parser, '(')) {
         int result = parse_expression(parser);
         parser_consume(parser, ')');

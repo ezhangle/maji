@@ -1,1 +1,6 @@
 0x2 + (5 * 4 / 0b10) - 0b1 + 0o10 + "hello, \nworld!"
+
+/* this is
+a
+    /* nested block */
+ comment */

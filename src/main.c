@@ -6,6 +6,8 @@
 #include "lexer.h"
 #include "lexer.c"
 
+#include "ast.h"
+
 #include "parser.h"
 #include "parser.c"
 

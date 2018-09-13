@@ -40,5 +40,12 @@ int main(int argc, char **argv)
         printf("got token '%s'\n", token_value);
     }
 
+    ast_print_expr(ast_expr_binary('+', ast_expr_int(2), ast_expr_binary('*', ast_expr_int(5), ast_expr_int(4))));
+    printf("\n");
+    ast_print_expr(ast_expr_cast(ast_typespec_pointer(ast_typespec_identifier(u8"int")), ast_expr_int(0xff0321b)));
+    printf("\n");
+    ast_print_expr(ast_expr_index(ast_expr_field(ast_expr_identifier(u8"input"), u8"events"), ast_expr_int(2)));
+    printf("\n");
+
     return 0;
 }

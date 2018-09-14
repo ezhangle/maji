@@ -13,7 +13,7 @@
 
 int main(int argc, char **argv)
 {
-    uint8_t *string = u8"1243 - 0x3ff * 0b111 とあ 0b11 + 0b1001 - 'b'"
+    uint8_t *string = u8"1243 - 0x3ff * 0b111 とあ 0b11 + 0b1001 - 'b' * 2.555"
                         "// line comment\n"
                         "'\\n'\n"
                         "'\\\''\n"

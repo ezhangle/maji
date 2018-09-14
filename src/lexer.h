@@ -21,6 +21,7 @@ enum token_kind
     // the ascii value as token_kind as well
     TOKEN_KIND_IDENTIFIER = 128,
     TOKEN_KIND_INT_LITERAL,
+    TOKEN_KIND_FLOAT_LITERAL,
     TOKEN_KIND_STRING_LITERAL,
 
     TOKEN_KIND_EQUAL,

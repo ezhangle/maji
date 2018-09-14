@@ -131,7 +131,7 @@ lexer_eat_char(struct lexer *lexer, struct token *token)
 }
 
 static inline bool
-lexer_eat_integer(struct lexer *lexer, struct token *token)
+lexer_eat_number(struct lexer *lexer, struct token *token)
 {
     bool overflow = false;
     uint64_t value = 0;
@@ -172,11 +172,24 @@ lexer_eat_integer(struct lexer *lexer, struct token *token)
             overflow = true;
         }
         value = value * base + digit;
+        token->length = lexer->at - token->text;
+        token->as.int_val = value;
+        token->kind = TOKEN_KIND_INT_LITERAL;
     }
 
-    token->length = lexer->at - token->text;
-    token->kind = TOKEN_KIND_INT_LITERAL;
-    token->as.int_val = value;
+    if (base == 10) {
+        if (*lexer->at == 'e' || *lexer->at == '.') {
+            lexer_advance(lexer);
+            while (*lexer->at && check_digit[base](*lexer->at)) {
+                lexer_advance(lexer);
+            }
+            token->length = lexer->at - token->text;
+            uint8_t *float_literal = copy_string_count(token->text, token->length);
+            overflow = sscanf((char*)float_literal, "%lf", &token->as.float_val) != 1;
+            free(float_literal);
+            token->kind = TOKEN_KIND_FLOAT_LITERAL;
+        }
+    }
 
     return overflow;
 }
@@ -370,10 +383,10 @@ struct token lexer_get_token(struct lexer *lexer)
 
     default:
         if (is_decimal(current)) {
-            bool overflow = lexer_eat_integer(lexer, &token);
+            bool overflow = lexer_eat_number(lexer, &token);
             if (overflow) {
-                printf("#%d:%d integer literal '%.*s' overflow (%" PRIu64 ")!\n",
-                       token.line, token.column, token.length, token.text, token.as.int_val);
+                printf("#%d:%d number literal '%.*s' overflow!\n",
+                       token.line, token.column, token.length, token.text);
             }
         } else if (is_identifier(current)) {
             lexer_eat_identifier(lexer);
@@ -403,6 +416,9 @@ void lexer_print_token(struct token token, uint8_t *token_value_u8, int token_va
         } else {
             snprintf(token_value, token_value_length, "%" PRIu64, token.as.int_val);
         }
+        break;
+    case TOKEN_KIND_FLOAT_LITERAL:
+        snprintf(token_value, token_value_length, "%f", token.as.float_val);
         break;
     case TOKEN_KIND_STRING_LITERAL:
         snprintf(token_value, token_value_length, "%s", token.as.string_val);

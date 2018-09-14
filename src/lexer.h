@@ -59,15 +59,13 @@ struct token
     int column;
     int line;
 
-    union
-    {
-        uint8_t *string;
-        uint8_t *name;
-        utf8_char uc;
+    union {
         uint8_t c;
-        int i;
-        float f32;
-        double f64;
+        utf8_char uc;
+        uint8_t *string_val;
+        uint8_t *name;
+        uint64_t int_val;
+        double float_val;
     } as;
 };
 

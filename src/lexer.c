@@ -4,7 +4,9 @@
 #include "string_util.h"
 #include "file_util.h"
 
-static const int char_int_table[] =
+#include <inttypes.h>
+
+static const uint64_t char_int_table[] =
 {
     ['0'] = 0x0, ['1'] = 0x1,
     ['2'] = 0x2, ['3'] = 0x3,
@@ -101,8 +103,8 @@ static inline bool
 lexer_eat_integer(struct lexer *lexer, struct token *token)
 {
     bool overflow = false;
-    int value = 0;
-    int base = 10;
+    uint64_t value = 0;
+    uint64_t base = 10;
 
     if (*token->text == '0') {
         if (*lexer->at && *lexer->at == 'x') {
@@ -130,8 +132,8 @@ lexer_eat_integer(struct lexer *lexer, struct token *token)
 
     while (*lexer->at && check_digit[base](*lexer->at)) {
         uint8_t c = lexer_advance(lexer);
-        int digit = char_int_table[c];
-        if (value > (INT_MAX - digit) / base) {
+        uint64_t digit = char_int_table[c];
+        if (value > (UINT64_MAX - digit) / base) {
             overflow = true;
         }
         value = value * base + digit;
@@ -139,7 +141,7 @@ lexer_eat_integer(struct lexer *lexer, struct token *token)
 
     token->length = lexer->at - token->text;
     token->kind = TOKEN_KIND_INT_LITERAL;
-    token->as.i = value;
+    token->as.int_val = value;
 
     return overflow;
 }
@@ -182,10 +184,10 @@ struct token lexer_get_token(struct lexer *lexer)
         lexer_eat_string(lexer);
         token.length = lexer->at - token.text;
         if (token.length <= 2) {
-            token.as.string = u8"";
+            token.as.string_val = u8"";
         } else {
             uint8_t *resolved_string = resolve_string_count(token.text + 1, token.length - 2);
-            token.as.string = intern_string(resolved_string);
+            token.as.string_val = intern_string(resolved_string);
             free(resolved_string);
         }
         token.kind = TOKEN_KIND_STRING_LITERAL;
@@ -330,8 +332,8 @@ struct token lexer_get_token(struct lexer *lexer)
         if (is_decimal(current)) {
             bool overflow = lexer_eat_integer(lexer, &token);
             if (overflow) {
-                printf("#%d:%d integer literal '%.*s' overflow (%d)!\n",
-                       token.line, token.column, token.length, token.text, token.as.i);
+                printf("#%d:%d integer literal '%.*s' overflow (%" PRIu64 ")!\n",
+                       token.line, token.column, token.length, token.text, token.as.int_val);
             }
         } else if (is_identifier(current)) {
             lexer_eat_identifier(lexer);
@@ -356,10 +358,10 @@ void lexer_print_token(struct token token, uint8_t *token_value_u8, int token_va
         snprintf(token_value, token_value_length, "%s", token.as.name);
         break;
     case TOKEN_KIND_INT_LITERAL:
-        snprintf(token_value, token_value_length, "%d", token.as.i);
+        snprintf(token_value, token_value_length, "%" PRIu64, token.as.int_val);
         break;
     case TOKEN_KIND_STRING_LITERAL:
-        snprintf(token_value, token_value_length, "%s", token.as.string);
+        snprintf(token_value, token_value_length, "%s", token.as.string_val);
         break;
     case TOKEN_KIND_EOF:
         snprintf(token_value, token_value_length, "EOF");

@@ -73,6 +73,8 @@ lexer_eat_block_comment(struct lexer *lexer)
         (lexer->at[1] == '/')) {
         lexer_advance(lexer);
         lexer_advance(lexer);
+    } else {
+        // TODO(koekeishiya): missing end of block comment
     }
 }
 
@@ -96,7 +98,36 @@ lexer_eat_string(struct lexer *lexer)
 
     if (*lexer->at && *lexer->at == '"') {
         lexer_advance(lexer);
+    } else {
+        // TODO(koekeishiya): missing end of string literal
     }
+}
+
+static inline void
+lexer_eat_char(struct lexer *lexer, struct token *token)
+{
+    // NOTE(koekeishiya): empty char literal is equal to zero
+    if (*lexer->at && *lexer->at == '\'') {
+        token->as.int_val = 0;
+        lexer_advance(lexer);
+    } else {
+        uint8_t c = lexer_advance(lexer);
+        if (c == '\\' && *lexer->at) {
+            token->as.int_val = resolve_char(lexer_advance(lexer));
+        } else if (c != '\\') {
+            token->as.int_val = c;
+        }
+    }
+
+    if (*lexer->at && *lexer->at == '\'') {
+        lexer_advance(lexer);
+    } else {
+        // TODO(koekeishiya): missing end of char literal
+    }
+
+    token->length = lexer->at - token->text;
+    token->kind = TOKEN_KIND_INT_LITERAL;
+    token->base = NUMBER_BASE_CHAR;
 }
 
 static inline bool
@@ -108,12 +139,15 @@ lexer_eat_integer(struct lexer *lexer, struct token *token)
 
     if (*token->text == '0') {
         if (*lexer->at && *lexer->at == 'x') {
+            token->base = NUMBER_BASE_HEXADECIMAL;
             lexer_advance(lexer);
             base = 16;
         } else if (*lexer->at && *lexer->at == 'o') {
+            token->base = NUMBER_BASE_OCTAL;
             lexer_advance(lexer);
             base = 8;
         } else if (*lexer->at && *lexer->at == 'b') {
+            token->base = NUMBER_BASE_BINARY;
             lexer_advance(lexer);
             base = 2;
         }
@@ -128,6 +162,7 @@ lexer_eat_integer(struct lexer *lexer, struct token *token)
 
         --lexer->at;
         --lexer->column;
+        token->base = NUMBER_BASE_DECIMAL;
     }
 
     while (*lexer->at && check_digit[base](*lexer->at)) {
@@ -167,7 +202,8 @@ struct token lexer_get_token(struct lexer *lexer)
         .column = lexer->column,
         .line   = lexer->line,
         .as.uc  = current,
-        .kind   = current
+        .kind   = current,
+        .base   = NUMBER_BASE_NONE
     };
 
     lexer_advance(lexer);
@@ -181,6 +217,9 @@ struct token lexer_get_token(struct lexer *lexer)
     case '{': case '}':
         break;
 
+    case '\'':
+        lexer_eat_char(lexer, &token);
+        break;
     case '"':
         lexer_eat_string(lexer);
         token.length = lexer->at - token.text;
@@ -359,7 +398,11 @@ void lexer_print_token(struct token token, uint8_t *token_value_u8, int token_va
         snprintf(token_value, token_value_length, "%s", token.as.name);
         break;
     case TOKEN_KIND_INT_LITERAL:
-        snprintf(token_value, token_value_length, "%" PRIu64, token.as.int_val);
+        if (token.base == NUMBER_BASE_CHAR) {
+            snprintf(token_value, token_value_length, "%c", (uint8_t)token.as.int_val);
+        } else {
+            snprintf(token_value, token_value_length, "%" PRIu64, token.as.int_val);
+        }
         break;
     case TOKEN_KIND_STRING_LITERAL:
         snprintf(token_value, token_value_length, "%s", token.as.string_val);

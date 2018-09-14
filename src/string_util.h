@@ -56,6 +56,7 @@ static uint8_t escape_char_map[] =
     ['"'] = '"',
 
     ['\\'] = '\\',
+    ['\''] = '\'',
 
     ['0'] = '\0',
     ['n'] = '\n',
@@ -64,6 +65,12 @@ static uint8_t escape_char_map[] =
     ['v'] = '\v',
     ['f'] = '\f',
 };
+
+static inline uint8_t
+resolve_char(uint8_t c)
+{
+    return escape_char_map[c];
+}
 
 static inline uint8_t *
 resolve_string_count(const uint8_t *a, size_t length)

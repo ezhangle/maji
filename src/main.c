@@ -13,12 +13,15 @@
 
 int main(int argc, char **argv)
 {
-    uint8_t *string = u8"1243 - 0x3ff * 0b111 とあ 0b11 + 0b1001"
+    uint8_t *string = u8"1243 - 0x3ff * 0b111 とあ 0b11 + 0b1001 - 'b'"
                         "// line comment\n"
+                        "'\\n'\n"
+                        "'\\\''\n"
                         "/* this is\n"
                         "a\n"
                         "    /* nested block */\n"
-                        " comment */"
+                        " comment */\n"
+                        "''\n"
                         "0x2 + (5 * 4 / 0b10) - 0b1 + 0o10 + \"hello, \\nworld!\"\n";
 
     struct parser parser = {

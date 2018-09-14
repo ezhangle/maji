@@ -49,9 +49,20 @@ enum token_kind
     TOKEN_KIND_UNKNOWN
 };
 
+enum number_base
+{
+    NUMBER_BASE_NONE,
+    NUMBER_BASE_CHAR,
+    NUMBER_BASE_BINARY,
+    NUMBER_BASE_OCTAL,
+    NUMBER_BASE_DECIMAL,
+    NUMBER_BASE_HEXADECIMAL
+};
+
 struct token
 {
     enum token_kind kind;
+    enum number_base base;
 
     uint8_t *text;
     int length;

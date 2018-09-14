@@ -122,7 +122,7 @@ lexer_eat_integer(struct lexer *lexer, struct token *token)
     if (base == 10) {
 
         //
-        // NOTE(koekeishiya): We already traversed past the first
+        // NOTE(koekeishiya): We already traversed past the first digit.
         // We move back one so that our parsing below will work as expected.
         //
 

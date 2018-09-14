@@ -175,6 +175,7 @@ struct token lexer_get_token(struct lexer *lexer)
     switch (current) {
     case '\0': token.kind = TOKEN_KIND_EOF; break;
 
+    case ';':
     case '(': case ')':
     case '[': case ']':
     case '{': case '}':

@@ -42,7 +42,7 @@ void ast_parse_test(void)
         u8"foo :: () { while (is_running) { printf(\"heh\"); } }",
         u8"w := 2;",
         u8"foo := a ? a&b + c<<d + e*f == +u-v-w + *g/h(x,y) + -i%k[x] && m <= n*(p+q)/r : 0;",
-        u8"main :: (argc: int, argv: int*[]) -> int { { str :: \"hello, world\"; len := strlen(str); } }",
+        u8"main :: (argc: int, argv: int*[]) -> int { { str :: \"hello, world\"; len := strlen(str); len += 1; } }",
     };
     for (const uint8_t **it = tests; it != tests + sizeof(tests)/sizeof(*tests); it++) {
         struct parser parser = init_stream(*it);

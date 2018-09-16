@@ -58,6 +58,7 @@ const uint8_t *parse_name(struct parser *parser);
 struct ast_typespec *parse_type_func(struct parser *parser);
 struct ast_typespec *parse_type_base(struct parser *parser);
 struct ast_typespec *parse_type(struct parser *parser);
+
 struct ast_struct_item parse_decl_struct_item(struct parser *parser);
 struct ast_decl *parse_decl_struct(struct parser *parser, struct token identifier);
 struct ast_enum_item parse_decl_enum_item(struct parser *parser);
@@ -65,6 +66,8 @@ struct ast_decl *parse_decl_enum(struct parser *parser, struct token identifier)
 struct ast_func_param parse_decl_func_param(struct parser *parser);
 struct ast_decl *parse_decl_func(struct parser *parser, struct token identifier);
 struct ast_decl *parse_decl_const(struct parser *parser, struct token identifier);
+struct ast_decl *parse_decl_var_infer(struct parser *parser, struct token identifier);
+struct ast_decl *parse_decl_var(struct parser *parser, struct token identifier);
 struct ast_decl *parse_decl(struct parser *parser);
 
 #endif

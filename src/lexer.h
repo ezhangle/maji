@@ -50,6 +50,32 @@ enum token_kind
     TOKEN_KIND_UNKNOWN
 };
 
+static const char *token_kind_str[] =
+{
+    [TOKEN_KIND_EQUAL] = "==",
+    [TOKEN_KIND_NOT_EQUAL] = "!=",
+    [TOKEN_KIND_LT_EQUAL] = "<=",
+    [TOKEN_KIND_GT_EQUAL] = ">=",
+    [TOKEN_KIND_AND] = "&&",
+    [TOKEN_KIND_OR] = "||",
+    [TOKEN_KIND_LSHIFT] = "<<",
+    [TOKEN_KIND_RSHIFT] = ">>",
+
+    [TOKEN_KIND_COLON_ASSIGN] = ":=",
+    [TOKEN_KIND_ADD_ASSIGN] = "+=",
+    [TOKEN_KIND_SUB_ASSIGN] = "-=",
+    [TOKEN_KIND_MUL_ASSIGN] = "*=",
+    [TOKEN_KIND_DIV_ASSIGN] = "/=",
+    [TOKEN_KIND_MOD_ASSIGN] = "%=",
+    [TOKEN_KIND_OR_ASSIGN] = "|=",
+    [TOKEN_KIND_AND_ASSIGN] = "&=",
+    [TOKEN_KIND_XOR_ASSIGN] = "^=",
+    [TOKEN_KIND_NOT_ASSIGN] = "~=",
+    [TOKEN_KIND_LSHIFT_ASSIGN] = "<<=",
+    [TOKEN_KIND_RSHIFT_ASSIGN] = ">>=",
+};
+
+
 enum number_base
 {
     NUMBER_BASE_NONE,

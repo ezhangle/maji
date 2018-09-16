@@ -9,14 +9,17 @@ struct ast_stmt;
 struct ast_decl;
 struct ast_typespec;
 
-static inline void ast_print_typespec(struct ast_typespec *type);
-static inline void ast_print_expr(struct ast_expr *expr);
-
 struct ast_stmt_block
 {
-    struct ast_stmt *statements;
+    struct ast_stmt **statements;
     size_t statements_count;
 };
+
+static inline void ast_print_typespec(struct ast_typespec *type);
+static inline void ast_print_expr(struct ast_expr *expr);
+static inline void ast_print_decl(struct ast_decl *decl);
+static inline void ast_print_stmt_block(struct ast_stmt_block block);
+static inline void ast_print_stmt(struct ast_stmt *stmt);
 
 enum ast_typespec_kind
 {
@@ -174,7 +177,7 @@ struct ast_decl
 };
 
 static inline struct ast_decl *
-decl_alloc(enum ast_decl_kind kind, const uint8_t *name)
+ast_decl_alloc(enum ast_decl_kind kind, const uint8_t *name)
 {
     struct ast_decl *decl = malloc(sizeof(struct ast_decl));
     memset(decl, 0, sizeof(struct ast_decl));
@@ -184,36 +187,36 @@ decl_alloc(enum ast_decl_kind kind, const uint8_t *name)
 }
 
 static inline struct ast_decl *
-decl_enum(const uint8_t *name, struct ast_enum_item *items, size_t items_count)
+ast_decl_enum(const uint8_t *name, struct ast_enum_item *items, size_t items_count)
 {
-    struct ast_decl *decl = decl_alloc(AST_DECL_ENUM, name);
+    struct ast_decl *decl = ast_decl_alloc(AST_DECL_ENUM, name);
     decl->enum_decl.items = items;
     decl->enum_decl.items_count = items_count;
     return decl;
 }
 
 static inline struct ast_decl *
-decl_struct(const uint8_t *name, struct ast_struct_item *items, size_t items_count)
+ast_decl_struct(const uint8_t *name, struct ast_struct_item *items, size_t items_count)
 {
-    struct ast_decl *decl = decl_alloc(AST_DECL_STRUCT, name);
+    struct ast_decl *decl = ast_decl_alloc(AST_DECL_STRUCT, name);
     decl->struct_decl.items = items;
     decl->struct_decl.items_count = items_count;
     return decl;
 }
 
 static inline struct ast_decl *
-decl_var(const uint8_t *name, struct ast_typespec *type, struct ast_expr *expr)
+ast_decl_var(const uint8_t *name, struct ast_typespec *type, struct ast_expr *expr)
 {
-    struct ast_decl *decl = decl_alloc(AST_DECL_VAR, name);
+    struct ast_decl *decl = ast_decl_alloc(AST_DECL_VAR, name);
     decl->var_decl.type = type;
     decl->var_decl.expr = expr;
     return decl;
 }
 
 static inline struct ast_decl *
-decl_func(const uint8_t *name, struct ast_func_param *params, size_t params_count, struct ast_typespec *ret_type, struct ast_stmt_block block)
+ast_decl_func(const uint8_t *name, struct ast_func_param *params, size_t params_count, struct ast_typespec *ret_type, struct ast_stmt_block block)
 {
-    struct ast_decl *decl = decl_alloc(AST_DECL_FUNC, name);
+    struct ast_decl *decl = ast_decl_alloc(AST_DECL_FUNC, name);
     decl->func_decl.params = params;
     decl->func_decl.params_count = params_count;
     decl->func_decl.ret_type = ret_type;
@@ -222,9 +225,9 @@ decl_func(const uint8_t *name, struct ast_func_param *params, size_t params_coun
 }
 
 static inline struct ast_decl *
-decl_const(const uint8_t *name, struct ast_expr *expr)
+ast_decl_const(const uint8_t *name, struct ast_expr *expr)
 {
-    struct ast_decl *decl = decl_alloc(AST_DECL_CONST, name);
+    struct ast_decl *decl = ast_decl_alloc(AST_DECL_CONST, name);
     decl->const_decl.expr = expr;
     return decl;
 }
@@ -235,6 +238,7 @@ enum ast_expr_kind
 
     AST_EXPR_IDENTIFIER,
     AST_EXPR_INT_LITERAL,
+    AST_EXPR_FLOAT_LITERAL,
     AST_EXPR_STRING_LITERAL,
 
     AST_EXPR_CALL,
@@ -329,6 +333,14 @@ ast_expr_int(uint64_t value)
 }
 
 static inline struct ast_expr *
+ast_expr_float(double value)
+{
+    struct ast_expr *result = ast_expr_alloc(AST_EXPR_FLOAT_LITERAL);
+    result->float_val = value;
+    return result;
+}
+
+static inline struct ast_expr *
 ast_expr_string(const uint8_t *string)
 {
     struct ast_expr *result = ast_expr_alloc(AST_EXPR_STRING_LITERAL);
@@ -341,6 +353,16 @@ ast_expr_identifier(const uint8_t *name)
 {
     struct ast_expr *result = ast_expr_alloc(AST_EXPR_IDENTIFIER);
     result->name = name;
+    return result;
+}
+
+static inline struct ast_expr *
+ast_expr_call(struct ast_expr *expr, struct ast_expr **args, size_t args_count)
+{
+    struct ast_expr *result = ast_expr_alloc(AST_EXPR_CALL);
+    result->call.expr = expr;
+    result->call.args = args;
+    result->call.args_count = args_count;
     return result;
 }
 
@@ -479,7 +501,7 @@ struct ast_stmt
 };
 
 static inline struct ast_stmt *
-stmt_alloc(enum ast_stmt_kind kind)
+ast_stmt_alloc(enum ast_stmt_kind kind)
 {
     struct ast_stmt *stmt = malloc(sizeof(struct ast_stmt));
     memset(stmt, 0, sizeof(struct ast_stmt));
@@ -488,39 +510,39 @@ stmt_alloc(enum ast_stmt_kind kind)
 }
 
 static inline struct ast_stmt *
-stmt_return(struct ast_expr *expr)
+ast_stmt_return(struct ast_expr *expr)
 {
-    struct ast_stmt *stmt = stmt_alloc(AST_STMT_RETURN);
+    struct ast_stmt *stmt = ast_stmt_alloc(AST_STMT_RETURN);
     stmt->return_stmt.expr = expr;
     return stmt;
 }
 
 static inline struct ast_stmt *
-stmt_break(void)
+ast_stmt_break(void)
 {
-    struct ast_stmt *stmt = stmt_alloc(AST_STMT_BREAK);
+    struct ast_stmt *stmt = ast_stmt_alloc(AST_STMT_BREAK);
     return stmt;
 }
 
 static inline struct ast_stmt *
-stmt_continue(void)
+ast_stmt_continue(void)
 {
-    struct ast_stmt *stmt = stmt_alloc(AST_STMT_CONTINUE);
+    struct ast_stmt *stmt = ast_stmt_alloc(AST_STMT_CONTINUE);
     return stmt;
 }
 
 static inline struct ast_stmt *
-stmt_block(struct ast_stmt_block block)
+ast_stmt_block(struct ast_stmt_block block)
 {
-    struct ast_stmt *stmt = stmt_alloc(AST_STMT_BLOCK);
+    struct ast_stmt *stmt = ast_stmt_alloc(AST_STMT_BLOCK);
     stmt->block = block;
     return stmt;
 }
 
 static inline struct ast_stmt *
-stmt_if(struct ast_expr *condition, struct ast_stmt_block then_block, struct ast_else_if *else_ifs, size_t else_ifs_count, struct ast_stmt_block else_block)
+ast_stmt_if(struct ast_expr *condition, struct ast_stmt_block then_block, struct ast_else_if *else_ifs, size_t else_ifs_count, struct ast_stmt_block else_block)
 {
-    struct ast_stmt *stmt = stmt_alloc(AST_STMT_IF);
+    struct ast_stmt *stmt = ast_stmt_alloc(AST_STMT_IF);
     stmt->if_stmt.condition = condition;
     stmt->if_stmt.then_block = then_block;
     stmt->if_stmt.else_ifs = else_ifs;
@@ -530,18 +552,18 @@ stmt_if(struct ast_expr *condition, struct ast_stmt_block then_block, struct ast
 }
 
 static inline struct ast_stmt *
-stmt_while(struct ast_expr *condition, struct ast_stmt_block block)
+ast_stmt_while(struct ast_expr *condition, struct ast_stmt_block block)
 {
-    struct ast_stmt *stmt = stmt_alloc(AST_STMT_WHILE);
+    struct ast_stmt *stmt = ast_stmt_alloc(AST_STMT_WHILE);
     stmt->while_stmt.condition = condition;
     stmt->while_stmt.block = block;
     return stmt;
 }
 
 static inline struct ast_stmt *
-stmt_for(struct ast_stmt *init, struct ast_expr *condition, struct ast_stmt *next, struct ast_stmt_block block)
+ast_stmt_for(struct ast_stmt *init, struct ast_expr *condition, struct ast_stmt *next, struct ast_stmt_block block)
 {
-    struct ast_stmt *stmt = stmt_alloc(AST_STMT_FOR);
+    struct ast_stmt *stmt = ast_stmt_alloc(AST_STMT_FOR);
     stmt->for_stmt.init = init;
     stmt->for_stmt.condition = condition;
     stmt->for_stmt.next = next;
@@ -550,9 +572,9 @@ stmt_for(struct ast_stmt *init, struct ast_expr *condition, struct ast_stmt *nex
 }
 
 static inline struct ast_stmt *
-stmt_assign(enum token_kind op, struct ast_expr *left_expr, struct ast_expr *right_expr)
+ast_stmt_assign(enum token_kind op, struct ast_expr *left_expr, struct ast_expr *right_expr)
 {
-    struct ast_stmt *stmt = stmt_alloc(AST_STMT_ASSIGN);
+    struct ast_stmt *stmt = ast_stmt_alloc(AST_STMT_ASSIGN);
     stmt->assign.op = op;
     stmt->assign.left_expr = left_expr;
     stmt->assign.right_expr = right_expr;
@@ -560,20 +582,27 @@ stmt_assign(enum token_kind op, struct ast_expr *left_expr, struct ast_expr *rig
 }
 
 static inline struct ast_stmt *
-stmt_init(const uint8_t *name, struct ast_expr *expr)
+ast_stmt_init(const uint8_t *name, struct ast_expr *expr)
 {
-    struct ast_stmt *stmt = stmt_alloc(AST_STMT_INIT);
+    struct ast_stmt *stmt = ast_stmt_alloc(AST_STMT_INIT);
     stmt->init.name = name;
     stmt->init.expr = expr;
     return stmt;
 }
 
 static inline struct ast_stmt *
-stmt_expr(struct ast_expr *expr)
+ast_stmt_expr(struct ast_expr *expr)
 {
-    struct ast_stmt *stmt = stmt_alloc(AST_STMT_EXPR);
+    struct ast_stmt *stmt = ast_stmt_alloc(AST_STMT_EXPR);
     stmt->expr = expr;
     return stmt;
+}
+
+
+static int ast_print_indent;
+void ast_print_newline(void)
+{
+    printf("\n%.*s", 2*ast_print_indent, "                                                        ");
 }
 
 static inline void
@@ -595,6 +624,18 @@ ast_print_typespec(struct ast_typespec *type)
         ast_print_typespec(type->ptr.elem);
         printf(")");
         break;
+    case AST_TYPESPEC_FUNC:
+        printf("(func (");
+        for (struct ast_typespec **it = type->func.args;
+             it != type->func.args + type->func.args_count;
+             ++it) {
+            printf(" ");
+            ast_print_typespec(*it);
+        }
+        printf(") ");
+        ast_print_typespec(type->func.ret);
+        printf(")");
+        break;
     default:
         assert(0);
         break;
@@ -608,11 +649,25 @@ ast_print_expr(struct ast_expr *expr)
     case AST_EXPR_INT_LITERAL:
         printf("%" PRIu64, expr->int_val);
         break;
+    case AST_EXPR_FLOAT_LITERAL:
+        printf("%lf", expr->float_val);
+        break;
     case AST_EXPR_STRING_LITERAL:
         printf("\"%s\"", expr->string_val);
         break;
     case AST_EXPR_IDENTIFIER:
         printf("%s", expr->name);
+        break;
+    case AST_EXPR_CALL:
+        printf("(");
+        ast_print_expr(expr->call.expr);
+        for (struct ast_expr **it = expr->call.args;
+             it != expr->call.args + expr->call.args_count;
+             ++it) {
+            printf(" ");
+            ast_print_expr(*it);
+        }
+        printf(")");
         break;
     case AST_EXPR_CAST:
         printf("(cast ");
@@ -625,7 +680,7 @@ ast_print_expr(struct ast_expr *expr)
         printf("(index ");
         ast_print_expr(expr->index.expr);
         printf(" ");
-        ast_print_expr(expr->index.expr);
+        ast_print_expr(expr->index.index);
         printf(")");
         break;
     case AST_EXPR_FIELD:
@@ -646,13 +701,195 @@ ast_print_expr(struct ast_expr *expr)
         printf(")");
         break;
     case AST_EXPR_TERNARY:
-        printf("(if ");
+        printf("(? ");
         ast_print_expr(expr->ternary.condition);
         printf(" ");
         ast_print_expr(expr->ternary.then_expr);
         printf(" ");
         ast_print_expr(expr->ternary.else_expr);
         printf(")");
+        break;
+    default:
+        assert(0);
+        break;
+    }
+}
+
+static inline void
+ast_print_decl(struct ast_decl *decl)
+{
+    switch (decl->kind) {
+    case AST_DECL_ENUM:
+        printf("(enum %s", decl->name);
+        ++ast_print_indent;
+        for (struct ast_enum_item *it = decl->enum_decl.items;
+             it != decl->enum_decl.items + decl->enum_decl.items_count;
+             it++) {
+            ast_print_newline();
+            printf("(%s ", it->name);
+            if (it->expr) {
+                ast_print_expr(it->expr);
+            } else {
+                printf("null");
+            }
+            printf(")");
+        }
+        --ast_print_indent;
+        printf(")");
+        break;
+    case AST_DECL_STRUCT:
+        printf("(struct %s", decl->name);
+        ++ast_print_indent;
+        for (struct ast_struct_item *it = decl->struct_decl.items;
+             it != decl->struct_decl.items + decl->struct_decl.items_count;
+             it++) {
+            ast_print_newline();
+            printf("(");
+            ast_print_typespec(it->type);
+            printf(" %s", it->name);
+            printf(")");
+        }
+        --ast_print_indent;
+        printf(")");
+        break;
+    case AST_DECL_VAR:
+        printf("(var %s ", decl->name);
+        if (decl->var_decl.type) {
+            ast_print_typespec(decl->var_decl.type);
+        } else {
+            printf("null");
+        }
+        if (decl->var_decl.expr) {
+            printf(" ");
+            ast_print_expr(decl->var_decl.expr);
+        }
+        printf(")");
+        break;
+    case AST_DECL_CONST:
+        printf("(const %s ", decl->name);
+        ast_print_expr(decl->const_decl.expr);
+        printf(")");
+        break;
+    case AST_DECL_FUNC:
+        printf("(func %s ", decl->name);
+        printf("(");
+        for (struct ast_func_param *it = decl->func_decl.params;
+             it != decl->func_decl.params + decl->func_decl.params_count;
+             it++) {
+            printf(" %s ", it->name);
+            ast_print_typespec(it->type);
+        }
+        printf(" ) ");
+        if (decl->func_decl.ret_type) {
+            ast_print_typespec(decl->func_decl.ret_type);
+        } else {
+            printf("null");
+        }
+        ++ast_print_indent;
+        ast_print_newline();
+        ast_print_stmt_block(decl->func_decl.block);
+        --ast_print_indent;
+        printf(")");
+        break;
+    default:
+        assert(0);
+        break;
+    }
+}
+
+static inline void
+ast_print_stmt_block(struct ast_stmt_block block)
+{
+    printf("(block");
+    ++ast_print_indent;
+    for (struct ast_stmt **it = block.statements;
+         it != block.statements + block.statements_count;
+         ++it) {
+        ast_print_newline();
+        ast_print_stmt(*it);
+    }
+    --ast_print_indent;
+    printf(")");
+}
+
+static inline void
+ast_print_stmt(struct ast_stmt *stmt)
+{
+    switch (stmt->kind) {
+    case AST_STMT_RETURN:
+        printf("(return ");
+        ast_print_expr(stmt->return_stmt.expr);
+        printf(")");
+        break;
+    case AST_STMT_BREAK:
+        printf("(break)");
+        break;
+    case AST_STMT_CONTINUE:
+        printf("(continue)");
+        break;
+    case AST_STMT_BLOCK:
+        ast_print_stmt_block(stmt->block);
+        break;
+    case AST_STMT_IF:
+        printf("(if ");
+        ast_print_expr(stmt->if_stmt.condition);
+        ++ast_print_indent;
+        ast_print_newline();
+        ast_print_stmt_block(stmt->if_stmt.then_block);
+        for (struct ast_else_if *it = stmt->if_stmt.else_ifs;
+             it != stmt->if_stmt.else_ifs + stmt->if_stmt.else_ifs_count;
+             ++it) {
+            ast_print_newline();
+            printf("elseif ");
+            ast_print_expr(it->condition);
+            ast_print_newline();
+            ast_print_stmt_block(it->block);
+        }
+        if (stmt->if_stmt.else_block.statements_count != 0) {
+            ast_print_newline();
+            printf("else ");
+            ast_print_newline();
+            ast_print_stmt_block(stmt->if_stmt.else_block);
+        }
+        --ast_print_indent;
+        printf(")");
+        break;
+    case AST_STMT_WHILE:
+        printf("(while ");
+        ast_print_expr(stmt->while_stmt.condition);
+        ++ast_print_indent;
+        ast_print_newline();
+        ast_print_stmt_block(stmt->while_stmt.block);
+        --ast_print_indent;
+        printf(")");
+        break;
+    case AST_STMT_FOR:
+        printf("(for ");
+        ast_print_stmt(stmt->for_stmt.init);
+        ast_print_expr(stmt->for_stmt.condition);
+        ast_print_stmt(stmt->for_stmt.next);
+        ++ast_print_indent;
+        ast_print_newline();
+        ast_print_stmt_block(stmt->for_stmt.block);
+        --ast_print_indent;
+        printf(")");
+        break;
+    case AST_STMT_ASSIGN:
+        printf("(%s ", token_kind_str[stmt->assign.op]);
+        ast_print_expr(stmt->assign.left_expr);
+        if (stmt->assign.right_expr) {
+            printf(" ");
+            ast_print_expr(stmt->assign.right_expr);
+        }
+        printf(")");
+        break;
+    case AST_STMT_INIT:
+        printf("(:= %s ", stmt->init.name);
+        ast_print_expr(stmt->init.expr);
+        printf(")");
+        break;
+    case AST_STMT_EXPR:
+        ast_print_expr(stmt->expr);
         break;
     default:
         assert(0);

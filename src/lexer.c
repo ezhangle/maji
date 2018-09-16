@@ -224,7 +224,10 @@ struct token lexer_get_token(struct lexer *lexer)
     switch (current) {
     case '\0': token.kind = TOKEN_KIND_EOF; break;
 
+    case ',':
+    case '.':
     case ';':
+    case '?':
     case '(': case ')':
     case '[': case ']':
     case '{': case '}':
@@ -265,6 +268,10 @@ struct token lexer_get_token(struct lexer *lexer)
             lexer_advance(lexer);
             token.length = lexer->at - token.text;
             token.kind = TOKEN_KIND_COLON_ASSIGN;
+        } else if (*lexer->at && *lexer->at == ':') {
+            lexer_advance(lexer);
+            token.length = lexer->at - token.text;
+            token.kind = TOKEN_KIND_CONST_ASSIGN;
         }
         break;
     case '+':
@@ -272,6 +279,10 @@ struct token lexer_get_token(struct lexer *lexer)
             lexer_advance(lexer);
             token.length = lexer->at - token.text;
             token.kind = TOKEN_KIND_ADD_ASSIGN;
+        } else if (*lexer->at && *lexer->at == '+') {
+            lexer_advance(lexer);
+            token.length = lexer->at - token.text;
+            token.kind = TOKEN_KIND_INC;
         }
         break;
     case '-':
@@ -279,6 +290,14 @@ struct token lexer_get_token(struct lexer *lexer)
             lexer_advance(lexer);
             token.length = lexer->at - token.text;
             token.kind = TOKEN_KIND_SUB_ASSIGN;
+        } else if (*lexer->at && *lexer->at == '>') {
+            lexer_advance(lexer);
+            token.length = lexer->at - token.text;
+            token.kind = TOKEN_KIND_ARROW;
+        } else if (*lexer->at && *lexer->at == '-') {
+            lexer_advance(lexer);
+            token.length = lexer->at - token.text;
+            token.kind = TOKEN_KIND_DEC;
         }
         break;
     case '*':

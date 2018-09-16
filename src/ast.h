@@ -116,19 +116,19 @@ enum ast_decl_kind
 
 struct ast_func_param
 {
-    const char *name;
+    const uint8_t *name;
     struct ast_typespec *type;
 };
 
 struct ast_enum_item
 {
-    const char *name;
+    const uint8_t *name;
     struct ast_expr *expr;
 };
 
 struct ast_struct_item
 {
-    const char *name;
+    const uint8_t *name;
     struct ast_typespec *type;
 };
 
@@ -615,8 +615,10 @@ ast_print_typespec(struct ast_typespec *type)
     case AST_TYPESPEC_ARRAY:
         printf("(array ");
         ast_print_typespec(type->array.elem);
-        printf(" ");
-        ast_print_expr(type->array.size);
+        if (type->array.size) {
+            printf(" ");
+            ast_print_expr(type->array.size);
+        }
         printf(")");
         break;
     case AST_TYPESPEC_POINTER:
@@ -659,7 +661,7 @@ ast_print_expr(struct ast_expr *expr)
         printf("%s", expr->name);
         break;
     case AST_EXPR_CALL:
-        printf("(");
+        printf("(call ");
         ast_print_expr(expr->call.expr);
         for (struct ast_expr **it = expr->call.args;
              it != expr->call.args + expr->call.args_count;
@@ -689,12 +691,12 @@ ast_print_expr(struct ast_expr *expr)
         printf(" %s)", expr->field.field);
         break;
     case AST_EXPR_UNARY:
-        printf("(%c ", expr->unary.op);
+        printf("(%s ", token_kind_str[expr->unary.op]);
         ast_print_expr(expr->unary.expr);
         printf(")");
         break;
     case AST_EXPR_BINARY:
-        printf("(%c ", expr->binary.op);
+        printf("(%s ", token_kind_str[expr->binary.op]);
         ast_print_expr(expr->binary.left_expr);
         printf(" ");
         ast_print_expr(expr->binary.right_expr);

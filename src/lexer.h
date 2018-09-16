@@ -24,6 +24,8 @@ enum token_kind
     TOKEN_KIND_FLOAT_LITERAL,
     TOKEN_KIND_STRING_LITERAL,
 
+    TOKEN_KIND_ARROW,
+
     TOKEN_KIND_EQUAL,
     TOKEN_KIND_NOT_EQUAL,
     TOKEN_KIND_LT_EQUAL,
@@ -33,6 +35,10 @@ enum token_kind
     TOKEN_KIND_LSHIFT,
     TOKEN_KIND_RSHIFT,
 
+    TOKEN_KIND_INC,
+    TOKEN_KIND_DEC,
+
+    TOKEN_KIND_CONST_ASSIGN,
     TOKEN_KIND_COLON_ASSIGN,
     TOKEN_KIND_ADD_ASSIGN,
     TOKEN_KIND_SUB_ASSIGN,
@@ -52,6 +58,26 @@ enum token_kind
 
 static const char *token_kind_str[] =
 {
+    ['+'] = "+",
+    ['-'] = "-",
+    ['|'] = "|",
+    ['^'] = "^",
+    ['~'] = "~",
+    ['<'] = "<",
+    ['>'] = ">",
+    ['*'] = "*",
+    ['/'] = "/",
+    ['%'] = "%",
+    ['&'] = "&",
+    ['?'] = "?",
+
+    [TOKEN_KIND_IDENTIFIER] = "identifier",
+    [TOKEN_KIND_INT_LITERAL] = "integer",
+    [TOKEN_KIND_FLOAT_LITERAL] = "floating point",
+    [TOKEN_KIND_STRING_LITERAL] = "string",
+
+    [TOKEN_KIND_ARROW] = "->",
+
     [TOKEN_KIND_EQUAL] = "==",
     [TOKEN_KIND_NOT_EQUAL] = "!=",
     [TOKEN_KIND_LT_EQUAL] = "<=",
@@ -61,6 +87,10 @@ static const char *token_kind_str[] =
     [TOKEN_KIND_LSHIFT] = "<<",
     [TOKEN_KIND_RSHIFT] = ">>",
 
+    [TOKEN_KIND_INC] = "++",
+    [TOKEN_KIND_DEC] = "--",
+
+    [TOKEN_KIND_CONST_ASSIGN] = "::",
     [TOKEN_KIND_COLON_ASSIGN] = ":=",
     [TOKEN_KIND_ADD_ASSIGN] = "+=",
     [TOKEN_KIND_SUB_ASSIGN] = "-=",
@@ -73,6 +103,9 @@ static const char *token_kind_str[] =
     [TOKEN_KIND_NOT_ASSIGN] = "~=",
     [TOKEN_KIND_LSHIFT_ASSIGN] = "<<=",
     [TOKEN_KIND_RSHIFT_ASSIGN] = ">>=",
+
+    [TOKEN_KIND_EOF] = "EOF",
+    [TOKEN_KIND_UNKNOWN] = "UNKNOWN"
 };
 
 

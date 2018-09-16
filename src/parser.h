@@ -49,6 +49,8 @@ struct ast_expr *parse_expr_paren(struct parser *parser);
 
 struct ast_stmt *parse_stmt_base(struct parser *parser);
 struct ast_stmt *parse_stmt_if(struct parser *parser);
+struct ast_stmt *parse_stmt_for(struct parser *parser);
+struct ast_stmt *parse_stmt_while(struct parser *parser);
 struct ast_stmt *parse_stmt(struct parser *parser);
 struct ast_stmt_block parse_stmt_block(struct parser *parser);
 

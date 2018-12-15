@@ -79,7 +79,6 @@ int main(int argc, char **argv)
         complete_symbol(&resolver, it);
     }
 
-    /*
     for (int i = 0; i < buf_len(resolver.ordered_symbols); ++i) {
         struct symbol *it = resolver.ordered_symbols[i];
         if (it->decl) {
@@ -89,7 +88,6 @@ int main(int argc, char **argv)
         }
         printf("\n");
     }
-    */
 
     printf("\n+---------------------+\n");
     printf("| emitting bytecode.. |\n");

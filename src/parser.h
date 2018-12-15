@@ -25,7 +25,7 @@ bool parser_match(struct parser *parser, enum token_kind kind);
 void parser_consume(struct parser *parser, enum token_kind kind);
 bool parser_eof(struct parser *parser);
 
-void parser_fatal(struct token token, const char *format, ...);
+void parser_fatal(struct parser *parser, struct token token, const char *format, ...);
 
 void parser_init(struct parser *parser, uint8_t *file);
 void parser_destroy(struct parser *parser);

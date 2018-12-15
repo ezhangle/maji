@@ -49,7 +49,7 @@ struct ast_expr *parse_expr_operand(struct parser *parser)
         uint8_t at_token_value[255];
         struct token at_token = parser_peek(parser);
         lexer_print_token(at_token, at_token_value, sizeof(at_token_value));
-        parser_fatal(at_token, "unexpected token '%s' in expression", at_token_value);
+        parser_fatal(parser, at_token, "unexpected token '%s' in expression", at_token_value);
         return NULL;
     }
 }
@@ -232,12 +232,12 @@ struct ast_stmt *parse_stmt_base(struct parser *parser)
 
     if (parser_match(parser, TOKEN_KIND_COLON_ASSIGN)) {
         if (expr->kind != AST_EXPR_IDENTIFIER) {
-            parser_fatal(parser_previous(parser), ":= must be preceeded by an identifier\n");
+            parser_fatal(parser, parser_previous(parser), ":= must be preceeded by an identifier\n");
         }
         stmt = ast_stmt_init(expr->name, parse_expr(parser));
     } else if (parser_match(parser, TOKEN_KIND_CONST_ASSIGN)) {
         if (expr->kind != AST_EXPR_IDENTIFIER) {
-            parser_fatal(parser_previous(parser), ":: must be preceeded by an identifier\n");
+            parser_fatal(parser, parser_previous(parser), ":: must be preceeded by an identifier\n");
         }
         stmt = ast_stmt_const(expr->name, parse_expr(parser));
     } else if (parser_match_assignment(parser)) {
@@ -249,7 +249,7 @@ struct ast_stmt *parse_stmt_base(struct parser *parser)
         stmt = ast_stmt_assign(op, expr, NULL);
     } else if (parser_match(parser, ':')) {
         if (expr->kind != AST_EXPR_IDENTIFIER) {
-            parser_fatal(parser_previous(parser), ": must be preceeded by an identifier in a statement context\n");
+            parser_fatal(parser, parser_previous(parser), ": must be preceeded by an identifier in a statement context\n");
         }
         struct ast_typespec *type = parse_type(parser);
         struct ast_expr *init = NULL;
@@ -300,7 +300,7 @@ struct ast_stmt *parse_stmt_for(struct parser *parser)
     if (!parser_check(parser, ')')) {
         next = parse_stmt_base(parser);
         if (next->kind == AST_STMT_INIT || next->kind == AST_STMT_CONST) {
-            parser_fatal(parser_previous(parser), "init/const statements not allowed in for statement's next clause");
+            parser_fatal(parser, parser_previous(parser), "init/const statements not allowed in for statement's next clause");
         }
     }
     parser_consume(parser, ')');
@@ -394,7 +394,7 @@ struct ast_typespec *parse_type_base(struct parser *parser)
         uint8_t at_token_value[255];
         struct token at_token = parser_peek(parser);
         lexer_print_token(at_token, at_token_value, sizeof(at_token_value));
-        parser_fatal(at_token, "unexpected token %s in type\n", at_token_value);
+        parser_fatal(parser, at_token, "unexpected token %s in type\n", at_token_value);
         return NULL;
     }
 }
@@ -532,12 +532,12 @@ struct ast_decl *parse_decl(struct resolver *resolver)
 
         for (int i = 0; i < buf_len(resolver->files); ++i) {
             if (file == resolver->files[i]) {
-                parser_fatal(at_token, "could not load file '%s', it has already been loaded!\n", file);
+                parser_fatal(parser, at_token, "could not load file '%s', it has already been loaded!\n", file);
             }
         }
 
         if (!file_exists(file)) {
-            parser_fatal(at_token, "could not load file '%s', it does not exist!\n", file);
+            parser_fatal(parser, at_token, "could not load file '%s', it does not exist!\n", file);
         }
 
         buf_push(resolver->files, file);
@@ -565,7 +565,7 @@ struct ast_decl *parse_decl(struct resolver *resolver)
         uint8_t at_token_value[255];
         struct token at_token = parser_peek(parser);
         lexer_print_token(at_token, at_token_value, sizeof(at_token_value));
-        parser_fatal(at_token, "expected token '::', ':=' or ':', but got '%s'\n", at_token_value);
+        parser_fatal(parser, at_token, "expected token '::', ':=' or ':', but got '%s'\n", at_token_value);
         return NULL;
     }
 }
@@ -629,7 +629,7 @@ void parser_consume(struct parser *parser, enum token_kind kind)
     struct token at_token = parser_peek(parser);
     lexer_print_token(at_token, at_token_value, sizeof(at_token_value));
 
-    parser_fatal(at_token, "expected token '%s', but got '%s'\n", token_kind_str[kind], at_token_value);
+    parser_fatal(parser, at_token, "expected token '%s', but got '%s'\n", token_kind_str[kind], at_token_value);
 }
 
 bool parser_eof(struct parser *parser)
@@ -638,11 +638,11 @@ bool parser_eof(struct parser *parser)
     return token.kind == TOKEN_KIND_EOF;
 }
 
-void parser_fatal(struct token token, const char *format, ...)
+void parser_fatal(struct parser *parser, struct token token, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
-    printf("#%d:%d ", token.line, token.column);
+    printf("%s:#%d:%d ", parser->lexer.file, token.line, token.column);
     vprintf(format, args);
     va_end(args);
     exit(1);

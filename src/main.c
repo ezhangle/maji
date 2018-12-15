@@ -2,58 +2,99 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <getopt.h>
+#include <string.h>
 
 #include "lexer.h"
-#include "lexer.c"
-
+#include "parser.h"
+#include "resolve.h"
 #include "ast.h"
 
-#include "parser.h"
+#include "lexer.c"
 #include "parser.c"
+#include "resolve.c"
 
-struct parser init_stream(const uint8_t *stream)
-{
-    struct parser parser = {
-        .lexer = (struct lexer) {
-            .buffer = (uint8_t*)stream,
-            .at = (uint8_t*)stream,
-            .column = 1,
-            .line = 1
-        },
-        .tokens = NULL,
-        .current_token = 0,
-    };
-    buf_push(parser.tokens, lexer_get_token(&parser.lexer));
-    return parser;
-}
+#include "bytecode/bytecode_generator.c"
 
-void ast_parse_test(void)
+void parse_arguments(int argc, char **argv, struct compiler_options *options)
 {
-    parser_init_keywords();
-    const uint8_t *tests[] = {
-        u8"x := b == 1 ? 1+2 : 3-4;",
-        u8"Vector :: struct { x: float; y: float; }",
-        u8"Color :: enum { RED = 3, GREEN, BLUE = 0 }",
-        u8"Words :: enum { }",
-        u8"fact :: (n: int) -> int { trace(\"fact\"); if (n == 0) { return 1; } else { return n * fact(n-1); } }",
-        u8"fact :: (n: int) -> int { p := 1; for (i := 1; i <= n; ++i) { p *= i; } return p; }",
-        u8"pi :: 3.14;",
-        u8"v: int = 1;",
-        u8"foo :: () { while (is_running) { printf(\"heh\"); } }",
-        u8"w := 2;",
-        u8"foo := a ? a&b + c<<d + e*f == +u-v-w + *g/h(x,y) + -i%k[x] && m <= n*(p+q)/r : 0;",
-        u8"main :: (argc: int, argv: int*[]) -> int { { str :: \"hello, world\"; len := strlen(str); len += 1; } }",
+    int option;
+    const char *short_options = "o:";
+    struct option long_options[] = {
+        { NULL, 0, NULL, 0 }
     };
-    for (const uint8_t **it = tests; it != tests + sizeof(tests)/sizeof(*tests); it++) {
-        struct parser parser = init_stream(*it);
-        struct ast_decl *decl = parse_decl(&parser);
-        ast_print_decl(decl);
-        printf("\n");
+
+    while ((option = getopt_long(argc, argv, short_options, long_options, NULL)) != -1) {
+        switch (option) {
+        case 'o': {
+            options->output_file = copy_string((uint8_t*)optarg);
+        } break;
+        }
     }
 }
 
 int main(int argc, char **argv)
 {
-    ast_parse_test();
-    return 0;
+    if (argc < 2) {
+        printf("Usage: %s <file>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    uint8_t *source_file = intern_string((uint8_t*)argv[1]);
+    if (!file_exists(source_file)) {
+        printf("file '%s' does not exist\n", argv[1]);
+        return EXIT_FAILURE;
+    }
+
+    struct compiler_options options = {};
+    parse_arguments(argc, argv, &options);
+
+    struct resolver resolver;
+    resolver_init(&resolver);
+    buf_push(resolver.files, source_file);
+
+    printf("+-----------------+\n");
+    printf("| parsing files.. |\n");
+    printf("+-----------------+\n");
+    for (int i = 0; i < buf_len(resolver.files); ++i) {
+        uint8_t *file = resolver.files[i];
+        printf("| + %s\n", file);
+
+        parser_init(&resolver.parser, file);
+        while (!parser_eof(&resolver.parser)) {
+            struct ast_decl *decl = parse_decl(&resolver);
+            if (!decl) continue;
+
+            buf_push(resolver.decls, decl);
+            resolve_decl(&resolver, decl);
+        }
+        parser_destroy(&resolver.parser);
+    }
+
+    printf("\n+---------------------+\n");
+    printf("| resolving symbols.. |\n");
+    printf("+---------------------+\n");
+    for (int i = 0; i < buf_len(resolver.symbols); ++i) {
+        struct symbol *it = resolver.symbols[i];
+        complete_symbol(&resolver, it);
+    }
+
+    /*
+    for (int i = 0; i < buf_len(resolver.ordered_symbols); ++i) {
+        struct symbol *it = resolver.ordered_symbols[i];
+        if (it->decl) {
+            ast_print_decl(it->decl);
+        } else {
+            printf("%s", it->name);
+        }
+        printf("\n");
+    }
+    */
+
+    printf("\n+---------------------+\n");
+    printf("| emitting bytecode.. |\n");
+    printf("+---------------------+\n");
+
+    bytecode_generate(&resolver, &options);
+    return EXIT_SUCCESS;
 }

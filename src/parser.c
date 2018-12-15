@@ -247,6 +247,16 @@ struct ast_stmt *parse_stmt_base(struct parser *parser)
                (parser_match(parser, TOKEN_KIND_DEC))) {
         enum token_kind op = parser_previous(parser).kind;
         stmt = ast_stmt_assign(op, expr, NULL);
+    } else if (parser_match(parser, ':')) {
+        if (expr->kind != AST_EXPR_IDENTIFIER) {
+            parser_fatal(parser_previous(parser), ": must be preceeded by an identifier in a statement context\n");
+        }
+        struct ast_typespec *type = parse_type(parser);
+        struct ast_expr *init = NULL;
+        if (parser_match(parser, '=')) {
+            init = parse_expr(parser);
+        }
+        stmt = ast_stmt_decl(expr->name, type, init);
     } else {
         stmt = ast_stmt_expr(expr);
     }
@@ -314,7 +324,10 @@ struct ast_stmt *parse_stmt(struct parser *parser)
     } else if (parser_check(parser, '{')) {
         return ast_stmt_block(parse_stmt_block(parser));
     } else if (parser_match_keyword(parser, return_keyword)) {
-        struct ast_expr *expr = parse_expr(parser);
+        struct ast_expr *expr = NULL;
+        if (!parser_check(parser, ';')) {
+            expr = parse_expr(parser);
+        }
         parser_consume(parser, ';');
         return ast_stmt_return(expr);
     } else if (parser_match_keyword(parser, break_keyword)) {
@@ -392,10 +405,7 @@ struct ast_typespec *parse_type(struct parser *parser)
     while ((parser_check(parser, '[')) ||
            (parser_check(parser, '*'))) {
         if (parser_match(parser, '[')) {
-            struct ast_expr *expr = NULL;
-            if (!parser_check(parser, ']')) {
-                expr = parse_expr(parser);
-            }
+            struct ast_expr *expr = parse_expr(parser);
             parser_consume(parser, ']');
             type = ast_typespec_array(type, expr);
         } else {
@@ -474,6 +484,13 @@ struct ast_decl *parse_decl_func(struct parser *parser, struct token identifier)
         ret = parse_type(parser);
     }
 
+    if (parser_match(parser, TOKEN_KIND_FOREIGN)) {
+        parser_consume(parser, TOKEN_KIND_STRING_LITERAL);
+        const uint8_t *lib = parser_previous(parser).as.name;
+        parser_consume(parser, ';');
+        return ast_decl_func_foreign(identifier.as.name, params, buf_len(params), ret, lib);
+    }
+
     struct ast_stmt_block block = parse_stmt_block(parser);
     return ast_decl_func(identifier.as.name, params, buf_len(params), ret, block);
 }
@@ -503,8 +520,30 @@ struct ast_decl *parse_decl_var(struct parser *parser, struct token identifier)
     return ast_decl_var(identifier.as.name, type, expr);
 }
 
-struct ast_decl *parse_decl(struct parser *parser)
+struct ast_decl *parse_decl(struct resolver *resolver)
 {
+    struct parser *parser = &resolver->parser;
+
+    while (parser_match(parser, TOKEN_KIND_LOAD)) {
+        parser_consume(parser, TOKEN_KIND_STRING_LITERAL);
+        struct token at_token = parser_previous(parser);
+        uint8_t *file = at_token.as.name;
+        parser_consume(parser, ';');
+
+        for (int i = 0; i < buf_len(resolver->files); ++i) {
+            if (file == resolver->files[i]) {
+                parser_fatal(at_token, "could not load file '%s', it has already been loaded!\n", file);
+            }
+        }
+
+        if (!file_exists(file)) {
+            parser_fatal(at_token, "could not load file '%s', it does not exist!\n", file);
+        }
+
+        buf_push(resolver->files, file);
+        return NULL;
+    }
+
     parser_consume(parser, TOKEN_KIND_IDENTIFIER);
     struct token identifier = parser_previous(parser);
 
@@ -611,6 +650,8 @@ void parser_fatal(struct token token, const char *format, ...)
 
 void parser_init(struct parser *parser, uint8_t *file)
 {
+    memset(parser, 0, sizeof(struct parser));
+    parser_init_keywords();
     parser->tokens = NULL;
     parser->current_token = 0;
     lexer_init(&parser->lexer, file);

@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stdarg.h>
 
+struct resolver;
 struct parser
 {
     struct lexer lexer;
@@ -68,6 +69,6 @@ struct ast_decl *parse_decl_func(struct parser *parser, struct token identifier)
 struct ast_decl *parse_decl_const(struct parser *parser, struct token identifier);
 struct ast_decl *parse_decl_var_infer(struct parser *parser, struct token identifier);
 struct ast_decl *parse_decl_var(struct parser *parser, struct token identifier);
-struct ast_decl *parse_decl(struct parser *parser);
+struct ast_decl *parse_decl(struct resolver *resolver);
 
 #endif

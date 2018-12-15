@@ -400,6 +400,26 @@ struct token lexer_get_token(struct lexer *lexer)
         }
         break;
 
+    case '#':
+        if (*lexer->at && *lexer->at == 'f') {
+            lexer_advance(lexer);
+            token.length = lexer->at - token.text;
+            token.kind = TOKEN_KIND_FOREIGN;
+        } else if ((lexer->at[0] && lexer->at[0] == 'l') &&
+                   (lexer->at[1] && lexer->at[1] == 'o') &&
+                   (lexer->at[2] && lexer->at[2] == 'a') &&
+                   (lexer->at[3] && lexer->at[3] == 'd')) {
+            lexer_advance(lexer);
+            lexer_advance(lexer);
+            lexer_advance(lexer);
+            lexer_advance(lexer);
+            token.length = lexer->at - token.text;
+            token.kind = TOKEN_KIND_LOAD;
+        } else {
+            token.kind = TOKEN_KIND_UNKNOWN;
+        }
+        break;
+
     default:
         if (is_decimal(current)) {
             bool overflow = lexer_eat_number(lexer, &token);

@@ -52,6 +52,9 @@ enum token_kind
     TOKEN_KIND_LSHIFT_ASSIGN,
     TOKEN_KIND_RSHIFT_ASSIGN,
 
+    TOKEN_KIND_FOREIGN,
+    TOKEN_KIND_LOAD,
+
     TOKEN_KIND_EOF,
     TOKEN_KIND_UNKNOWN
 };
@@ -119,6 +122,8 @@ static const char *token_kind_str[] =
     [TOKEN_KIND_NOT_ASSIGN] = "~=",
     [TOKEN_KIND_LSHIFT_ASSIGN] = "<<=",
     [TOKEN_KIND_RSHIFT_ASSIGN] = ">>=",
+
+    [TOKEN_KIND_FOREIGN] = "#f",
 
     [TOKEN_KIND_EOF] = "EOF",
     [TOKEN_KIND_UNKNOWN] = "UNKNOWN"

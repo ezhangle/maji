@@ -94,7 +94,7 @@ int main(int argc, char **argv)
     printf("\n+---------------------+\n");
     printf("| emitting bytecode.. |\n");
     printf("+---------------------+\n");
-
     bytecode_generate(&resolver, &options);
+
     return EXIT_SUCCESS;
 }

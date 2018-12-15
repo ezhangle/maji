@@ -1,0 +1,71 @@
+#load "sample/s2.maji";
+
+greeting :: "hello, world!\n";
+success :: "success!\n";
+failure :: "fail!\n";
+
+pos: vec2;
+y := backing_type.NON_RETAINED;
+x := my_counter == 10 ? 3+4 : 4-4;
+my_counter := 10;
+
+backing_type :: enum {
+    NON_RETAINED,
+    RETAINED = 0b111,
+    BUFFERED
+}
+
+bar :: (n: int) -> int {
+    return n + 1;
+}
+
+test_forever_break :: () {
+    for (;;) {
+        printf(greeting);
+        if (++x > 9) {
+            break;
+        }
+    }
+}
+
+main :: () -> int {
+    pos.x = 2;
+    pos.y = 7;
+
+    pptr := &pos;
+    (*pptr).y = 2;
+
+    xx: int = 5;
+    pos.z = &xx;
+
+    *pos.z = 100;
+    pos.y = *pos.z;
+
+    ppp := &pos.z;
+    **ppp = 50;
+
+    pos.y = *pos.z;
+
+    y = backing_type.BUFFERED;
+
+    a := my_counter;
+    b := &a;
+    *b = 0;
+    my_counter = a;
+
+    test_forever_break();
+
+    if (y == backing_type.BUFFERED) {
+        printf(success);
+    } else {
+        printf(failure);
+    }
+
+    return pos.x + pos.y;
+}
+
+vec2 :: struct {
+    x: int;
+    y: int;
+    z: int*;
+}

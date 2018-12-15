@@ -1,0 +1,24 @@
+player :: struct {
+    position: vec2;
+}
+
+player :: struct {
+    x: float;
+    y: float;
+}
+
+vec2 :: struct {
+    x: float;
+    y: float;
+}
+
+vec2_add :: (a: vec2, b: vec2) -> vec2 {
+    result: vec2;
+    result.x = a.x + b.x;
+    result.y = a.y + b.y;
+    return result;
+}
+
+main :: (argc: int, argv: char **) -> int {
+    p: player;
+}

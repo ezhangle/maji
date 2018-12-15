@@ -1,0 +1,2 @@
+sleep :: (seconds: int) -> int #f "/usr/lib/libc.dylib";
+printf :: (format: char*) -> int #f "/usr/lib/libc.dylib";

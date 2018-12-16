@@ -3,6 +3,7 @@
 greeting :: "hello, world!\n";
 success :: "success!\n";
 failure :: "fail!\n";
+ending :: "end..\n";
 
 pos: vec2;
 y := backing_type.NON_RETAINED;
@@ -28,6 +29,12 @@ test_forever_break :: () {
     }
 }
 
+test_for :: () {
+    for (i := 0; i < 1; ++i) {
+        printf(greeting);
+    }
+}
+
 main :: () -> int {
     pos.x = 2;
     pos.y = 7;
@@ -46,7 +53,7 @@ main :: () -> int {
 
     pos.y = *pos.z;
 
-    y = backing_type.BUFFERED;
+    y = backing_type.RETAINED;
 
     a := my_counter;
     b := &a;
@@ -55,11 +62,17 @@ main :: () -> int {
 
     test_forever_break();
 
-    if (y == backing_type.BUFFERED) {
+    if (y == backing_type.RETAINED) {
         printf(success);
+    } else if (y == backing_type.BUFFERED) {
+        printf(greeting);
     } else {
         printf(failure);
     }
+
+    printf(ending);
+
+    test_for();
 
     return pos.x + pos.y;
 }

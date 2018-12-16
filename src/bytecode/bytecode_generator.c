@@ -897,26 +897,50 @@ void bytecode_emit_stmt_decl_local(struct bytecode_emitter *emitter, struct ast_
 
 void bytecode_emit_stmt_if(struct bytecode_emitter *emitter, struct ast_stmt_if stmt)
 {
+    uint64_t **end_branch_patches = NULL;
+
     bytecode_emit_expression(emitter, stmt.condition);
     bytecode_emit(emitter, _cmp_reg_imm(BYTECODE_REGISTER_RCX));
     bytecode_emit(emitter, 0);
     bytecode_emit(emitter, _jz_imm());
-
-    uint64_t *else_branch_patch = bytecode_emitter_mark_patch_source(emitter);
+    uint64_t *elseif_branch_patch = bytecode_emitter_mark_patch_source(emitter);
     bytecode_emit(emitter, -1);
 
     bytecode_emit_stmt_block(emitter, stmt.then_block);
     bytecode_emit(emitter, _jmp_imm());
-
     uint64_t *end_branch_patch = bytecode_emitter_mark_patch_source(emitter);
+    buf_push(end_branch_patches, end_branch_patch);
     bytecode_emit(emitter, -1);
 
-    int else_mark = bytecode_emitter_mark_patch_target(emitter);
+    int elseif_mark = bytecode_emitter_mark_patch_target(emitter);
+
+    for (int i = 0; i < stmt.else_ifs_count; ++i) {
+        *elseif_branch_patch = elseif_mark;
+
+        struct ast_else_if elseif = stmt.else_ifs[i];
+        bytecode_emit_expression(emitter, elseif.condition);
+        bytecode_emit(emitter, _cmp_reg_imm(BYTECODE_REGISTER_RCX));
+        bytecode_emit(emitter, 0);
+        bytecode_emit(emitter, _jz_imm());
+        elseif_branch_patch = bytecode_emitter_mark_patch_source(emitter);
+        bytecode_emit(emitter, -1);
+
+        bytecode_emit_stmt_block(emitter, elseif.block);
+        bytecode_emit(emitter, _jmp_imm());
+        end_branch_patch = bytecode_emitter_mark_patch_source(emitter);
+        buf_push(end_branch_patches, end_branch_patch);
+        bytecode_emit(emitter, -1);
+
+        elseif_mark = bytecode_emitter_mark_patch_target(emitter);
+    }
+    *elseif_branch_patch = elseif_mark;
+
     bytecode_emit_stmt_block(emitter, stmt.else_block);
     int end_mark = bytecode_emitter_mark_patch_target(emitter);
 
-    *else_branch_patch = else_mark;
-    *end_branch_patch  = end_mark;
+    for (int i = 0; i < buf_len(end_branch_patches); ++i) {
+        *end_branch_patches[i] = end_mark;
+    }
 }
 
 void bytecode_emit_stmt_for(struct bytecode_emitter *emitter, struct ast_stmt_for stmt)

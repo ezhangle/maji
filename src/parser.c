@@ -532,12 +532,12 @@ struct ast_decl *parse_decl(struct resolver *resolver)
 
         for (int i = 0; i < buf_len(resolver->files); ++i) {
             if (file == resolver->files[i]) {
-                parser_fatal(parser, at_token, "could not load file '%s', it has already been loaded!\n", file);
+                parser_fatal(parser, at_token, "\e[1;31merror:\e[0m file already loaded: '%s'\n", file);
             }
         }
 
         if (!file_exists(file)) {
-            parser_fatal(parser, at_token, "could not load file '%s', it does not exist!\n", file);
+            parser_fatal(parser, at_token, "\e[1;31merror:\e[0m file not found: '%s'\n", file);
         }
 
         buf_push(resolver->files, file);
@@ -642,7 +642,7 @@ void parser_fatal(struct parser *parser, struct token token, const char *format,
 {
     va_list args;
     va_start(args, format);
-    printf("%s:#%d:%d ", parser->lexer.file, token.line, token.column);
+    printf("%s:\e[1;34m#%d:%d\e[0m ", parser->lexer.file, token.line, token.column);
     vprintf(format, args);
     va_end(args);
     exit(1);

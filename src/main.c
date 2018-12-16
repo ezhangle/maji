@@ -16,42 +16,58 @@
 
 #include "bytecode/bytecode_generator.c"
 
-void parse_arguments(int argc, char **argv, struct compiler_options *options)
+void print_usage(const char *name)
+{
+    printf("USAGE: %s <inputs> [options]\n", name);
+    printf("\nOPTIONS:\n  -o <file>\n");
+}
+
+void parse_arguments(int argc, char **argv, struct resolver *resolver, struct compiler_options *options)
 {
     int option;
-    const char *short_options = "o:";
+    const char *short_options = "o:h";
     struct option long_options[] = {
+        { "help", no_argument, NULL, 'h' },
         { NULL, 0, NULL, 0 }
     };
 
     while ((option = getopt_long(argc, argv, short_options, long_options, NULL)) != -1) {
         switch (option) {
+        case 'h': {
+            print_usage(argv[0]);
+            exit(EXIT_SUCCESS);
+        } break;
         case 'o': {
             options->output_file = copy_string((uint8_t*)optarg);
         } break;
         }
+    }
+
+    for (int i = optind; i < argc; ++i) {
+        if (argv[i][0] == '-') break;
+
+        uint8_t *source_file = intern_string((uint8_t*)argv[i]);
+        if (!file_exists(source_file)) {
+            printf("%s: \e[1;31merror:\e[0m file not found: '%s'\n", argv[0], argv[i]);
+            exit(EXIT_FAILURE);
+        }
+
+        buf_push(resolver->files, source_file);
     }
 }
 
 int main(int argc, char **argv)
 {
     if (argc < 2) {
-        printf("Usage: %s <file>\n", argv[0]);
+        printf("%s: \e[1;31merror:\e[0m no input files\n", argv[0]);
         return EXIT_FAILURE;
     }
-
-    uint8_t *source_file = intern_string((uint8_t*)argv[1]);
-    if (!file_exists(source_file)) {
-        printf("file '%s' does not exist\n", argv[1]);
-        return EXIT_FAILURE;
-    }
-
-    struct compiler_options options = {};
-    parse_arguments(argc, argv, &options);
 
     struct resolver resolver;
     resolver_init(&resolver);
-    buf_push(resolver.files, source_file);
+
+    struct compiler_options options = {};
+    parse_arguments(argc, argv, &resolver, &options);
 
     printf("+-----------------+\n");
     printf("| parsing files.. |\n");

@@ -401,7 +401,19 @@ struct token lexer_get_token(struct lexer *lexer)
         break;
 
     case '#':
-        if (*lexer->at && *lexer->at == 'f') {
+        if ((lexer->at[0] && lexer->at[0] == 'f') &&
+            (lexer->at[1] && lexer->at[1] == 'o') &&
+            (lexer->at[2] && lexer->at[2] == 'r') &&
+            (lexer->at[3] && lexer->at[3] == 'e') &&
+            (lexer->at[4] && lexer->at[4] == 'i') &&
+            (lexer->at[5] && lexer->at[5] == 'g') &&
+            (lexer->at[6] && lexer->at[6] == 'n')) {
+            lexer_advance(lexer);
+            lexer_advance(lexer);
+            lexer_advance(lexer);
+            lexer_advance(lexer);
+            lexer_advance(lexer);
+            lexer_advance(lexer);
             lexer_advance(lexer);
             token.length = lexer->at - token.text;
             token.kind = TOKEN_KIND_FOREIGN;

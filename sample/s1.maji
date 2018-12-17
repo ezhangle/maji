@@ -1,4 +1,4 @@
-#load "sample/s2.maji";
+#load "s2.maji";
 
 greeting :: "hello, world!\n";
 success :: "success!\n";

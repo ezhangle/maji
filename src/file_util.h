@@ -6,6 +6,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <sys/stat.h>
+#include <string.h>
+
+#include "string_util.h"
 
 static inline bool
 file_exists(const uint8_t *file)
@@ -13,6 +16,16 @@ file_exists(const uint8_t *file)
     struct stat sb;
     bool result = stat((char*)file, &sb) == 0;
     return result;
+}
+
+static inline uint8_t *
+file_directory(const uint8_t *file)
+{
+    char *last_slash = strrchr((char*)file, '/');
+    *last_slash = '\0';
+    uint8_t *directory = copy_string(file);
+    *last_slash = '/';
+    return directory;
 }
 
 static inline uint8_t *

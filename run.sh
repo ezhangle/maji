@@ -1,4 +1,4 @@
-./bin/majic sample/s1.maji sample/s2.maji -o s1.bcr
+./bin/majic sample/s1.maji -o s1.bcr
 echo ""
 ../bytecode/bin/bcr -p s1.bcr
 RET=$?

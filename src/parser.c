@@ -527,14 +527,16 @@ struct ast_decl *parse_decl(struct resolver *resolver)
     while (parser_match(parser, TOKEN_KIND_LOAD)) {
         parser_consume(parser, TOKEN_KIND_STRING_LITERAL);
         struct token at_token = parser_previous(parser);
-        uint8_t *file = at_token.as.name;
+        uint8_t *filename = at_token.as.name;
         parser_consume(parser, ';');
 
-        for (int i = 0; i < buf_len(resolver->files); ++i) {
-            if (file == resolver->files[i]) {
-                parser_fatal(parser, at_token, "\e[1;31merror:\e[0m file already loaded: '%s'\n", file);
-            }
-        }
+        uint8_t *directory = file_directory(parser->lexer.file);
+        size_t directory_length = length_of_string(directory);
+        size_t filename_length = length_of_string(filename);
+        size_t file_length = directory_length + filename_length + 2;
+
+        uint8_t *file = malloc(file_length * sizeof(uint8_t));
+        snprintf((char*)file, file_length, "%s/%s", directory, filename);
 
         if (!file_exists(file)) {
             parser_fatal(parser, at_token, "\e[1;31merror:\e[0m file not found: '%s'\n", file);
@@ -642,7 +644,7 @@ void parser_fatal(struct parser *parser, struct token token, const char *format,
 {
     va_list args;
     va_start(args, format);
-    printf("%s:\e[1;34m#%d:%d\e[0m ", parser->lexer.file, token.line, token.column);
+    printf("\e[1;32m%s\e[0m \e[1;34m#%d:%d\e[0m ", parser->lexer.file, token.line, token.column);
     vprintf(format, args);
     va_end(args);
     exit(1);

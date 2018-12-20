@@ -42,6 +42,13 @@ test_for_ptr :: (n: int*) {
     *n = 0;
 }
 
+test_for_ptr_c :: (i: int, n: int*) {
+    for (;i < *n; ++i) {
+        printf(greeting);
+    }
+    *n = 0;
+}
+
 main :: () -> int {
     pos.x = 2;
     pos.y = 7;
@@ -90,7 +97,7 @@ main :: () -> int {
     // test_for(xx);
     test_for_ptr(&xx);
     xx = 8;
-    test_for_ptr(pos.z);
+    test_for_ptr_c(7, pos.z);
 
     return xx;
     return pos.x + pos.y;

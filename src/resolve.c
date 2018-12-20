@@ -987,8 +987,11 @@ void resolve_func(struct resolver *resolver, struct symbol *symbol)
     for (size_t i = 0; i < decl->func_decl.params_count; ++i) {
         struct ast_func_param *param = &decl->func_decl.params[i];
         param->address = resolver->locals_address;
+        printf("allocating address '%" PRIu64 "' for param '%s'\n", param->address, param->name);
         resolver->locals_address += type_sizeof(resolve_typespec(resolver, param->type));
-        symbol_push(resolver, symbol_var(param->name, resolve_typespec(resolver, param->type)));
+        struct symbol *param_symbol = symbol_var(param->name, resolve_typespec(resolver, param->type));
+        param_symbol->address = param->address;
+        symbol_push(resolver, param_symbol);
     }
     if (decl->kind == AST_DECL_FUNC) {
         resolve_statement_block(resolver, decl->func_decl.block, resolve_typespec(resolver, decl->func_decl.ret_type));

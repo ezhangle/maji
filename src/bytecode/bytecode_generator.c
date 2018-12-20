@@ -586,7 +586,6 @@ void bytecode_emit_expression_dereference(struct bytecode_emitter *emitter, stru
             // NOTE: if the type we are derefencing is a pointer, we need to do an additional read.
             // This is because we load the address of a local variable to read from, but the value of the variable
             // is the address of the variable we are pointing to; we must then read the value of that variable!
-            printf("identifier %s is ptr, require another read\n", symbol->name);
             bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R9));
             type = type->ptr.elem;
         }
@@ -617,7 +616,6 @@ void bytecode_emit_expression_dereference(struct bytecode_emitter *emitter, stru
             // NOTE: if the type we are derefencing is a pointer, we need to do an additional read.
             // This is because we load the address of a local variable to read from, but the value of the variable
             // is the address of the variable we are pointing to; we must then read the value of that variable!
-            printf("identifier %s is ptr, require another read\n", symbol->name);
             bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R9));
             type = type->ptr.elem;
         }

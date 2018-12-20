@@ -120,6 +120,7 @@ struct ast_func_param
 {
     const uint8_t *name;
     struct ast_typespec *type;
+    uint64_t address;
 };
 
 struct ast_enum_item
@@ -322,6 +323,7 @@ struct ast_expr
 {
     enum ast_expr_kind kind;
     struct symbol *symbol;
+    struct resolved_expr res;
 
     union {
         uint64_t int_val;

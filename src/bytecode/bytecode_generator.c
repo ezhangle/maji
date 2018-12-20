@@ -183,6 +183,8 @@ struct bytecode_emitter
     uint64_t break_patches_count;
     uint64_t *continue_patches[12];
     uint64_t continue_patches_count;
+    uint64_t *return_patches[12];
+    uint64_t return_patches_count;
     uint64_t **call_patches;
     struct symbol **call_patches_symbol;
     const uint8_t *entry_point;
@@ -392,12 +394,12 @@ void bytecode_emit_expression_or(struct bytecode_emitter *emitter, struct ast_ex
 void bytecode_emit_expression_assign(struct bytecode_emitter *emitter, struct ast_expr *left_expr, struct ast_expr *right_expr)
 {
     bytecode_emit_expression(emitter, left_expr);
-    bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RDX));
+    bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_R9));
 
     bytecode_emit_expression(emitter, right_expr);
 
-    bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RDX));
-    bytecode_emit(emitter, _memw_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
+    bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_R9));
+    bytecode_emit(emitter, _memw_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_RCX));
 }
 
 struct bytecode_data_string
@@ -448,13 +450,13 @@ void bytecode_emit_expression_identifier(struct bytecode_emitter *emitter, struc
     assert(symbol);
 
     if (symbol->decl) {
-        bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_RDX));
+        bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_R9));
     } else {
-        bytecode_emit(emitter, _lea_lcl_reg_imm(BYTECODE_REGISTER_RDX));
+        bytecode_emit(emitter, _lea_lcl_reg_imm(BYTECODE_REGISTER_R9));
     }
 
     bytecode_emit(emitter, symbol->address);
-    bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_RDX));
+    bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
 }
 
 void _bytecode_emit_expression_binary(struct bytecode_emitter *emitter, enum token_kind op, struct ast_expr *left_expr, struct ast_expr *right_expr)
@@ -529,7 +531,7 @@ void bytecode_emit_expression_inc(struct bytecode_emitter *emitter, struct ast_e
     bytecode_emit_expression(emitter, expr);
     bytecode_emit(emitter, _add_i64_reg_imm(BYTECODE_REGISTER_RCX));
     bytecode_emit(emitter, 1);
-    bytecode_emit(emitter, _memw_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
+    bytecode_emit(emitter, _memw_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_RCX));
 }
 
 void bytecode_emit_expression_dec(struct bytecode_emitter *emitter, struct ast_expr *expr)
@@ -537,84 +539,90 @@ void bytecode_emit_expression_dec(struct bytecode_emitter *emitter, struct ast_e
     bytecode_emit_expression(emitter, expr);
     bytecode_emit(emitter, _sub_i64_reg_imm(BYTECODE_REGISTER_RCX));
     bytecode_emit(emitter, 1);
-    bytecode_emit(emitter, _memw_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
+    bytecode_emit(emitter, _memw_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_RCX));
 }
 
 void bytecode_emit_expression_dereference(struct bytecode_emitter *emitter, struct ast_expr *expr)
 {
+    // NOTE: The expression could be of type AST_EXPR_UNARY, which usually
+    // means we are derefencing a multi-level pointer. We need to find the innermost expression.
+    while (expr->kind == AST_EXPR_UNARY) {
+        assert(expr->unary.op == '*');
+        expr = expr->unary.expr;
+    }
+
     if (expr->kind == AST_EXPR_FIELD) {
         // NOTE: support expressions of type FIELD ACCESS
         assert(expr->field.expr->symbol);
         struct symbol *symbol = expr->field.expr->symbol;
         assert(symbol);
 
+        printf("dereference field access %s\n", symbol->name);
+
         int field_offset = 0;
+        struct type *type = NULL;
         for (size_t i = 0; i < symbol->type->aggregate.fields_count; ++i) {
             struct type_field field = symbol->type->aggregate.fields[i];
             if (field.name == expr->field.name) {
+                type = field.type;
                 break;
             }
             field_offset += type_sizeof(field.type);
         }
 
         if (symbol->decl) {
-            bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_RDX));
+            bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_R9));
         } else {
-            bytecode_emit(emitter, _lea_lcl_reg_imm(BYTECODE_REGISTER_RDX));
+            bytecode_emit(emitter, _lea_lcl_reg_imm(BYTECODE_REGISTER_R9));
         }
 
         bytecode_emit(emitter, symbol->address);
 
         bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_R11));
         bytecode_emit(emitter, field_offset);
-        bytecode_emit(emitter, _add_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_R11));
-        bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_RDX));
-    } else if (expr->kind == AST_EXPR_UNARY) {
-        // NOTE: support unary expressions of type POINTER DEREFERENCE
-        assert(expr->unary.op == '*');
-        assert(expr->unary.expr->symbol);
-        struct symbol *symbol = expr->unary.expr->symbol;
-        assert(symbol);
-        assert(symbol->type);
-        assert(symbol->type->kind == TYPE_PTR);
+        bytecode_emit(emitter, _add_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R11));
 
-        struct type *type = symbol->type;
         while (type->kind == TYPE_PTR) {
+            // NOTE: if the type we are derefencing is a pointer, we need to do an additional read.
+            // This is because we load the address of a local variable to read from, but the value of the variable
+            // is the address of the variable we are pointing to; we must then read the value of that variable!
+            printf("identifier %s is ptr, require another read\n", symbol->name);
+            bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R9));
             type = type->ptr.elem;
         }
 
-        assert(type);
-
-        int field_offset = 0;
-        for (size_t i = 0; i < type->aggregate.fields_count; ++i) {
-            struct type_field field = type->aggregate.fields[i];
-            if (field.name == expr->field.name) {
-                break;
-            }
-            field_offset += type_sizeof(field.type);
-        }
-
-        bytecode_emit_expression(emitter, expr);
-
-        bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_R11));
-        bytecode_emit(emitter, field_offset);
-        bytecode_emit(emitter, _add_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_R11));
-
-        bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_RDX));
+        bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
+    } else if (expr->kind == AST_EXPR_UNARY) {
+        printf("DEREFENCING UNARY EXPR SHOULD NOT HAPPEN\n");
+        assert(0);
     } else {
         // NOTE: dereference an identifier
         assert(expr->symbol);
         struct symbol *symbol = expr->symbol;
         assert(symbol);
+        struct type *type = symbol->type;
+        assert(type);
+
+        printf("dereference identifier %s\n", symbol->name);
 
         if (symbol->decl) {
-            bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_RDX));
+            bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_R9));
         } else {
-            bytecode_emit(emitter, _lea_lcl_reg_imm(BYTECODE_REGISTER_RDX));
+            bytecode_emit(emitter, _lea_lcl_reg_imm(BYTECODE_REGISTER_R9));
         }
 
         bytecode_emit(emitter, symbol->address);
-        bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RDX));
+
+        while (type->kind == TYPE_PTR) {
+            // NOTE: if the type we are derefencing is a pointer, we need to do an additional read.
+            // This is because we load the address of a local variable to read from, but the value of the variable
+            // is the address of the variable we are pointing to; we must then read the value of that variable!
+            printf("identifier %s is ptr, require another read\n", symbol->name);
+            bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R9));
+            type = type->ptr.elem;
+        }
+
+        bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
     }
 }
 
@@ -710,6 +718,16 @@ void bytecode_emit_expression_call(struct bytecode_emitter *emitter, struct ast_
             int format_string = bytecode_data_find_string(emitter, arg_symbol->decl->const_decl.expr->string_val);
             bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_RDI));
             bytecode_emit(emitter, format_string);
+
+            /*
+            const uint8_t *arg_name = symbol->decl->func_decl.params[i].name;
+            uint64_t arg_address = symbol->decl->func_decl.params[i].address;
+            printf("%s address %d\n", arg_name, arg_address);
+
+            bytecode_emit_expression(emitter, arg);
+            bytecode_emit(emitter, _lea_lcl_reg_imm(BYTECODE_REGISTER_RDI));
+            bytecode_emit(emitter, arg_address);
+            */
         }
 
         // locate function and library name in data segment - required by upcoming instructions
@@ -729,7 +747,11 @@ void bytecode_emit_expression_call(struct bytecode_emitter *emitter, struct ast_
         bytecode_emit(emitter, call.args_count);
         bytecode_emit(emitter, BYTECODE_REGISTER_KIND_I64);
     } else {
-        // TODO: should arguments be treated as locals, or just popped off the stack ???
+        for (size_t i = 0; i < call.args_count; ++i) {
+            enum bytecode_register reg = bytecode_internal_call_registers[i];
+            bytecode_emit_expression(emitter, call.args[i]);
+            bytecode_emit(emitter, _mov_reg_reg(reg, BYTECODE_REGISTER_RCX));
+        }
 
         bytecode_emit(emitter, _call_imm());
 
@@ -774,9 +796,9 @@ void bytecode_emit_expression_field(struct bytecode_emitter *emitter, struct ast
 
         bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_R11));
         bytecode_emit(emitter, field_offset);
-        bytecode_emit(emitter, _add_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_R11));
+        bytecode_emit(emitter, _add_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R11));
 
-        bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_RDX));
+        bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
     } else {
         assert(expr->field.expr->symbol);
         struct symbol *symbol = expr->field.expr->symbol;
@@ -796,27 +818,26 @@ void bytecode_emit_expression_field(struct bytecode_emitter *emitter, struct ast
             // printf("%s.%s | offset: %d\n", symbol->name, expr->field.name, field_offset);
 
             if (symbol->decl) {
-                bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_RDX));
+                bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_R9));
             } else {
-                bytecode_emit(emitter, _lea_lcl_reg_imm(BYTECODE_REGISTER_RDX));
+                bytecode_emit(emitter, _lea_lcl_reg_imm(BYTECODE_REGISTER_R9));
             }
 
             bytecode_emit(emitter, symbol->address);
 
             bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_R11));
             bytecode_emit(emitter, field_offset);
-            bytecode_emit(emitter, _add_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_R11));
+            bytecode_emit(emitter, _add_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R11));
 
-            bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_RDX));
+            bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
         } else {
             int field_value = -1;
             for (size_t i = 0; i < symbol->decl->enum_decl.items_count; ++i) {
                 struct ast_enum_item item = symbol->decl->enum_decl.items[i];
 
                 if (item.expr) {
-                    struct resolved_expr rexpr = resolve_expr(emitter->resolver, item.expr);
-                    assert(rexpr.is_const);
-                    field_value = rexpr.val;
+                    assert(item.expr->res.is_const);
+                    field_value = item.expr->res.val;
                 } else {
                     ++field_value;
                 }
@@ -1052,10 +1073,15 @@ void bytecode_emit_stmt_continue(struct bytecode_emitter *emitter)
 
 void bytecode_emit_stmt_return(struct bytecode_emitter *emitter, struct ast_stmt_return stmt)
 {
+    assert(emitter->return_patches_count < 12);
     if (stmt.expr) {
         bytecode_emit_expression(emitter, stmt.expr);
         bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RAX, BYTECODE_REGISTER_RCX));
     }
+    bytecode_emit(emitter, _jmp_imm());
+    uint64_t *return_patch = bytecode_emitter_mark_patch_source(emitter);
+    emitter->return_patches[emitter->return_patches_count++] = return_patch;
+    bytecode_emit(emitter, -1);
 }
 
 void bytecode_emit_stmt(struct bytecode_emitter *emitter, struct ast_stmt *stmt)
@@ -1113,21 +1139,36 @@ void bytecode_emit_function(struct bytecode_emitter *emitter, struct symbol *sym
 {
     printf("emitting bytecode for function: '%s'\n", symbol->name);
 
+    struct ast_decl_func *decl = &symbol->decl->func_decl;
     uint64_t func_address = bytecode_emitter_mark_patch_target(emitter);
     uint64_t ar_size = 0x40;
 
     symbol->address = func_address;
-
-    // TODO: should arguments be treated as locals, or just popped off the stack ???
+    emitter->return_patches_count = 0;
 
     bytecode_emit(emitter, _begin_call_frame());
     bytecode_emit(emitter, _add_i64_reg_imm(BYTECODE_REGISTER_RSP));
     bytecode_emit(emitter, ar_size);
+
+    for (size_t i = 0; i < decl->params_count; ++i) {
+        enum bytecode_register reg = bytecode_internal_call_registers[i];
+        bytecode_emit(emitter, _mov_lcl_reg(reg));
+        bytecode_emit(emitter, decl->params[i].address);
+    }
+
     bytecode_emit_stmt_block(emitter, symbol->decl->func_decl.block);
     bytecode_emit(emitter, _sub_i64_reg_imm(BYTECODE_REGISTER_RSP));
     bytecode_emit(emitter, ar_size);
+
+    int end_mark = bytecode_emitter_mark_patch_target(emitter);
     bytecode_emit(emitter, _end_call_frame());
     bytecode_emit(emitter, _ret());
+
+    for (int i = 0; i < emitter->return_patches_count; ++i) {
+        uint64_t *return_patch = emitter->return_patches[i];
+        *return_patch = end_mark;
+    }
+    emitter->return_patches_count = 0;
 }
 
 void bytecode_emit_var(struct bytecode_emitter *emitter, struct symbol *symbol)
@@ -1142,9 +1183,9 @@ void bytecode_emit_var(struct bytecode_emitter *emitter, struct symbol *symbol)
 
     if (symbol->decl->var_decl.expr) {
         bytecode_emit_expression(emitter, symbol->decl->var_decl.expr);
-        bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_RDX));
+        bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_R9));
         bytecode_emit(emitter, symbol->address);
-        bytecode_emit(emitter, _memw_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
+        bytecode_emit(emitter, _memw_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_RCX));
     }
 }
 

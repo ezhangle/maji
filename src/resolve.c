@@ -737,7 +737,9 @@ struct resolved_expr resolve_expected_expr(struct resolver *resolver, struct ast
 
 struct resolved_expr resolve_expr(struct resolver *resolver, struct ast_expr *expr)
 {
-    return resolve_expected_expr(resolver, expr, NULL);
+    struct resolved_expr res = resolve_expected_expr(resolver, expr, NULL);
+    expr->res = res;
+    return res;
 }
 
 int64_t resolve_const_expr(struct resolver *resolver, struct ast_expr *expr)
@@ -983,8 +985,10 @@ void resolve_func(struct resolver *resolver, struct symbol *symbol)
     resolver->locals_address = 0;
 
     for (size_t i = 0; i < decl->func_decl.params_count; ++i) {
-        struct ast_func_param param = decl->func_decl.params[i];
-        symbol_push(resolver, symbol_var(param.name, resolve_typespec(resolver, param.type)));
+        struct ast_func_param *param = &decl->func_decl.params[i];
+        param->address = resolver->locals_address;
+        resolver->locals_address += type_sizeof(resolve_typespec(resolver, param->type));
+        symbol_push(resolver, symbol_var(param->name, resolve_typespec(resolver, param->type)));
     }
     if (decl->kind == AST_DECL_FUNC) {
         resolve_statement_block(resolver, decl->func_decl.block, resolve_typespec(resolver, decl->func_decl.ret_type));

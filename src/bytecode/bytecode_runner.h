@@ -81,6 +81,19 @@ static enum bytecode_register bytecode_call_registers[] =
     BYTECODE_REGISTER_R15,
 };
 
+static enum bytecode_register bytecode_internal_call_registers[] =
+{
+    BYTECODE_REGISTER_RDI,
+    BYTECODE_REGISTER_RSI,
+    BYTECODE_REGISTER_R8,
+    BYTECODE_REGISTER_R10,
+    BYTECODE_REGISTER_R11,
+    BYTECODE_REGISTER_R12,
+    BYTECODE_REGISTER_R13,
+    BYTECODE_REGISTER_R14,
+    BYTECODE_REGISTER_R15,
+};
+
 struct bytecode_runner
 {
     bool verbose;

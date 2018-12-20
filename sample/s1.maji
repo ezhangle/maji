@@ -29,10 +29,17 @@ test_forever_break :: () {
     }
 }
 
-test_for :: () {
-    for (i := 0; i < 1; ++i) {
+test_for :: (n: int) {
+    for (i := 0; i < n; ++i) {
         printf(greeting);
     }
+}
+
+test_for_ptr :: (n: int*) {
+    for (i := 0; i < *n; ++i) {
+        printf(greeting);
+    }
+    *n = 0;
 }
 
 main :: () -> int {
@@ -72,9 +79,21 @@ main :: () -> int {
 
     printf(ending);
 
-    test_for();
+    /*
+    c := 2;
+    test_for_ptr(&c);
+    test_for(c);
+    */
 
-    return pos.x + pos.y;
+    *pos.z = 1;
+    // test_for(*pos.z);
+    // test_for(xx);
+    test_for_ptr(&xx);
+    xx = 8;
+    test_for_ptr(pos.z);
+
+    return xx;
+    // return pos.x + pos.y;
 }
 
 vec2 :: struct {

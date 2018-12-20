@@ -113,9 +113,17 @@ void bytecode_runner_print_stack(struct bytecode_runner *bcr)
 
     printf("compare: %d\n", bcr->compare);
 
-    printf("stack [ ");
+    printf("stack [\n");
     for (int i = 0; i < bcr->reg[BYTECODE_REGISTER_RSP]; ++i) {
-        printf("%0X ", bcr->stack[i]);
+        printf("%.2X ", (unsigned char)bcr->stack[i]);
+
+        if (((i+1) % 4) == 0) {
+            printf("  ");
+        }
+
+        if (((i+1) % 20) == 0) {
+            printf("\n");
+        }
     }
     printf("]\n");
 }
@@ -124,11 +132,12 @@ void bytecode_runner_print_instruction(struct bytecode_runner *bcr, struct bytec
 {
     if (!bcr->verbose) return;
 
-    printf("cycle %3" PRIu64 ": op = %-15s r1 = %s, r2 = %s\n",
+    printf("cycle %3" PRIu64 ": op = %-15s r1 = %s, r2 = %s, imm = %" PRIu64 "\n",
             ++bcr->cycle_count,
             bytecode_opcode_str[instr->op],
             bytecode_register_str[instr->r1],
-            bytecode_register_str[instr->r2]);
+            bytecode_register_str[instr->r2],
+            bcr->text[bcr->reg[BYTECODE_REGISTER_RIP]]);
 }
 
 static int bcr_sample_exe = 1;

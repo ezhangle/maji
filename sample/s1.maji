@@ -93,7 +93,7 @@ main :: () -> int {
     test_for_ptr(pos.z);
 
     return xx;
-    // return pos.x + pos.y;
+    return pos.x + pos.y;
 }
 
 vec2 :: struct {

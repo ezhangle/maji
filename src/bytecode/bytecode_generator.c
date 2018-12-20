@@ -1141,7 +1141,7 @@ void bytecode_emit_function(struct bytecode_emitter *emitter, struct symbol *sym
 
     struct ast_decl_func *decl = &symbol->decl->func_decl;
     uint64_t func_address = bytecode_emitter_mark_patch_target(emitter);
-    uint64_t ar_size = 0x40;
+    uint64_t ar_size = decl->ar_size;
 
     symbol->address = func_address;
     emitter->return_patches_count = 0;

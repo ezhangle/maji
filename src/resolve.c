@@ -994,6 +994,8 @@ void resolve_func(struct resolver *resolver, struct symbol *symbol)
         resolve_statement_block(resolver, decl->func_decl.block, resolve_typespec(resolver, decl->func_decl.ret_type));
     }
 
+    decl->func_decl.ar_size = resolver->locals_address;
+
     symbol_leave(resolver);
 }
 

@@ -141,6 +141,7 @@ struct ast_decl_func
     size_t params_count;
     struct ast_typespec *ret_type;
     struct ast_stmt_block block;
+    size_t ar_size;
 };
 
 struct ast_decl_func_foreign

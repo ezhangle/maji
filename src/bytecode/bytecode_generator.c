@@ -11,6 +11,11 @@
 #include "bytecode_executable.h"
 #include "bytecode_executable.c"
 
+uint64_t _memw_i64_reg_imm(enum bytecode_register reg)
+{
+    return encode_instruction_r1(BYTECODE_OPCODE_MEMW_INT64_REG_IMM, reg);
+}
+
 uint64_t _memw_reg_reg(enum bytecode_register reg1, enum bytecode_register reg2)
 {
     return encode_instruction_r2(BYTECODE_OPCODE_MEMW_REG_REG, reg1, reg2);
@@ -241,7 +246,9 @@ void bytecode_emit_expression_sub(struct bytecode_emitter *emitter, struct ast_e
     bytecode_emit_expression(emitter, left);
     bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RCX));
     bytecode_emit_expression(emitter, right);
-    bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RDX));
+
+    bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
+    bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RCX));
     bytecode_emit(emitter, _sub_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_RDX));
 }
 
@@ -250,7 +257,9 @@ void bytecode_emit_expression_add(struct bytecode_emitter *emitter, struct ast_e
     bytecode_emit_expression(emitter, left);
     bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RCX));
     bytecode_emit_expression(emitter, right);
-    bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RDX));
+
+    bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
+    bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RCX));
     bytecode_emit(emitter, _add_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_RDX));
 }
 
@@ -259,7 +268,9 @@ void bytecode_emit_expression_mul(struct bytecode_emitter *emitter, struct ast_e
     bytecode_emit_expression(emitter, left);
     bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RCX));
     bytecode_emit_expression(emitter, right);
-    bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RDX));
+
+    bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
+    bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RCX));
     bytecode_emit(emitter, _mul_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_RDX));
 }
 
@@ -268,7 +279,9 @@ void bytecode_emit_expression_div(struct bytecode_emitter *emitter, struct ast_e
     bytecode_emit_expression(emitter, left);
     bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RCX));
     bytecode_emit_expression(emitter, right);
-    bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RDX));
+
+    bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
+    bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RCX));
     bytecode_emit(emitter, _div_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_RDX));
 }
 
@@ -435,6 +448,14 @@ void bytecode_emit_expression_immediate_string_(struct bytecode_emitter *emitter
 void bytecode_emit_expression_immediate_string(struct bytecode_emitter *emitter, struct ast_expr *expr)
 {
     bytecode_emit_expression_immediate_string_(emitter, expr->string_val);
+}
+
+void bytecode_emit_expression_immediate_string__(struct bytecode_emitter *emitter, struct ast_expr *expr)
+{
+    bytecode_emit_expression_immediate_string_(emitter, expr->string_val);
+    int storage = bytecode_data_find_string(emitter, expr->string_val);
+    bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_RCX));
+    bytecode_emit(emitter, storage);
 }
 
 void bytecode_emit_expression_immediate_int(struct bytecode_emitter *emitter, struct ast_expr *expr)
@@ -706,26 +727,11 @@ void bytecode_emit_expression_call(struct bytecode_emitter *emitter, struct ast_
         bytecode_emit_expression_immediate_string_(emitter, symbol->decl->foreign_func_decl.lib);
 
         // emit code for arguments
-        for (int i = 0; i < call.args_count; ++i) {
-            struct ast_expr *arg = call.args[0];
-            // bytecode_emit_expression_call_argument(emitter, arg, i);
-
-            // TODO: replace with proper recursive descent of arguments
-            struct symbol *arg_symbol = symbol_get(emitter->resolver, arg->string_val);
-            bytecode_emit_expression_immediate_string(emitter, arg_symbol->decl->const_decl.expr);
-            int format_string = bytecode_data_find_string(emitter, arg_symbol->decl->const_decl.expr->string_val);
-            bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_RDI));
-            bytecode_emit(emitter, format_string);
-
-            /*
-            const uint8_t *arg_name = symbol->decl->func_decl.params[i].name;
-            uint64_t arg_address = symbol->decl->func_decl.params[i].address;
-            printf("%s address %d\n", arg_name, arg_address);
-
+        for (size_t i = 0; i < call.args_count; ++i) {
+            struct ast_expr *arg = call.args[i];
+            enum bytecode_register reg = bytecode_call_registers[i];
             bytecode_emit_expression(emitter, arg);
-            bytecode_emit(emitter, _lea_lcl_reg_imm(BYTECODE_REGISTER_RDI));
-            bytecode_emit(emitter, arg_address);
-            */
+            bytecode_emit(emitter, _mov_reg_reg(reg, BYTECODE_REGISTER_RCX));
         }
 
         // locate function and library name in data segment - required by upcoming instructions
@@ -870,7 +876,7 @@ void bytecode_emit_expression(struct bytecode_emitter *emitter, struct ast_expr 
         bytecode_emit_expression_immediate_int(emitter, expr);
     } break;
     case AST_EXPR_STRING_LITERAL: {
-        bytecode_emit_expression_immediate_string(emitter, expr);
+        bytecode_emit_expression_immediate_string__(emitter, expr);
     } break;
     case AST_EXPR_UNARY: {
         bytecode_emit_expression_unary(emitter, expr->unary);
@@ -1174,10 +1180,9 @@ void bytecode_emit_var(struct bytecode_emitter *emitter, struct symbol *symbol)
     assert(symbol->type);
     assert(symbol->decl);
 
-
     symbol->address = emitter->data_cursor - emitter->program_data;
     emitter->data_cursor += type_sizeof(symbol->type);
-    printf("allocating address '%" PRIu64 "' for global: '%s' of type %s\n", symbol->address, symbol->name, symbol->type->symbol->name);
+    printf("allocating address '%" PRIu64 "' for global: '%s'\n", symbol->address, symbol->name);
 
     if (symbol->decl->var_decl.expr) {
         bytecode_emit_expression(emitter, symbol->decl->var_decl.expr);
@@ -1189,8 +1194,18 @@ void bytecode_emit_var(struct bytecode_emitter *emitter, struct symbol *symbol)
 
 void bytecode_emit_const(struct bytecode_emitter *emitter, struct symbol *symbol)
 {
-    if (symbol->decl->const_decl.expr->kind == AST_EXPR_STRING_LITERAL) {
-        bytecode_emit_expression_immediate_string(emitter, symbol->decl->const_decl.expr);
+    assert(symbol->decl);
+
+    symbol->address = emitter->data_cursor - emitter->program_data;
+    emitter->data_cursor += 8;
+
+    printf("allocating address '%" PRIu64 "' for const: '%s'\n", symbol->address, symbol->name);
+
+    if (symbol->decl->const_decl.expr) {
+        bytecode_emit_expression(emitter, symbol->decl->const_decl.expr);
+        bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_R9));
+        bytecode_emit(emitter, symbol->address);
+        bytecode_emit(emitter, _memw_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_RCX));
     }
 }
 
@@ -1240,6 +1255,18 @@ void bytecode_generate(struct resolver *resolver, struct compiler_options *optio
     bytecode_emitter_init(&emitter, resolver);
 
     //
+    // ---- STORE CONSTANT STRING VALUES
+    //
+
+    for (int i = 0; i < buf_len(resolver->ordered_symbols); ++i) {
+        struct symbol *symbol = resolver->ordered_symbols[i];
+
+        if (symbol->kind == SYMBOL_CONST) {
+            bytecode_emit_const(&emitter, symbol);
+        }
+    }
+
+    //
     // ---- ALLOCATE AND INITIALIZE GLOBAL VARIABLES ----
     //
 
@@ -1256,19 +1283,6 @@ void bytecode_generate(struct resolver *resolver, struct compiler_options *optio
     //
 
     bytecode_emit_entry_point(&emitter);
-
-    //
-    // ---- STORE CONSTANT STRING VALUES
-    //
-
-    for (int i = 0; i < buf_len(resolver->ordered_symbols); ++i) {
-        struct symbol *symbol = resolver->ordered_symbols[i];
-
-        if (symbol->kind == SYMBOL_CONST) {
-            bytecode_emit_const(&emitter, symbol);
-        }
-    }
-
 
     //
     // ---- EMIT CODE FOR FUNCTIONS ----

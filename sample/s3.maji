@@ -1,0 +1,20 @@
+printf :: (format: char*, a: int, b: int) -> int #foreign "/usr/lib/libc.dylib";
+
+fib :: (n: int) -> int
+{
+    if (n < 2) {
+        return n;
+    }
+
+    return fib(n-1) + fib(n-2);
+}
+
+main :: () -> int
+{
+    for (i := 1; i < 15; ++i) {
+        val := fib(i);
+        printf("the %2d'th fibonacci number is %2d\n", i, val);
+    }
+
+    return 0;
+}

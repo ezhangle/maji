@@ -693,53 +693,55 @@ struct resolved_expr resolve_expr_ternary(struct resolver *resolver, struct ast_
 
 struct resolved_expr resolve_expected_expr(struct resolver *resolver, struct ast_expr *expr, struct type *expected_type)
 {
+    struct resolved_expr res = {};
+
     switch (expr->kind) {
     case AST_EXPR_IDENTIFIER:
-        return resolve_expr_identifier(resolver, expr);
+        res = resolve_expr_identifier(resolver, expr);
         break;
     case AST_EXPR_INT_LITERAL:
-        return resolved_const(expr->int_val);
+        res = resolved_const(expr->int_val);
         break;
     case AST_EXPR_FLOAT_LITERAL:
-        return resolved_rvalue(type_float);
+        res = resolved_rvalue(type_float);
         break;
     case AST_EXPR_STRING_LITERAL: {
-        struct resolved_expr rexpr = resolved_rvalue(type_ptr(type_char));
-        rexpr.is_const = true;
-        return rexpr;
+        res = resolved_rvalue(type_ptr(type_char));
+        res.is_const = true;
     } break;
     case AST_EXPR_CALL:
-        return resolve_expr_call(resolver, expr);
+        res = resolve_expr_call(resolver, expr);
         break;
     case AST_EXPR_CAST:
-        return resolve_expr_cast(resolver, expr);
+        res = resolve_expr_cast(resolver, expr);
         break;
     case AST_EXPR_INDEX:
-        return resolve_expr_index(resolver, expr);
+        res = resolve_expr_index(resolver, expr);
         break;
     case AST_EXPR_FIELD:
-        return resolve_expr_field(resolver, expr);
+        res = resolve_expr_field(resolver, expr);
         break;
     case AST_EXPR_UNARY:
-        return resolve_expr_unary(resolver, expr);
+        res = resolve_expr_unary(resolver, expr);
         break;
     case AST_EXPR_BINARY:
-        return resolve_expr_binary(resolver, expr);
+        res = resolve_expr_binary(resolver, expr);
         break;
     case AST_EXPR_TERNARY:
-        return resolve_expr_ternary(resolver, expr, expected_type);
+        res = resolve_expr_ternary(resolver, expr, expected_type);
         break;
     default:
         assert(0);
         break;
     }
+
+    expr->res = res;
+    return res;
 }
 
 struct resolved_expr resolve_expr(struct resolver *resolver, struct ast_expr *expr)
 {
-    struct resolved_expr res = resolve_expected_expr(resolver, expr, NULL);
-    expr->res = res;
-    return res;
+    return resolve_expected_expr(resolver, expr, NULL);
 }
 
 int64_t resolve_const_expr(struct resolver *resolver, struct ast_expr *expr)

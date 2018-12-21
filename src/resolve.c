@@ -469,7 +469,7 @@ struct resolved_expr resolve_expr_call(struct resolver *resolver, struct ast_exp
         struct type *param_type = func.type->func.params[i];
         struct resolved_expr arg = resolve_expected_expr(resolver, expr->call.args[i], param_type);
 
-        if (arg.type != param_type) {
+        if (ptr_decay(arg).type != param_type) {
             // TODO: error handling
             printf("call argument expression type doesn't match expected param type");
             exit(1);

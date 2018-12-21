@@ -1,17 +1,64 @@
 printf :: (format: char*, a: int, b: int) -> int #foreign "/usr/lib/libc.dylib";
+malloc :: (size: int) -> int* #foreign "/usr/lib/libc.dylib";
+memset :: (ptr: int*, value: int, size: int) #foreign "/usr/lib/libc.dylib";
+free :: (ptr: int*) #foreign "/usr/lib/libc.dylib";
 
-fib :: (n: int) -> int {
+global_mem: int[40];
+dynamic_mem: int*;
+
+fib_mem :: (mem: int*, n: int) -> int {
     if (n < 2) {
         return n;
     }
 
-    return fib(n-1) + fib(n-2);
+    if (mem[n-1] == 0) {
+        mem[n-1] = fib_mem(mem, n-1);
+    }
+
+    if (mem[n-2] == 0) {
+        mem[n-2] = fib_mem(mem, n-2);
+    }
+
+    return mem[n-1] + mem[n-2];
+}
+
+
+test_int_array :: (list: int*, write: int) {
+    printf("list[%d] = %d\n", 7, list[7]);
+    if (write) {
+        list[7] = 8;
+    }
+}
+
+test_int_ptr :: (i: int*) {
+    printf("i = %d = %d\n", *i, *i);
+    *i = 8;
 }
 
 main :: () -> int {
-    for (i := 1; i < 25; ++i) {
-        printf("the %2d'th fibonacci number is %2d\n", i, fib(i));
+    dynamic_mem = malloc(320);
+    memset(dynamic_mem, 0, 320);
+
+    for (i := 1; i < 40; ++i) {
+        printf("[global_mem]  the %2d'th fibonacci number is %2d\n", i, fib_mem(global_mem, i));
+        printf("[dynamic_mem] the %2d'th fibonacci number is %2d\n", i, fib_mem(dynamic_mem, i));
     }
+
+    free(dynamic_mem);
+
+    xx := 7;
+
+    ints: int[20];
+    ints[7] = 5;
+
+    test_int_array(ints, 1);
+    printf("ints[%d] = %d\n", 7, ints[7]);
+
+    test_int_array(global_mem, 0);
+    printf("mem[%d] = %d\n", 7, global_mem[7]);
+
+    test_int_ptr(&xx);
+    printf("xx = %d = %d\n", xx, xx);
 
     return 0;
 }

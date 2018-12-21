@@ -648,8 +648,13 @@ void bytecode_emit_expression_dereference(struct bytecode_emitter *emitter, stru
 void bytecode_emit_expression_address(struct bytecode_emitter *emitter, struct ast_expr *expr)
 {
     if (expr->kind == AST_EXPR_FIELD) {
-        assert(expr->field.expr->symbol);
-        struct symbol *symbol = expr->field.expr->symbol;
+        struct ast_expr *field_expr = expr->field.expr;
+        while (field_expr->kind == AST_EXPR_UNARY) {
+            assert(field_expr->unary.op == '*');
+            field_expr = field_expr->unary.expr;
+        }
+
+        struct symbol *symbol = field_expr->symbol;
         assert(symbol);
 
         int field_offset = 0;
@@ -661,17 +666,10 @@ void bytecode_emit_expression_address(struct bytecode_emitter *emitter, struct a
             field_offset += type_sizeof(field.type);
         }
 
-        if (symbol->decl) {
-            bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_RCX));
-        } else {
-            bytecode_emit(emitter, _lea_lcl_reg_imm(BYTECODE_REGISTER_RCX));
-        }
-
-        bytecode_emit(emitter, symbol->address);
-
-        bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_R11));
+        bytecode_emit_expression(emitter, expr->field.expr);
+        bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
         bytecode_emit(emitter, field_offset);
-        bytecode_emit(emitter, _add_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R11));
+        bytecode_emit(emitter, _add_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
     } else {
         assert(expr->symbol);
         struct symbol *symbol = expr->symbol;

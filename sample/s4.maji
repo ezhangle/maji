@@ -1,0 +1,25 @@
+CGSMainConnectionID :: () -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+sleep :: (n: int) #foreign "/usr/lib/libc.dylib";
+
+printf :: (format: char*, n: int) -> int #foreign "/usr/lib/libc.dylib";
+
+
+cgl_window :: struct {
+    connection: int;
+    id: int;
+}
+
+cgl_window_init :: (win: cgl_window*) {
+    win.connection = CGSMainConnectionID();
+    ss := &win.id;
+    *ss = 6;
+    win.id = 2;
+    *ss = 8;
+}
+
+main :: () {
+    win: cgl_window;
+    cgl_window_init(&win);
+    printf("connectionid = %d\n", win.connection);
+    printf("windowid = %d\n", win.id);
+}

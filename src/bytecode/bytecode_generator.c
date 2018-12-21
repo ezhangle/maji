@@ -726,6 +726,12 @@ void bytecode_emit_expression_call(struct bytecode_emitter *emitter, struct ast_
         bytecode_emit_expression_immediate_string(emitter, call.expr);
         bytecode_emit_expression_immediate_string_(emitter, symbol->decl->foreign_func_decl.lib);
 
+        // NOTE: push registers to the stack so that we don't trash the state !!!
+        for (size_t i = 0; i < call.args_count; ++i) {
+            enum bytecode_register reg = bytecode_call_registers[i];
+            bytecode_emit(emitter, _push_reg(reg));
+        }
+
         // emit code for arguments
         for (size_t i = 0; i < call.args_count; ++i) {
             struct ast_expr *arg = call.args[i];
@@ -750,7 +756,19 @@ void bytecode_emit_expression_call(struct bytecode_emitter *emitter, struct ast_
         bytecode_emit(emitter, _call_foreign());
         bytecode_emit(emitter, call.args_count);
         bytecode_emit(emitter, BYTECODE_REGISTER_KIND_I64);
+
+        // NOTE: pop registers from the stack so that we don't trash the state !!!
+        for (size_t i = 0; i < call.args_count; ++i) {
+            enum bytecode_register reg = bytecode_call_registers[call.args_count - i - 1];
+            bytecode_emit(emitter, _pop_i64_reg(reg));
+        }
     } else {
+        // NOTE: push registers to the stack so that we don't trash the state !!!
+        for (size_t i = 0; i < call.args_count; ++i) {
+            enum bytecode_register reg = bytecode_internal_call_registers[i];
+            bytecode_emit(emitter, _push_reg(reg));
+        }
+
         for (size_t i = 0; i < call.args_count; ++i) {
             enum bytecode_register reg = bytecode_internal_call_registers[i];
             bytecode_emit_expression(emitter, call.args[i]);
@@ -761,6 +779,12 @@ void bytecode_emit_expression_call(struct bytecode_emitter *emitter, struct ast_
 
         uint64_t *call_patch = bytecode_emitter_mark_patch_source(emitter);
         bytecode_emit(emitter, -1);
+
+        // NOTE: pop registers from the stack so that we don't trash the state !!!
+        for (size_t i = 0; i < call.args_count; ++i) {
+            enum bytecode_register reg = bytecode_internal_call_registers[call.args_count - i - 1];
+            bytecode_emit(emitter, _pop_i64_reg(reg));
+        }
 
         buf_push(emitter->call_patches, call_patch);
         buf_push(emitter->call_patches_symbol, symbol);

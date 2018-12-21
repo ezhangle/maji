@@ -197,6 +197,26 @@ struct bytecode_emitter
     struct resolver *resolver;
 };
 
+int find_field_offset_and_type(struct type *type, const uint8_t *field_name, struct type **field_type)
+{
+    int field_offset = 0;
+    for (size_t i = 0; i < type->aggregate.fields_count; ++i) {
+        struct type_field field = type->aggregate.fields[i];
+        if (field.name == field_name) {
+            *field_type = field.type;
+            break;
+        }
+        field_offset += type_sizeof(field.type);
+    }
+    return field_offset;
+}
+
+int find_field_offset(struct type *type, const uint8_t *field_name)
+{
+    struct type *field_type;
+    return find_field_offset_and_type(type, field_name, &field_type);
+}
+
 void bytecode_emit_expression(struct bytecode_emitter *emitter, struct ast_expr *expr);
 void bytecode_emit_stmt_block(struct bytecode_emitter *emitter, struct ast_stmt_block block);
 void bytecode_emit_stmt(struct bytecode_emitter *emitter, struct ast_stmt *stmt);
@@ -580,16 +600,8 @@ void bytecode_emit_expression_dereference(struct bytecode_emitter *emitter, stru
 
         printf("dereference field access %s\n", symbol->name);
 
-        int field_offset = 0;
         struct type *type = NULL;
-        for (size_t i = 0; i < symbol->type->aggregate.fields_count; ++i) {
-            struct type_field field = symbol->type->aggregate.fields[i];
-            if (field.name == expr->field.name) {
-                type = field.type;
-                break;
-            }
-            field_offset += type_sizeof(field.type);
-        }
+        int field_offset = find_field_offset_and_type(symbol->type, expr->field.name, &type);
 
         if (symbol->decl) {
             bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_R9));
@@ -647,26 +659,30 @@ void bytecode_emit_expression_dereference(struct bytecode_emitter *emitter, stru
 
 void bytecode_emit_expression_address(struct bytecode_emitter *emitter, struct ast_expr *expr)
 {
-    if (expr->kind == AST_EXPR_FIELD) {
-        struct ast_expr *field_expr = expr->field.expr;
-        while (field_expr->kind == AST_EXPR_UNARY) {
-            assert(field_expr->unary.op == '*');
-            field_expr = field_expr->unary.expr;
-        }
+    while (expr->kind == AST_EXPR_UNARY) {
+        assert(expr->unary.op == '*' || expr->unary.op == '&');
+        expr = expr->unary.expr;
+    }
 
-        struct symbol *symbol = field_expr->symbol;
+    if (expr->kind == AST_EXPR_FIELD) {
+        struct symbol *symbol = expr->field.expr->symbol;
         assert(symbol);
 
-        int field_offset = 0;
-        for (size_t i = 0; i < symbol->type->aggregate.fields_count; ++i) {
-            struct type_field field = symbol->type->aggregate.fields[i];
-            if (field.name == expr->field.name) {
-                break;
-            }
-            field_offset += type_sizeof(field.type);
+        struct type *type = symbol->type;
+        while (type->kind == TYPE_PTR) {
+            type = type->ptr.elem;
         }
 
+        assert(type);
+
+        int field_offset = find_field_offset(type, expr->field.name);
+
         bytecode_emit_expression(emitter, expr->field.expr);
+
+        if (symbol->type->kind == TYPE_PTR) {
+            bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R9));
+        }
+
         bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
         bytecode_emit(emitter, field_offset);
         bytecode_emit(emitter, _add_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
@@ -812,14 +828,7 @@ void bytecode_emit_expression_field(struct bytecode_emitter *emitter, struct ast
 
         assert(type);
 
-        int field_offset = 0;
-        for (size_t i = 0; i < type->aggregate.fields_count; ++i) {
-            struct type_field field = type->aggregate.fields[i];
-            if (field.name == expr->field.name) {
-                break;
-            }
-            field_offset += type_sizeof(field.type);
-        }
+        int field_offset = find_field_offset(type, expr->field.name);
 
         // printf("UNARY %s FIELD EXPR: offset %d\n", symbol->name, field_offset);
 
@@ -836,15 +845,27 @@ void bytecode_emit_expression_field(struct bytecode_emitter *emitter, struct ast
         assert(symbol);
         assert(symbol->type);
 
-        if (symbol->type->kind == TYPE_STRUCT) {
-            int field_offset = 0;
-            for (size_t i = 0; i < symbol->type->aggregate.fields_count; ++i) {
-                struct type_field field = symbol->type->aggregate.fields[i];
-                if (field.name == expr->field.name) {
-                    break;
-                }
-                field_offset += type_sizeof(field.type);
+        if (symbol->type->kind == TYPE_PTR) {
+            struct type *type = symbol->type;
+            while (type->kind == TYPE_PTR) {
+                type = type->ptr.elem;
             }
+
+            assert(type);
+            assert(type->kind == TYPE_STRUCT);
+
+            int field_offset = find_field_offset(type, expr->field.name);
+
+            bytecode_emit_expression(emitter, expr->field.expr);
+            bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R9));
+
+            bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_R11));
+            bytecode_emit(emitter, field_offset);
+            bytecode_emit(emitter, _add_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R11));
+
+            bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
+        } else if (symbol->type->kind == TYPE_STRUCT) {
+            int field_offset = find_field_offset(symbol->type, expr->field.name);
 
             // printf("%s.%s | offset: %d\n", symbol->name, expr->field.name, field_offset);
 
@@ -862,6 +883,8 @@ void bytecode_emit_expression_field(struct bytecode_emitter *emitter, struct ast
 
             bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
         } else {
+            assert(symbol->type->kind == TYPE_ENUM);
+
             int field_value = -1;
             for (size_t i = 0; i < symbol->decl->enum_decl.items_count; ++i) {
                 struct ast_enum_item item = symbol->decl->enum_decl.items[i];

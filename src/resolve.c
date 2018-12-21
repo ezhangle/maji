@@ -527,11 +527,18 @@ struct resolved_expr resolve_expr_field(struct resolver *resolver, struct ast_ex
     struct resolved_expr left = resolve_expr(resolver, expr->field.expr);
     struct type *type = left.type;
     complete_type(resolver, type);
+
+    while (type->kind == TYPE_PTR) {
+        type = type->ptr.elem;
+        complete_type(resolver, type);
+    }
+
     if (type->kind != TYPE_STRUCT && type->kind != TYPE_ENUM) {
         // TODO: error handling
         printf("can only access fields on aggregate types");
         exit(1);
     }
+
     for (size_t i = 0; i < type->aggregate.fields_count; ++i) {
         struct type_field field = type->aggregate.fields[i];
         if (field.name == expr->field.name) {
@@ -542,6 +549,7 @@ struct resolved_expr resolve_expr_field(struct resolver *resolver, struct ast_ex
             }
         }
     }
+
     // TODO: error handling
     printf("no field named '%s'", expr->field.name);
     exit(1);

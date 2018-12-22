@@ -668,9 +668,11 @@ void bytecode_emit_expression_address(struct bytecode_emitter *emitter, struct a
         struct symbol *symbol = expr->field.expr->symbol;
         assert(symbol);
 
+        int deref_count = 0;
         struct type *type = symbol->type;
         while (type->kind == TYPE_PTR) {
             type = type->ptr.elem;
+            ++deref_count;
         }
 
         assert(type);
@@ -679,7 +681,7 @@ void bytecode_emit_expression_address(struct bytecode_emitter *emitter, struct a
 
         bytecode_emit_expression(emitter, expr->field.expr);
 
-        if (symbol->type->kind == TYPE_PTR) {
+        while (deref_count-- > 0) {
             bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R9));
         }
 
@@ -822,7 +824,7 @@ void bytecode_emit_expression_field(struct bytecode_emitter *emitter, struct ast
         assert(symbol->type->kind == TYPE_PTR);
 
         struct type *type = symbol->type;
-        while (type->kind == TYPE_PTR) {
+        if (type->kind == TYPE_PTR) {
             type = type->ptr.elem;
         }
 
@@ -846,9 +848,11 @@ void bytecode_emit_expression_field(struct bytecode_emitter *emitter, struct ast
         assert(symbol->type);
 
         if (symbol->type->kind == TYPE_PTR) {
+            int deref_count = 0;
             struct type *type = symbol->type;
             while (type->kind == TYPE_PTR) {
                 type = type->ptr.elem;
+                ++deref_count;
             }
 
             assert(type);
@@ -857,7 +861,9 @@ void bytecode_emit_expression_field(struct bytecode_emitter *emitter, struct ast
             int field_offset = find_field_offset(type, expr->field.name);
 
             bytecode_emit_expression(emitter, expr->field.expr);
-            bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R9));
+            while (deref_count-- > 0) {
+                bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R9));
+            }
 
             bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_R11));
             bytecode_emit(emitter, field_offset);

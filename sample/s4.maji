@@ -12,9 +12,14 @@ cgl_window :: struct {
 cgl_window_init :: (win: cgl_window*) {
     win.connection = CGSMainConnectionID();
     ss := &win.id;
-    *ss = 6;
-    win.id = 2;
-    *ss = 8;
+    // *ss = 6;
+    winptr := &win;
+    conptr := &winptr.connection;
+    printf("connectionid = %d\n", winptr.connection);
+    printf("connectionid = %d\n", *conptr);
+    printf("connectionid = %d\n", win.connection);
+    // winptr.id = 2;
+    // *ss = 8;
 }
 
 main :: () {
@@ -22,4 +27,27 @@ main :: () {
     cgl_window_init(&win);
     printf("connectionid = %d\n", win.connection);
     printf("windowid = %d\n", win.id);
+
+    v: vec;
+    vptr := &v;
+
+    vv := &vptr;
+
+    /*
+     * FIXME
+    (**vv).y = 5;
+
+    printf("v.y = %d\n", v.y);
+
+     * FIXME
+    w: vec*[4];
+    w[0] = &v;
+    w[0].y = 2;
+    printf("v[0].y = %d\n", w[0].y);
+    */
+}
+
+vec :: struct {
+    x: int;
+    y: int;
 }

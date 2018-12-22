@@ -7,7 +7,7 @@ global_mem: int[40];
 dynamic_mem: int*;
 
 fib_mem :: (mem: int*, n: int) -> int {
-    if (n < 2) {
+    if (n <= 1) {
         return n;
     }
 

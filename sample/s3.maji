@@ -58,7 +58,14 @@ main :: () -> int {
     printf("mem[%d] = %d\n", 7, global_mem[7]);
 
     test_int_ptr(&xx);
+    xx = -2;
     printf("xx = %d = %d\n", xx, xx);
+
+
+    asd := ~0;
+    printf("asd = %llu\n", asd, asd);
+    asd = ~asd;
+    printf("asd = %llu\n", asd, asd);
 
     return 0;
 }

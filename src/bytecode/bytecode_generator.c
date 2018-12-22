@@ -11,6 +11,16 @@
 #include "bytecode_executable.h"
 #include "bytecode_executable.c"
 
+uint64_t _not_reg(enum bytecode_register reg)
+{
+    return encode_instruction_r1(BYTECODE_OPCODE_NOT_REG, reg);
+}
+
+uint64_t _neg_reg(enum bytecode_register reg)
+{
+    return encode_instruction_r1(BYTECODE_OPCODE_NEG_REG, reg);
+}
+
 uint64_t _memw_i64_reg_imm(enum bytecode_register reg)
 {
     return encode_instruction_r1(BYTECODE_OPCODE_MEMW_INT64_REG_IMM, reg);
@@ -679,6 +689,20 @@ void bytecode_emit_expression_dec(struct bytecode_emitter *emitter, struct ast_e
     bytecode_emit(emitter, _memw_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_RCX));
 }
 
+void bytecode_emit_expression_neg(struct bytecode_emitter *emitter, struct ast_expr *expr)
+{
+    bytecode_emit_expression(emitter, expr);
+    bytecode_emit(emitter, _neg_reg(BYTECODE_REGISTER_RCX));
+    bytecode_emit(emitter, _memw_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_RCX));
+}
+
+void bytecode_emit_expression_not(struct bytecode_emitter *emitter, struct ast_expr *expr)
+{
+    bytecode_emit_expression(emitter, expr);
+    bytecode_emit(emitter, _not_reg(BYTECODE_REGISTER_RCX));
+    bytecode_emit(emitter, _memw_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_RCX));
+}
+
 void bytecode_emit_expression_dereference(struct bytecode_emitter *emitter, struct ast_expr *expr)
 {
     // NOTE: The expression could be of type AST_EXPR_UNARY, which usually
@@ -803,8 +827,10 @@ void _bytecode_emit_expression_unary(struct bytecode_emitter *emitter, enum toke
 {
     switch (op) {
     case '+': {
+        bytecode_emit_expression(emitter, expr);
     } break;
     case '-': {
+        bytecode_emit_expression_neg(emitter, expr);
     } break;
     case '*': {
         bytecode_emit_expression_dereference(emitter, expr);
@@ -813,6 +839,7 @@ void _bytecode_emit_expression_unary(struct bytecode_emitter *emitter, enum toke
         bytecode_emit_expression_address(emitter, expr);
     } break;
     case '~': {
+        bytecode_emit_expression_not(emitter, expr);
     } break;
     case TOKEN_KIND_INC: {
         bytecode_emit_expression_inc(emitter, expr);

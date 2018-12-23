@@ -344,9 +344,6 @@ void bytecode_emit_expression_cmp(struct bytecode_emitter *emitter, struct ast_e
     *end_patch = end_target;
 }
 
-
-
-
 void bytecode_emit_expression_and(struct bytecode_emitter *emitter, struct ast_expr *left, struct ast_expr *right)
 {
     bytecode_emit_expression(emitter, left);

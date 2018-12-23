@@ -298,7 +298,13 @@ void bytecode_emit_expression_sub(struct bytecode_emitter *emitter, struct ast_e
     bytecode_emit_expression(emitter, right);
 
     bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
-    bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RCX));
+
+    if (left->res.type == type_float) {
+        bytecode_emit(emitter, _pop_f64_reg(BYTECODE_REGISTER_RCX));
+    } else {
+        bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RCX));
+    }
+
     bytecode_emit(emitter, _sub_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_RDX));
 }
 
@@ -309,7 +315,13 @@ void bytecode_emit_expression_add(struct bytecode_emitter *emitter, struct ast_e
     bytecode_emit_expression(emitter, right);
 
     bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
-    bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RCX));
+
+    if (left->res.type == type_float) {
+        bytecode_emit(emitter, _pop_f64_reg(BYTECODE_REGISTER_RCX));
+    } else {
+        bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RCX));
+    }
+
     bytecode_emit(emitter, _add_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_RDX));
 }
 
@@ -320,7 +332,13 @@ void bytecode_emit_expression_mul(struct bytecode_emitter *emitter, struct ast_e
     bytecode_emit_expression(emitter, right);
 
     bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
-    bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RCX));
+
+    if (left->res.type == type_float) {
+        bytecode_emit(emitter, _pop_f64_reg(BYTECODE_REGISTER_RCX));
+    } else {
+        bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RCX));
+    }
+
     bytecode_emit(emitter, _mul_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_RDX));
 }
 
@@ -331,7 +349,13 @@ void bytecode_emit_expression_div(struct bytecode_emitter *emitter, struct ast_e
     bytecode_emit_expression(emitter, right);
 
     bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
-    bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RCX));
+
+    if (left->res.type == type_float) {
+        bytecode_emit(emitter, _pop_f64_reg(BYTECODE_REGISTER_RCX));
+    } else {
+        bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RCX));
+    }
+
     bytecode_emit(emitter, _div_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_RDX));
 }
 

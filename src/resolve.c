@@ -555,17 +555,31 @@ struct resolved_expr resolve_expr_field(struct resolver *resolver, struct ast_ex
 int64_t eval_int_unary(enum token_kind op, int64_t val)
 {
     switch (op) {
-    case '+':
-        return +val;
-    case '-':
-        return -val;
-    case '~':
-        return ~val;
-    case '!':
-        return !val;
-    default:
+    case '+': return +val;
+    case '-': return -val;
+    case '~': return ~val;
+    case '!': return !val;
+    default: {
         assert(0);
         return 0;
+    } break;
+    }
+}
+
+double eval_float_unary(enum token_kind op, double val)
+{
+    switch (op) {
+    case '+': return +val;
+    case '-': return -val;
+    case '!': return !val;
+    case '~': {
+        printf("invalid argument to unary operator '~'\n");
+        exit(1);
+    } break;
+    default: {
+        assert(0);
+        return 0;
+    } break;
     }
 }
 
@@ -591,63 +605,98 @@ struct resolved_expr resolve_expr_unary(struct resolver *resolver, struct ast_ex
         }
         return resolved_rvalue(type_ptr(type));
     default:
-        if (type->kind != TYPE_INT) {
+        if ((type != type_int) &&
+            (type != type_float) &&
+            (type->kind != TYPE_ENUM)) {
             // TODO: error handling
-            printf("can only use unary %s with ints", token_kind_str[expr->unary.op]);
+            printf("unary operand must be int or float\n");
             exit(1);
         }
+
         if (operand.is_const) {
-            return resolved_const(eval_int_unary(expr->unary.op, operand.val), type_int);
-        } else {
-            return resolved_rvalue(type);
+            if (type == type_float) {
+                double float_val = eval_float_unary(expr->unary.op, operand.val);
+                return resolved_const((int64_t)(*(int64_t *)&float_val), type_float);
+            } else if (type == type_int) {
+                return resolved_const(eval_int_unary(expr->unary.op, operand.val), type_int);
+            }
         }
+
+        return resolved_rvalue(type);
     }
 }
 
 int64_t eval_int_binary(enum token_kind op, int64_t left, int64_t right)
 {
     switch (op) {
-    case '*':
-        return left * right;
-    case '/':
-        return right != 0 ? left / right : 0;
-    case '%':
-        return right != 0 ? left % right : 0;
-    case '&':
-        return left & right;
-    // TODO: Don't allow UB in shifts, etc
-    case TOKEN_KIND_LSHIFT:
-        return left << right;
-    case TOKEN_KIND_RSHIFT:
-        return left >> right;
-    case '+':
-        return left + right;
-    case '-':
-        return left - right;
-    case '|':
-        return left | right;
-    case '^':
-        return left ^ right;
-    case TOKEN_KIND_EQUAL:
-        return left == right;
-    case TOKEN_KIND_NOT_EQUAL:
-        return left != right;
-    case '<':
-        return left < right;
-    case TOKEN_KIND_LT_EQUAL:
-        return left <= right;
-    case '>':
-        return left > right;
-    case TOKEN_KIND_GT_EQUAL:
-        return left >= right;
-    // TODO: Probably handle logical AND/OR separately
-    case TOKEN_KIND_AND:
-        return left && right;
-    case TOKEN_KIND_OR:
-        return left || right;
-    default:
+    case '*':                  return left * right;
+    case '/':                  return right != 0 ? left / right : 0;
+    case '%':                  return right != 0 ? left % right : 0;
+    case '&':                  return left & right;
+    case TOKEN_KIND_LSHIFT:    return left << right;
+    case TOKEN_KIND_RSHIFT:    return left >> right;
+    case '+':                  return left + right;
+    case '-':                  return left - right;
+    case '|':                  return left | right;
+    case '^':                  return left ^ right;
+    case TOKEN_KIND_EQUAL:     return left == right;
+    case TOKEN_KIND_NOT_EQUAL: return left != right;
+    case '<':                  return left < right;
+    case TOKEN_KIND_LT_EQUAL:  return left <= right;
+    case '>':                  return left > right;
+    case TOKEN_KIND_GT_EQUAL:  return left >= right;
+    case TOKEN_KIND_AND:       return left && right;
+    case TOKEN_KIND_OR:        return left || right;
+    default: {
         assert(0);
         return 0;
+    } break;
+    }
+}
+
+double eval_float_binary(enum token_kind op, double left, double right)
+{
+    switch (op) {
+    case '*':                  return left * right;
+    case '/':                  return right != 0 ? left / right : 0;
+    case '+':                  return left + right;
+    case '-':                  return left - right;
+    case TOKEN_KIND_EQUAL:     return left == right;
+    case TOKEN_KIND_NOT_EQUAL: return left != right;
+    case '<':                  return left < right;
+    case TOKEN_KIND_LT_EQUAL:  return left <= right;
+    case '>':                  return left > right;
+    case TOKEN_KIND_GT_EQUAL:  return left >= right;
+    case TOKEN_KIND_AND:       return left && right;
+    case TOKEN_KIND_OR:        return left || right;
+    case '%': {
+        printf("invalid operands to binary operator '%%'\n");
+        exit(1);
+    } break;
+    case '&': {
+        printf("invalid operands to binary operator '&'\n");
+        exit(1);
+    } break;
+    case TOKEN_KIND_LSHIFT: {
+        printf("invalid operands to binary operator '<<'\n");
+        exit(1);
+    } break;
+    case TOKEN_KIND_RSHIFT: {
+        printf("invalid operands to binary operator '>>'\n");
+        exit(1);
+    } break;
+    case '|': {
+        printf("invalid operands to binary operator '|'\n");
+        exit(1);
+    } break;
+    case '^': {
+        printf("invalid operands to binary operator '^'\n");
+        exit(1);
+    } break;
+    default: {
+        assert(0);
+        return 0;
+    } break;
     }
 }
 
@@ -656,23 +705,32 @@ struct resolved_expr resolve_expr_binary(struct resolver *resolver, struct ast_e
     assert(expr->kind == AST_EXPR_BINARY);
     struct resolved_expr left = resolve_expr(resolver, expr->binary.left_expr);
     struct resolved_expr right = resolve_expr(resolver, expr->binary.right_expr);
-    if ((left.type != type_int) &&
-        (left.type != type_char) &&
+
+    if ((left.type != type_char) &&
+        (left.type != type_int) &&
+        (left.type != type_float) &&
         (left.type->kind != TYPE_ENUM)) {
         // TODO: error handling
-        printf("left operand of + must be int");
+        printf("left operand of + must be char, int or float");
         exit(1);
     }
+
     if (right.type != left.type)  {
         // TODO: error handling
         printf("left and right operand of + must have same type");
         exit(1);
     }
-    if (left.is_const && right.is_const) {
-        return resolved_const(eval_int_binary(expr->binary.op, left.val, right.val), type_int);
-    } else {
+
+    if (!left.is_const || !right.is_const) {
         return resolved_rvalue(left.type);
     }
+
+    if (left.type == type_float) {
+        double float_val = eval_float_binary(expr->binary.op, left.val, right.val);
+        return resolved_const((int64_t)(*(int64_t *)&float_val), type_float);
+    }
+
+    return resolved_const(eval_int_binary(expr->binary.op, left.val, right.val), type_int);
 }
 
 struct resolved_expr resolve_expr_ternary(struct resolver *resolver, struct ast_expr *expr, struct type *expected_type)

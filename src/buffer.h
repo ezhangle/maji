@@ -23,6 +23,7 @@ struct buf_hdr
 #define buf_push(b, x) (buf__fit(b, 1), (b)[buf_len(b)] = (x), buf__hdr(b)->len++)
 #define buf_last(b) ((b)[buf_len(b)-1])
 #define buf_free(b) ((b) ? (free(buf__hdr(b)), (b) = NULL) : 0)
+#define buf_pop(b) ((b) ? buf__hdr(b)->len-- : 0)
 
 static void *buf__grow_f(const void *buf, size_t new_len, size_t elem_size)
 {

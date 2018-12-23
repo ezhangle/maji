@@ -1,0 +1,29 @@
+print_rect :: (r: rect*) #foreign "/Users/Koe/test/testlib/test.so";
+printf :: (fmt: char*, f: f64, ff: f64, fff: f32) #foreign "/usr/lib/libc.dylib";
+
+rect :: struct {
+    x: f32;
+    y: f32;
+    w: f32;
+    h: f32;
+}
+
+ww :: 5.0;
+www: f64 = 5.0;
+ff: f32 = 2.5;
+
+main :: () -> int {
+    printf("ww = %.2f %.2f %.2f\n", ww + 0.15, www + 1.2, ff + 0.2);
+
+    r: rect;
+
+    r.x = 5.2;
+    r.y = 2.2;
+    r.w = 12.2;
+    r.h = 14.2;
+    r.h = r.h + 2.3;
+
+    print_rect(&r);
+
+    return 0;
+}

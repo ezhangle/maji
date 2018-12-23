@@ -23,7 +23,8 @@ void complete_type(struct resolver *resolver, struct type *type);
 struct type *type_void = &(struct type){TYPE_VOID, 0};
 struct type *type_char = &(struct type){TYPE_CHAR, 1, 1};
 struct type *type_int = &(struct type){TYPE_INT, 8, 8};
-struct type *type_float = &(struct type){TYPE_FLOAT, 8, 8};
+struct type *type_float32 = &(struct type){TYPE_FLOAT, 4, 4};
+struct type *type_float64 = &(struct type){TYPE_FLOAT, 8, 8};
 
 const size_t PTR_SIZE = 8;
 const size_t PTR_ALIGN = 8;
@@ -606,7 +607,8 @@ struct resolved_expr resolve_expr_unary(struct resolver *resolver, struct ast_ex
         return resolved_rvalue(type_ptr(type));
     default:
         if ((type != type_int) &&
-            (type != type_float) &&
+            (type != type_float64) &&
+            (type != type_float32) &&
             (type->kind != TYPE_ENUM)) {
             // TODO: error handling
             printf("unary operand must be int or float\n");
@@ -614,9 +616,9 @@ struct resolved_expr resolve_expr_unary(struct resolver *resolver, struct ast_ex
         }
 
         if (operand.is_const) {
-            if (type == type_float) {
+            if (type->kind == TYPE_FLOAT) {
                 double float_val = eval_float_unary(expr->unary.op, operand.val);
-                return resolved_const((int64_t)(*(int64_t *)&float_val), type_float);
+                return resolved_const((int64_t)(*(int64_t *)&float_val), type);
             } else if (type == type_int) {
                 return resolved_const(eval_int_unary(expr->unary.op, operand.val), type_int);
             }
@@ -708,14 +710,15 @@ struct resolved_expr resolve_expr_binary(struct resolver *resolver, struct ast_e
 
     if ((left.type != type_char) &&
         (left.type != type_int) &&
-        (left.type != type_float) &&
+        (left.type != type_float64) &&
+        (left.type != type_float32) &&
         (left.type->kind != TYPE_ENUM)) {
         // TODO: error handling
         printf("left operand of + must be char, int or float");
         exit(1);
     }
 
-    if (right.type != left.type)  {
+    if (right.type != left.type && left.type->kind != right.type->kind)  {
         // TODO: error handling
         printf("left and right operand of + must have same type");
         exit(1);
@@ -725,9 +728,9 @@ struct resolved_expr resolve_expr_binary(struct resolver *resolver, struct ast_e
         return resolved_rvalue(left.type);
     }
 
-    if (left.type == type_float) {
+    if (left.type->kind == TYPE_FLOAT) {
         double float_val = eval_float_binary(expr->binary.op, left.val, right.val);
-        return resolved_const((int64_t)(*(int64_t *)&float_val), type_float);
+        return resolved_const((int64_t)(*(int64_t *)&float_val), left.type);
     }
 
     return resolved_const(eval_int_binary(expr->binary.op, left.val, right.val), type_int);
@@ -770,9 +773,9 @@ struct resolved_expr resolve_expected_expr(struct resolver *resolver, struct ast
     case AST_EXPR_CHAR_LITERAL:
         res = resolved_const(expr->int_val, type_char);
         break;
-    case AST_EXPR_FLOAT_LITERAL:
-        res = resolved_const((int64_t)(*(int64_t *)&expr->float_val), type_float);
-        break;
+    case AST_EXPR_FLOAT_LITERAL: {
+        res = resolved_const((int64_t)(*(int64_t *)&expr->float_val), type_float64);
+    } break;
     case AST_EXPR_STRING_LITERAL: {
         res = resolved_const(expr->int_val, type_ptr(type_char));
     } break;
@@ -898,7 +901,7 @@ void resolve_statement(struct resolver *resolver, struct ast_stmt *statement, st
 
         if (statement->assign.right_expr) {
             struct resolved_expr right = resolve_expected_expr(resolver, statement->assign.right_expr, left.type);
-            if (left.type != right.type) {
+            if (left.type != right.type && left.type->kind != right.type->kind) {
                 // TODO: error handling
                 printf("left-hand side of assignment does not match right-hand side type\n");
                 exit(1);
@@ -930,7 +933,7 @@ void resolve_statement(struct resolver *resolver, struct ast_stmt *statement, st
         struct type *decl_type = resolve_typespec(resolver, statement->decl.type);
         if (statement->decl.expr) {
             struct resolved_expr init = resolve_expr(resolver, statement->decl.expr);
-            if (decl_type != init.type) {
+            if (decl_type != init.type && decl_type->kind != init.type->kind) {
                 // TODO: error handling
                 printf("left-hand side of assignment does not match right-hand side type\n");
                 exit(1);
@@ -965,13 +968,15 @@ struct type *resolve_decl_var(struct resolver *resolver, struct ast_decl *decl)
     if (decl->var_decl.expr) {
         struct resolved_expr result = resolve_expected_expr(resolver, decl->var_decl.expr, type);
 
-        if (type && result.type != type) {
+        if (type && result.type->kind != type->kind) {
             // TODO: error handling
             printf("declared type does not match inferred type\n");
             exit(1);
         }
 
-        type = result.type;
+        if (!type) {
+            type = result.type;
+        }
     }
 
     complete_type(resolver, type);
@@ -1202,5 +1207,6 @@ void resolver_init(struct resolver *resolver)
     type_void->symbol = symbol_type(resolver, intern_string(u8"void"), type_void);
     type_char->symbol = symbol_type(resolver, intern_string(u8"char"), type_char);
     type_int->symbol = symbol_type(resolver, intern_string(u8"int"), type_int);
-    type_float->symbol = symbol_type(resolver, intern_string(u8"float"), type_float);
+    type_float32->symbol = symbol_type(resolver, intern_string(u8"f32"), type_float32);
+    type_float64->symbol = symbol_type(resolver, intern_string(u8"f64"), type_float64);
 }

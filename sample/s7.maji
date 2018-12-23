@@ -1,4 +1,4 @@
-printf :: (fmt: char*, f: float) #foreign "/usr/lib/libc.dylib";
+printf :: (fmt: char*, f: f64) #foreign "/usr/lib/libc.dylib";
 
 a :: 1.5;
 b := 2.5;

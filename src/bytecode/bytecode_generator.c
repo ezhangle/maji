@@ -315,7 +315,7 @@ void bytecode_emit_expression_div(struct bytecode_emitter *emitter, struct ast_e
     bytecode_emit(emitter, _div_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_RDX));
 }
 
-void bytecode_emit_expression_greater_than(struct bytecode_emitter *emitter, struct ast_expr *left, struct ast_expr *right)
+void bytecode_emit_expression_cmp(struct bytecode_emitter *emitter, struct ast_expr *left, struct ast_expr *right, uint64_t cmp_jmp_instruction)
 {
     bytecode_emit_expression(emitter, left);
     bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RCX));
@@ -323,7 +323,7 @@ void bytecode_emit_expression_greater_than(struct bytecode_emitter *emitter, str
     bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RDX));
 
     bytecode_emit(emitter, _cmp_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
-    bytecode_emit(emitter, _jg_imm());
+    bytecode_emit(emitter, cmp_jmp_instruction);
 
     uint64_t *true_patch = bytecode_emitter_mark_patch_source(emitter);
     bytecode_emit(emitter, -1);
@@ -344,150 +344,8 @@ void bytecode_emit_expression_greater_than(struct bytecode_emitter *emitter, str
     *end_patch = end_target;
 }
 
-void bytecode_emit_expression_greater_than_or_equal(struct bytecode_emitter *emitter, struct ast_expr *left, struct ast_expr *right)
-{
-    bytecode_emit_expression(emitter, left);
-    bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RCX));
-    bytecode_emit_expression(emitter, right);
-    bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RDX));
 
-    bytecode_emit(emitter, _cmp_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
-    bytecode_emit(emitter, _jge_imm());
 
-    uint64_t *true_patch = bytecode_emitter_mark_patch_source(emitter);
-    bytecode_emit(emitter, -1);
-
-    bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
-    bytecode_emit(emitter, 0);
-    bytecode_emit(emitter, _jmp_imm());
-    uint64_t *end_patch = bytecode_emitter_mark_patch_source(emitter);
-    bytecode_emit(emitter, -1);
-
-    int true_target = bytecode_emitter_mark_patch_target(emitter);
-    *true_patch = true_target;
-
-    bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
-    bytecode_emit(emitter, 1);
-
-    int end_target = bytecode_emitter_mark_patch_target(emitter);
-    *end_patch = end_target;
-}
-
-void bytecode_emit_expression_less_than(struct bytecode_emitter *emitter, struct ast_expr *left, struct ast_expr *right)
-{
-    bytecode_emit_expression(emitter, left);
-    bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RCX));
-    bytecode_emit_expression(emitter, right);
-    bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RDX));
-
-    bytecode_emit(emitter, _cmp_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
-    bytecode_emit(emitter, _jl_imm());
-
-    uint64_t *true_patch = bytecode_emitter_mark_patch_source(emitter);
-    bytecode_emit(emitter, -1);
-
-    bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
-    bytecode_emit(emitter, 0);
-    bytecode_emit(emitter, _jmp_imm());
-    uint64_t *end_patch = bytecode_emitter_mark_patch_source(emitter);
-    bytecode_emit(emitter, -1);
-
-    int true_target = bytecode_emitter_mark_patch_target(emitter);
-    *true_patch = true_target;
-
-    bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
-    bytecode_emit(emitter, 1);
-
-    int end_target = bytecode_emitter_mark_patch_target(emitter);
-    *end_patch = end_target;
-}
-
-void bytecode_emit_expression_less_than_or_equal(struct bytecode_emitter *emitter, struct ast_expr *left, struct ast_expr *right)
-{
-    bytecode_emit_expression(emitter, left);
-    bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RCX));
-    bytecode_emit_expression(emitter, right);
-    bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RDX));
-
-    bytecode_emit(emitter, _cmp_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
-    bytecode_emit(emitter, _jle_imm());
-
-    uint64_t *true_patch = bytecode_emitter_mark_patch_source(emitter);
-    bytecode_emit(emitter, -1);
-
-    bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
-    bytecode_emit(emitter, 0);
-    bytecode_emit(emitter, _jmp_imm());
-    uint64_t *end_patch = bytecode_emitter_mark_patch_source(emitter);
-    bytecode_emit(emitter, -1);
-
-    int true_target = bytecode_emitter_mark_patch_target(emitter);
-    *true_patch = true_target;
-
-    bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
-    bytecode_emit(emitter, 1);
-
-    int end_target = bytecode_emitter_mark_patch_target(emitter);
-    *end_patch = end_target;
-}
-
-void bytecode_emit_expression_equal(struct bytecode_emitter *emitter, struct ast_expr *left, struct ast_expr *right)
-{
-    bytecode_emit_expression(emitter, left);
-    bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RCX));
-    bytecode_emit_expression(emitter, right);
-    bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RDX));
-
-    bytecode_emit(emitter, _cmp_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
-    bytecode_emit(emitter, _jz_imm());
-
-    uint64_t *true_patch = bytecode_emitter_mark_patch_source(emitter);
-    bytecode_emit(emitter, -1);
-
-    bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
-    bytecode_emit(emitter, 0);
-    bytecode_emit(emitter, _jmp_imm());
-    uint64_t *end_patch = bytecode_emitter_mark_patch_source(emitter);
-    bytecode_emit(emitter, -1);
-
-    int true_target = bytecode_emitter_mark_patch_target(emitter);
-    *true_patch = true_target;
-
-    bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
-    bytecode_emit(emitter, 1);
-
-    int end_target = bytecode_emitter_mark_patch_target(emitter);
-    *end_patch = end_target;
-}
-
-void bytecode_emit_expression_not_equal(struct bytecode_emitter *emitter, struct ast_expr *left, struct ast_expr *right)
-{
-    bytecode_emit_expression(emitter, left);
-    bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RCX));
-    bytecode_emit_expression(emitter, right);
-    bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RDX));
-
-    bytecode_emit(emitter, _cmp_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
-    bytecode_emit(emitter, _jnz_imm());
-
-    uint64_t *true_patch = bytecode_emitter_mark_patch_source(emitter);
-    bytecode_emit(emitter, -1);
-
-    bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
-    bytecode_emit(emitter, 0);
-    bytecode_emit(emitter, _jmp_imm());
-    uint64_t *end_patch = bytecode_emitter_mark_patch_source(emitter);
-    bytecode_emit(emitter, -1);
-
-    int true_target = bytecode_emitter_mark_patch_target(emitter);
-    *true_patch = true_target;
-
-    bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
-    bytecode_emit(emitter, 1);
-
-    int end_target = bytecode_emitter_mark_patch_target(emitter);
-    *end_patch = end_target;
-}
 
 void bytecode_emit_expression_and(struct bytecode_emitter *emitter, struct ast_expr *left, struct ast_expr *right)
 {
@@ -612,26 +470,26 @@ void _bytecode_emit_expression_binary(struct bytecode_emitter *emitter, enum tok
     case '/': {
         bytecode_emit_expression_div(emitter, left_expr, right_expr);
     } break;
-    case '>': {
-        bytecode_emit_expression_greater_than(emitter, left_expr, right_expr);
-    } break;
-    case '<': {
-        bytecode_emit_expression_less_than(emitter, left_expr, right_expr);
-    } break;
     case '=': {
         bytecode_emit_expression_assign(emitter, left_expr, right_expr);
     } break;
+    case '>': {
+        bytecode_emit_expression_cmp(emitter, left_expr, right_expr, _jg_imm());
+    } break;
+    case '<': {
+        bytecode_emit_expression_cmp(emitter, left_expr, right_expr, _jl_imm());
+    } break;
     case TOKEN_KIND_GT_EQUAL: {
-        bytecode_emit_expression_greater_than_or_equal(emitter, left_expr, right_expr);
+        bytecode_emit_expression_cmp(emitter, left_expr, right_expr, _jge_imm());
     } break;
     case TOKEN_KIND_LT_EQUAL: {
-        bytecode_emit_expression_less_than_or_equal(emitter, left_expr, right_expr);
+        bytecode_emit_expression_cmp(emitter, left_expr, right_expr, _jle_imm());
     } break;
     case TOKEN_KIND_EQUAL: {
-        bytecode_emit_expression_equal(emitter, left_expr, right_expr);
+        bytecode_emit_expression_cmp(emitter, left_expr, right_expr, _jz_imm());
     } break;
     case TOKEN_KIND_NOT_EQUAL: {
-        bytecode_emit_expression_not_equal(emitter, left_expr, right_expr);
+        bytecode_emit_expression_cmp(emitter, left_expr, right_expr, _jnz_imm());
     } break;
     case TOKEN_KIND_AND: {
         bytecode_emit_expression_and(emitter, left_expr, right_expr);

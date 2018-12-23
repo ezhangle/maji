@@ -1,0 +1,22 @@
+printf :: (format: char*, a: int, b: int, c: int) #foreign "/usr/lib/libc.dylib";
+
+main :: () {
+    a := 1;
+    b := 2;
+    c := 2;
+
+    printf("%d < %d = %d\n", a, b, a < b);
+    printf("%d <= %d = %d\n", a, b, a <= b);
+
+    printf("%d > %d = %d\n", a, b, a > b);
+    printf("%d >= %d = %d\n", a, b, a >= b);
+
+    printf("%d == %d = %d\n", a, b, a == b);
+    printf("%d != %d = %d\n", a, b, a != b);
+
+    printf("%d < %d = %d\n", c, b, c < b);
+    printf("%d <= %d = %d\n", c, b, c <= b);
+
+    printf("%d > %d = %d\n", c, b, c > b);
+    printf("%d >= %d = %d\n", c, b, c >= b);
+}

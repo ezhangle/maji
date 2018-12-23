@@ -63,7 +63,7 @@ main :: () {
 
     wptr := &w[0].y;
     *wptr = 99;
-    printf("v[0].y = %d\n", w[0].y);
+    printf("v.y = %d\n", v.y);
 }
 
 vec :: struct {

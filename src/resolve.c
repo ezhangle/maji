@@ -23,7 +23,7 @@ void complete_type(struct resolver *resolver, struct type *type);
 struct type *type_void = &(struct type){TYPE_VOID, 0};
 struct type *type_char = &(struct type){TYPE_CHAR, 1, 1};
 struct type *type_int = &(struct type){TYPE_INT, 8, 8};
-struct type *type_float = &(struct type){TYPE_FLOAT, 4, 4};
+struct type *type_float = &(struct type){TYPE_FLOAT, 8, 8};
 
 const size_t PTR_SIZE = 8;
 const size_t PTR_ALIGN = 8;
@@ -713,7 +713,7 @@ struct resolved_expr resolve_expected_expr(struct resolver *resolver, struct ast
         res = resolved_const(expr->int_val, type_char);
         break;
     case AST_EXPR_FLOAT_LITERAL:
-        res = resolved_rvalue(type_float);
+        res = resolved_const((int64_t)(*(int64_t *)&expr->float_val), type_float);
         break;
     case AST_EXPR_STRING_LITERAL: {
         res = resolved_const(expr->int_val, type_ptr(type_char));
@@ -888,9 +888,6 @@ void resolve_statement(struct resolver *resolver, struct ast_stmt *statement, st
     case AST_STMT_EXPR: {
         struct resolved_expr __unused expr = resolve_expr(resolver, statement->expr);
     } break;
-    case AST_STMT_CONST: {
-        symbol_push(resolver, symbol_const(statement->init.name, resolve_expr(resolver, statement->init.expr).type));
-    } break;
     default:
         printf("GOT UNHANDLED TYPE %d\n", statement->kind);
         assert(0);
@@ -911,8 +908,6 @@ struct type *resolve_decl_var(struct resolver *resolver, struct ast_decl *decl)
         struct resolved_expr result = resolve_expected_expr(resolver, decl->var_decl.expr, type);
 
         if (type && result.type != type) {
-            printf("decl type %p\n", type);
-            printf("inff type %p\n", result.type);
             // TODO: error handling
             printf("declared type does not match inferred type\n");
             exit(1);

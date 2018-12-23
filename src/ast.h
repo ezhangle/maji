@@ -471,7 +471,6 @@ enum ast_stmt_kind
     AST_STMT_EXPR,
     AST_STMT_ASSIGN,
     AST_STMT_INIT,
-    AST_STMT_CONST,
     AST_STMT_DECL,
 };
 
@@ -632,15 +631,6 @@ static inline struct ast_stmt *
 ast_stmt_init(const uint8_t *name, struct ast_expr *expr)
 {
     struct ast_stmt *stmt = ast_stmt_alloc(AST_STMT_INIT);
-    stmt->init.name = name;
-    stmt->init.expr = expr;
-    return stmt;
-}
-
-static inline struct ast_stmt *
-ast_stmt_const(const uint8_t *name, struct ast_expr *expr)
-{
-    struct ast_stmt *stmt = ast_stmt_alloc(AST_STMT_CONST);
     stmt->init.name = name;
     stmt->init.expr = expr;
     return stmt;
@@ -981,11 +971,6 @@ ast_print_stmt(struct ast_stmt *stmt)
         break;
     case AST_STMT_INIT:
         printf("(:= %s ", stmt->init.name);
-        ast_print_expr(stmt->init.expr);
-        printf(")");
-        break;
-    case AST_STMT_CONST:
-        printf("(:: %s ", stmt->init.name);
         ast_print_expr(stmt->init.expr);
         printf(")");
         break;

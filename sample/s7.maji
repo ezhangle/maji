@@ -1,0 +1,14 @@
+printf :: (fmt: char*, f: float) #foreign "/usr/lib/libc.dylib";
+
+a :: 1.5;
+b := 2.5;
+main :: () -> int {
+    c := 7.5;
+    b = 3.5;
+    d := 5;
+    c = 8.5;
+    printf("a is %.2lf\n", a);
+    printf("b is %.2lf\n", b);
+    printf("c is %.2lf\n", c);
+    return d;
+}

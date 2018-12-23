@@ -241,10 +241,7 @@ struct ast_stmt *parse_stmt_base(struct parser *parser)
         }
         stmt = ast_stmt_init(expr->name, parse_expr(parser));
     } else if (parser_match(parser, TOKEN_KIND_CONST_ASSIGN)) {
-        if (expr->kind != AST_EXPR_IDENTIFIER) {
-            parser_fatal(parser, parser_previous(parser), ":: must be preceeded by an identifier\n");
-        }
-        stmt = ast_stmt_const(expr->name, parse_expr(parser));
+        parser_fatal(parser, parser_previous(parser), ":: is not allowed in a statement context\n");
     } else if (parser_match_assignment(parser)) {
         enum token_kind op = parser_previous(parser).kind;
         stmt = ast_stmt_assign(op, expr, parse_expr(parser));
@@ -304,8 +301,8 @@ struct ast_stmt *parse_stmt_for(struct parser *parser)
     parser_consume(parser, ';');
     if (!parser_check(parser, ')')) {
         next = parse_stmt_base(parser);
-        if (next->kind == AST_STMT_INIT || next->kind == AST_STMT_CONST) {
-            parser_fatal(parser, parser_previous(parser), "init/const statements not allowed in for statement's next clause");
+        if (next->kind == AST_STMT_INIT) {
+            parser_fatal(parser, parser_previous(parser), "init statements not allowed in for statement's next clause");
         }
     }
     parser_consume(parser, ')');

@@ -31,6 +31,11 @@ uint64_t _memw_reg_reg(enum bytecode_register reg1, enum bytecode_register reg2)
     return encode_instruction_r2(BYTECODE_OPCODE_MEMW_REG_REG, reg1, reg2);
 }
 
+uint64_t _memr_f64_reg_reg(enum bytecode_register reg1, enum bytecode_register reg2)
+{
+    return encode_instruction_r2(BYTECODE_OPCODE_MEMR_FLT64_REG_REG, reg1, reg2);
+}
+
 uint64_t _memr_i64_reg_reg(enum bytecode_register reg1, enum bytecode_register reg2)
 {
     return encode_instruction_r2(BYTECODE_OPCODE_MEMR_INT64_REG_REG, reg1, reg2);
@@ -54,6 +59,11 @@ uint64_t _mov_i64_lcl_imm(void)
 uint64_t _mov_lcl_reg(enum bytecode_register reg)
 {
     return encode_instruction_r1(BYTECODE_OPCODE_MOV_LCL_REG, reg);
+}
+
+uint64_t _mov_f64_reg_imm(enum bytecode_register reg)
+{
+    return encode_instruction_r1(BYTECODE_OPCODE_MOV_FLT64_REG_IMM, reg);
 }
 
 uint64_t _mov_i64_reg_imm(enum bytecode_register reg)
@@ -104,6 +114,11 @@ uint64_t _div_reg_reg(enum bytecode_register reg1, enum bytecode_register reg2)
 uint64_t _push_reg(enum bytecode_register reg)
 {
     return encode_instruction_r1(BYTECODE_OPCODE_PUSH_REG, reg);
+}
+
+uint64_t _pop_f64_reg(enum bytecode_register reg)
+{
+    return encode_instruction_r1(BYTECODE_OPCODE_POP_FLT64_REG, reg);
 }
 
 uint64_t _pop_i64_reg(enum bytecode_register reg)
@@ -447,6 +462,12 @@ void bytecode_emit_expression_immediate_char(struct bytecode_emitter *emitter, s
     bytecode_emit(emitter, expr->int_val);
 }
 
+void bytecode_emit_expression_immediate_float(struct bytecode_emitter *emitter, struct ast_expr *expr)
+{
+    bytecode_emit(emitter, _mov_f64_reg_imm(BYTECODE_REGISTER_RCX));
+    bytecode_emit(emitter, (uint64_t)(*(uint64_t *)&expr->float_val));
+}
+
 void bytecode_emit_expression_identifier(struct bytecode_emitter *emitter, struct ast_expr *expr)
 {
     assert(expr->symbol);
@@ -459,6 +480,9 @@ void bytecode_emit_expression_identifier(struct bytecode_emitter *emitter, struc
             bytecode_emit(emitter, symbol->val);
         } else if (symbol->type == type_char) {
             bytecode_emit(emitter, _mov_i8_reg_imm(BYTECODE_REGISTER_RCX));
+            bytecode_emit(emitter, symbol->val);
+        } else if (symbol->type == type_float) {
+            bytecode_emit(emitter, _mov_f64_reg_imm(BYTECODE_REGISTER_RCX));
             bytecode_emit(emitter, symbol->val);
         } else if (symbol->type->kind == TYPE_PTR) {
             bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_R9));
@@ -473,7 +497,12 @@ void bytecode_emit_expression_identifier(struct bytecode_emitter *emitter, struc
         }
 
         bytecode_emit(emitter, symbol->address);
-        bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
+
+        if (symbol->type == type_float) {
+            bytecode_emit(emitter, _memr_f64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
+        } else {
+            bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
+        }
     }
 }
 
@@ -801,7 +830,6 @@ void bytecode_emit_expression_index(struct bytecode_emitter *emitter, struct ast
 void bytecode_emit_expression(struct bytecode_emitter *emitter, struct ast_expr *expr)
 {
     switch (expr->kind) {
-    case AST_EXPR_FLOAT_LITERAL:
     case AST_EXPR_CAST:
         break;
     case AST_EXPR_INDEX: {
@@ -818,6 +846,9 @@ void bytecode_emit_expression(struct bytecode_emitter *emitter, struct ast_expr 
     } break;
     case AST_EXPR_CHAR_LITERAL: {
         bytecode_emit_expression_immediate_char(emitter, expr);
+    } break;
+    case AST_EXPR_FLOAT_LITERAL: {
+        bytecode_emit_expression_immediate_float(emitter, expr);
     } break;
     case AST_EXPR_STRING_LITERAL: {
         bytecode_emit_expression_immediate_string__(emitter, expr);
@@ -1035,8 +1066,6 @@ void bytecode_emit_stmt_return(struct bytecode_emitter *emitter, struct ast_stmt
 void bytecode_emit_stmt(struct bytecode_emitter *emitter, struct ast_stmt *stmt)
 {
     switch (stmt->kind) {
-    case AST_STMT_CONST:
-        break;
     case AST_STMT_ASSIGN: {
         bytecode_emit_stmt_assign(emitter, stmt->assign);
     } break;
@@ -1128,25 +1157,12 @@ void bytecode_emit_var(struct bytecode_emitter *emitter, struct symbol *symbol)
     emitter->data_cursor += type_sizeof(symbol->type);
     printf("allocating address '%" PRIu64 "' for global: '%s'\n", symbol->address, symbol->name);
 
-    if (symbol->decl->var_decl.expr) {
-        bytecode_emit_expression(emitter, symbol->decl->var_decl.expr);
-        bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_R9));
-        bytecode_emit(emitter, symbol->address);
-        bytecode_emit(emitter, _memw_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_RCX));
-    }
-}
+    struct ast_expr *init_expr = symbol->kind == SYMBOL_CONST
+                               ? symbol->decl->const_decl.expr
+                               : symbol->decl->var_decl.expr;
 
-void bytecode_emit_const(struct bytecode_emitter *emitter, struct symbol *symbol)
-{
-    assert(symbol->decl);
-
-    symbol->address = emitter->data_cursor - emitter->program_data;
-    emitter->data_cursor += 8;
-
-    printf("allocating address '%" PRIu64 "' for const: '%s'\n", symbol->address, symbol->name);
-
-    if (symbol->decl->const_decl.expr) {
-        bytecode_emit_expression(emitter, symbol->decl->const_decl.expr);
+    if (init_expr) {
+        bytecode_emit_expression(emitter, init_expr);
         bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_R9));
         bytecode_emit(emitter, symbol->address);
         bytecode_emit(emitter, _memw_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_RCX));
@@ -1201,25 +1217,14 @@ void bytecode_generate(struct resolver *resolver, struct compiler_options *optio
     bytecode_emitter_init(&emitter, resolver);
 
     //
-    // ---- STORE CONSTANT STRING VALUES
-    //
-
-    for (int i = 0; i < buf_len(resolver->ordered_symbols); ++i) {
-        struct symbol *symbol = resolver->ordered_symbols[i];
-
-        if (symbol->kind == SYMBOL_CONST) {
-            bytecode_emit_const(&emitter, symbol);
-        }
-    }
-
-    //
     // ---- ALLOCATE AND INITIALIZE GLOBAL VARIABLES ----
     //
 
     for (int i = 0; i < buf_len(resolver->ordered_symbols); ++i) {
         struct symbol *symbol = resolver->ordered_symbols[i];
 
-        if (symbol->kind == SYMBOL_VAR) {
+        if ((symbol->kind == SYMBOL_CONST) ||
+            (symbol->kind == SYMBOL_VAR)) {
             bytecode_emit_var(&emitter, symbol);
         }
     }

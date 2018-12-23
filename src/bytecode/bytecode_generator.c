@@ -26,6 +26,21 @@ uint64_t _memw_i64_reg_imm(enum bytecode_register reg)
     return encode_instruction_r1(BYTECODE_OPCODE_MEMW_INT64_REG_IMM, reg);
 }
 
+uint64_t _memw_i32_reg_imm(enum bytecode_register reg)
+{
+    return encode_instruction_r1(BYTECODE_OPCODE_MEMW_INT32_REG_IMM, reg);
+}
+
+uint64_t _memw_i16_reg_imm(enum bytecode_register reg)
+{
+    return encode_instruction_r1(BYTECODE_OPCODE_MEMW_INT16_REG_IMM, reg);
+}
+
+uint64_t _memw_i8_reg_imm(enum bytecode_register reg)
+{
+    return encode_instruction_r1(BYTECODE_OPCODE_MEMW_INT8_REG_IMM, reg);
+}
+
 uint64_t _memw_reg_reg(enum bytecode_register reg1, enum bytecode_register reg2)
 {
     return encode_instruction_r2(BYTECODE_OPCODE_MEMW_REG_REG, reg1, reg2);
@@ -46,6 +61,21 @@ uint64_t _memr_i64_reg_reg(enum bytecode_register reg1, enum bytecode_register r
     return encode_instruction_r2(BYTECODE_OPCODE_MEMR_INT64_REG_REG, reg1, reg2);
 }
 
+uint64_t _memr_i32_reg_reg(enum bytecode_register reg1, enum bytecode_register reg2)
+{
+    return encode_instruction_r2(BYTECODE_OPCODE_MEMR_INT32_REG_REG, reg1, reg2);
+}
+
+uint64_t _memr_i16_reg_reg(enum bytecode_register reg1, enum bytecode_register reg2)
+{
+    return encode_instruction_r2(BYTECODE_OPCODE_MEMR_INT16_REG_REG, reg1, reg2);
+}
+
+uint64_t _memr_i8_reg_reg(enum bytecode_register reg1, enum bytecode_register reg2)
+{
+    return encode_instruction_r2(BYTECODE_OPCODE_MEMR_INT8_REG_REG, reg1, reg2);
+}
+
 uint64_t _lea_lcl_reg_imm(enum bytecode_register reg)
 {
     return encode_instruction_r1(BYTECODE_OPCODE_LEA_LCL_REG_IMM, reg);
@@ -59,6 +89,21 @@ uint64_t _lea_bss_reg_imm(enum bytecode_register reg)
 uint64_t _mov_i64_lcl_imm(void)
 {
     return encode_instruction(BYTECODE_OPCODE_MOV_INT64_LCL_IMM);
+}
+
+uint64_t _mov_i32_lcl_imm(void)
+{
+    return encode_instruction(BYTECODE_OPCODE_MOV_INT32_LCL_IMM);
+}
+
+uint64_t _mov_i16_lcl_imm(void)
+{
+    return encode_instruction(BYTECODE_OPCODE_MOV_INT16_LCL_IMM);
+}
+
+uint64_t _mov_i8_lcl_imm(void)
+{
+    return encode_instruction(BYTECODE_OPCODE_MOV_INT8_LCL_IMM);
 }
 
 uint64_t _mov_lcl_reg(enum bytecode_register reg)
@@ -79,6 +124,16 @@ uint64_t _mov_f32_reg_imm(enum bytecode_register reg)
 uint64_t _mov_i64_reg_imm(enum bytecode_register reg)
 {
     return encode_instruction_r1(BYTECODE_OPCODE_MOV_INT64_REG_IMM, reg);
+}
+
+uint64_t _mov_i32_reg_imm(enum bytecode_register reg)
+{
+    return encode_instruction_r1(BYTECODE_OPCODE_MOV_INT32_REG_IMM, reg);
+}
+
+uint64_t _mov_i16_reg_imm(enum bytecode_register reg)
+{
+    return encode_instruction_r1(BYTECODE_OPCODE_MOV_INT16_REG_IMM, reg);
 }
 
 uint64_t _mov_i8_reg_imm(enum bytecode_register reg)
@@ -139,6 +194,21 @@ uint64_t _pop_f32_reg(enum bytecode_register reg)
 uint64_t _pop_i64_reg(enum bytecode_register reg)
 {
     return encode_instruction_r1(BYTECODE_OPCODE_POP_INT64_REG, reg);
+}
+
+uint64_t _pop_i32_reg(enum bytecode_register reg)
+{
+    return encode_instruction_r1(BYTECODE_OPCODE_POP_INT32_REG, reg);
+}
+
+uint64_t _pop_i16_reg(enum bytecode_register reg)
+{
+    return encode_instruction_r1(BYTECODE_OPCODE_POP_INT16_REG, reg);
+}
+
+uint64_t _pop_i8_reg(enum bytecode_register reg)
+{
+    return encode_instruction_r1(BYTECODE_OPCODE_POP_INT8_REG, reg);
 }
 
 uint64_t _cmp_reg_reg(enum bytecode_register reg1, enum bytecode_register reg2)
@@ -221,6 +291,14 @@ uint64_t _ret(void)
     return encode_instruction(BYTECODE_OPCODE_RETURN);
 }
 
+enum bytecode_int_size
+{
+    INT_SIZE_8  = 0,
+    INT_SIZE_16 = 1,
+    INT_SIZE_32 = 2,
+    INT_SIZE_64 = 3,
+};
+
 enum bytecode_float_size
 {
     FLOAT_SIZE_32 = 0,
@@ -229,6 +307,7 @@ enum bytecode_float_size
 
 struct bytecode_type_sizes
 {
+    enum bytecode_int_size int_size;
     enum bytecode_float_size float_size;
 };
 
@@ -308,6 +387,16 @@ void bytecode_emit(struct bytecode_emitter *emitter, uint64_t raw_instr)
     *emitter->text_cursor++ = raw_instr;
 }
 
+enum bytecode_int_size type_to_int_size(struct bytecode_emitter *emitter, struct type *type)
+{
+    if (type == type_int)   return INT_SIZE_64;
+    if (type == type_int8)  return INT_SIZE_8;
+    if (type == type_int16) return INT_SIZE_16;
+    if (type == type_int32) return INT_SIZE_32;
+    if (type == type_int64) return INT_SIZE_64;
+    return buf_last(emitter->type_sizes).int_size;
+}
+
 enum bytecode_float_size type_to_float_size(struct bytecode_emitter *emitter, struct type *type)
 {
     if (type == type_float64) return FLOAT_SIZE_64;
@@ -318,6 +407,7 @@ enum bytecode_float_size type_to_float_size(struct bytecode_emitter *emitter, st
 void bytecode_emitter_push_type_sizes(struct bytecode_emitter *emitter, struct type *type)
 {
     buf_push(emitter->type_sizes, ((struct bytecode_type_sizes) {
+        .int_size   = type_to_int_size(emitter, type),
         .float_size = type_to_float_size(emitter, type),
     }));
 }
@@ -349,6 +439,14 @@ void bytecode_emit_expression_sub(struct bytecode_emitter *emitter, struct ast_e
         bytecode_emit(emitter, _pop_f64_reg(BYTECODE_REGISTER_RCX));
     } else if (left->res.type == type_float32) {
         bytecode_emit(emitter, _pop_f32_reg(BYTECODE_REGISTER_RCX));
+    } else if (left->res.type == type_int64) {
+        bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RCX));
+    } else if (left->res.type == type_int32) {
+        bytecode_emit(emitter, _pop_i32_reg(BYTECODE_REGISTER_RCX));
+    } else if (left->res.type == type_int16) {
+        bytecode_emit(emitter, _pop_i16_reg(BYTECODE_REGISTER_RCX));
+    } else if (left->res.type == type_int8) {
+        bytecode_emit(emitter, _pop_i8_reg(BYTECODE_REGISTER_RCX));
     } else {
         bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RCX));
     }
@@ -373,6 +471,14 @@ void bytecode_emit_expression_add(struct bytecode_emitter *emitter, struct ast_e
         bytecode_emit(emitter, _pop_f64_reg(BYTECODE_REGISTER_RCX));
     } else if (left->res.type == type_float32) {
         bytecode_emit(emitter, _pop_f32_reg(BYTECODE_REGISTER_RCX));
+    } else if (left->res.type == type_int64) {
+        bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RCX));
+    } else if (left->res.type == type_int32) {
+        bytecode_emit(emitter, _pop_i32_reg(BYTECODE_REGISTER_RCX));
+    } else if (left->res.type == type_int16) {
+        bytecode_emit(emitter, _pop_i16_reg(BYTECODE_REGISTER_RCX));
+    } else if (left->res.type == type_int8) {
+        bytecode_emit(emitter, _pop_i8_reg(BYTECODE_REGISTER_RCX));
     } else {
         bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RCX));
     }
@@ -392,6 +498,14 @@ void bytecode_emit_expression_mul(struct bytecode_emitter *emitter, struct ast_e
         bytecode_emit(emitter, _pop_f64_reg(BYTECODE_REGISTER_RCX));
     } else if (left->res.type == type_float32) {
         bytecode_emit(emitter, _pop_f32_reg(BYTECODE_REGISTER_RCX));
+    } else if (left->res.type == type_int64) {
+        bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RCX));
+    } else if (left->res.type == type_int32) {
+        bytecode_emit(emitter, _pop_i32_reg(BYTECODE_REGISTER_RCX));
+    } else if (left->res.type == type_int16) {
+        bytecode_emit(emitter, _pop_i16_reg(BYTECODE_REGISTER_RCX));
+    } else if (left->res.type == type_int8) {
+        bytecode_emit(emitter, _pop_i8_reg(BYTECODE_REGISTER_RCX));
     } else {
         bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RCX));
     }
@@ -411,6 +525,14 @@ void bytecode_emit_expression_div(struct bytecode_emitter *emitter, struct ast_e
         bytecode_emit(emitter, _pop_f64_reg(BYTECODE_REGISTER_RCX));
     } else if (left->res.type == type_float32) {
         bytecode_emit(emitter, _pop_f32_reg(BYTECODE_REGISTER_RCX));
+    } else if (left->res.type == type_int64) {
+        bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RCX));
+    } else if (left->res.type == type_int32) {
+        bytecode_emit(emitter, _pop_i32_reg(BYTECODE_REGISTER_RCX));
+    } else if (left->res.type == type_int16) {
+        bytecode_emit(emitter, _pop_i16_reg(BYTECODE_REGISTER_RCX));
+    } else if (left->res.type == type_int8) {
+        bytecode_emit(emitter, _pop_i8_reg(BYTECODE_REGISTER_RCX));
     } else {
         bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_RCX));
     }
@@ -482,15 +604,16 @@ void bytecode_emit_expression_or(struct bytecode_emitter *emitter, struct ast_ex
 void bytecode_emit_expression_assign(struct bytecode_emitter *emitter, struct ast_expr *left_expr, struct ast_expr *right_expr)
 {
     bytecode_emitter_push_type_sizes(emitter, left_expr->res.type);
-    bytecode_emit_expression(emitter, left_expr);
-    bytecode_emitter_pop_type_sizes(emitter);
 
+    bytecode_emit_expression(emitter, left_expr);
     bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_R9));
 
     bytecode_emit_expression(emitter, right_expr);
 
     bytecode_emit(emitter, _pop_i64_reg(BYTECODE_REGISTER_R9));
     bytecode_emit(emitter, _memw_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_RCX));
+
+    bytecode_emitter_pop_type_sizes(emitter);
 }
 
 struct bytecode_data_string
@@ -538,8 +661,21 @@ void bytecode_emit_expression_immediate_string__(struct bytecode_emitter *emitte
 
 void bytecode_emit_expression_immediate_int(struct bytecode_emitter *emitter, struct ast_expr *expr)
 {
-    bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
-    bytecode_emit(emitter, expr->int_val);
+    enum bytecode_int_size int_size = buf_last(emitter->type_sizes).int_size;
+    printf("EMIT IMMEDIATE %d: %lld\n", int_size, expr->int_val);
+    if (int_size == INT_SIZE_64) {
+        bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
+        bytecode_emit(emitter, expr->int_val);
+    } else if (int_size == INT_SIZE_32) {
+        bytecode_emit(emitter, _mov_i32_reg_imm(BYTECODE_REGISTER_RCX));
+        bytecode_emit(emitter, (int32_t)expr->int_val);
+    } else if (int_size == INT_SIZE_16) {
+        bytecode_emit(emitter, _mov_i16_reg_imm(BYTECODE_REGISTER_RCX));
+        bytecode_emit(emitter, (int16_t)expr->int_val);
+    } else if (int_size == INT_SIZE_8) {
+        bytecode_emit(emitter, _mov_i8_reg_imm(BYTECODE_REGISTER_RCX));
+        bytecode_emit(emitter, (int8_t)expr->int_val);
+    }
 }
 
 void bytecode_emit_expression_immediate_char(struct bytecode_emitter *emitter, struct ast_expr *expr)
@@ -594,6 +730,14 @@ void bytecode_emit_expression_identifier(struct bytecode_emitter *emitter, struc
             bytecode_emit(emitter, _memr_f64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
         } else if (symbol->type == type_float32) {
             bytecode_emit(emitter, _memr_f32_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
+        } else if (symbol->type == type_int64) {
+            bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
+        } else if (symbol->type == type_int32) {
+            bytecode_emit(emitter, _memr_i32_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
+        } else if (symbol->type == type_int16) {
+            bytecode_emit(emitter, _memr_i16_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
+        } else if (symbol->type == type_int8) {
+            bytecode_emit(emitter, _memr_i8_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
         } else {
             bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
         }
@@ -887,6 +1031,14 @@ void bytecode_emit_expression_field_struct(struct bytecode_emitter *emitter, str
         bytecode_emit(emitter, _memr_f64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
     } else if (field_type == type_float32) {
         bytecode_emit(emitter, _memr_f32_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
+    } else if (field_type == type_int64) {
+        bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
+    } else if (field_type == type_int32) {
+        bytecode_emit(emitter, _memr_i32_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
+    } else if (field_type == type_int16) {
+        bytecode_emit(emitter, _memr_i16_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
+    } else if (field_type == type_int8) {
+        bytecode_emit(emitter, _memr_i8_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
     } else {
         bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
     }
@@ -985,11 +1137,11 @@ void bytecode_emit_stmt_init_local(struct bytecode_emitter *emitter, struct ast_
     bytecode_emitter_push_type_sizes(emitter, stmt_init.expr->res.type);
 
     bytecode_emit_expression(emitter, stmt_init.expr);
+    bytecode_emit(emitter, _mov_lcl_reg(BYTECODE_REGISTER_RCX));
+    bytecode_emit(emitter, stmt_init.address);
 
     bytecode_emitter_pop_type_sizes(emitter);
 
-    bytecode_emit(emitter, _mov_lcl_reg(BYTECODE_REGISTER_RCX));
-    bytecode_emit(emitter, stmt_init.address);
 }
 
 void bytecode_emit_stmt_decl_local(struct bytecode_emitter *emitter, struct ast_stmt_decl stmt_decl)
@@ -1273,12 +1425,11 @@ void bytecode_emit_var(struct bytecode_emitter *emitter, struct symbol *symbol)
         bytecode_emitter_push_type_sizes(emitter, symbol->type);
 
         bytecode_emit_expression(emitter, init_expr);
-
-        bytecode_emitter_pop_type_sizes(emitter);
-
         bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_R9));
         bytecode_emit(emitter, symbol->address);
         bytecode_emit(emitter, _memw_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_RCX));
+
+        bytecode_emitter_pop_type_sizes(emitter);
     }
 }
 
@@ -1309,7 +1460,10 @@ void bytecode_emitter_init(struct bytecode_emitter *emitter, struct resolver *re
     emitter->data_cursor = emitter->program_data;
     emitter->text_cursor = emitter->program_text;
     emitter->entry_point = intern_string(u8"main");
-    buf_push(emitter->type_sizes, ((struct bytecode_type_sizes) {}));
+    buf_push(emitter->type_sizes, ((struct bytecode_type_sizes) {
+        .int_size = INT_SIZE_64,
+        .float_size = FLOAT_SIZE_64,
+    }));
 }
 
 void bytecode_emitter_destroy(struct bytecode_emitter *emitter)

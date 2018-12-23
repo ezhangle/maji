@@ -1,0 +1,27 @@
+printf :: (format: char*, a: int, b: int) -> int #foreign "/usr/lib/libc.dylib";
+
+mem: int[40];
+
+fib :: (n: int) -> int {
+    if (n <= 1) {
+        return n;
+    }
+
+    if (mem[n-1] == 0) {
+        mem[n-1] = fib(n-1);
+    }
+
+    if (mem[n-2] == 0) {
+        mem[n-2] = fib(n-2);
+    }
+
+    return mem[n-1] + mem[n-2];
+}
+
+
+main :: () {
+    for (i := 1; i < 15; ++i) {
+        printf("the %2d'th fibonacci number is %2d\n", i, fib(i));
+    }
+    // return 0;
+}

@@ -22,7 +22,13 @@ void complete_type(struct resolver *resolver, struct type *type);
 
 struct type *type_void = &(struct type){TYPE_VOID, 0};
 struct type *type_char = &(struct type){TYPE_CHAR, 1, 1};
+
 struct type *type_int = &(struct type){TYPE_INT, 8, 8};
+struct type *type_int8 = &(struct type){TYPE_INT, 1, 1};
+struct type *type_int16 = &(struct type){TYPE_INT, 2, 2};
+struct type *type_int32 = &(struct type){TYPE_INT, 4, 4};
+struct type *type_int64 = &(struct type){TYPE_INT, 8, 8};
+
 struct type *type_float32 = &(struct type){TYPE_FLOAT, 4, 4};
 struct type *type_float64 = &(struct type){TYPE_FLOAT, 8, 8};
 
@@ -467,7 +473,7 @@ struct resolved_expr resolve_expr_call(struct resolver *resolver, struct ast_exp
         struct type *param_type = func.type->func.params[i];
         struct resolved_expr arg = resolve_expected_expr(resolver, expr->call.args[i], param_type);
 
-        if (ptr_decay(arg).type != param_type) {
+        if (ptr_decay(arg).type != param_type && arg.type->kind != param_type->kind) {
             // TODO: error handling
             printf("call argument expression type doesn't match expected param type");
             exit(1);
@@ -606,22 +612,27 @@ struct resolved_expr resolve_expr_unary(struct resolver *resolver, struct ast_ex
         }
         return resolved_rvalue(type_ptr(type));
     default:
-        if ((type != type_int) &&
-            (type != type_float64) &&
-            (type != type_float32) &&
+        if ((type->kind != TYPE_INT) &&
+            (type->kind != TYPE_FLOAT) &&
             (type->kind != TYPE_ENUM)) {
             // TODO: error handling
             printf("unary operand must be int or float\n");
             exit(1);
         }
 
-        if (operand.is_const) {
-            if (type->kind == TYPE_FLOAT) {
+        if (type->kind == TYPE_FLOAT) {
+            if (operand.is_const) {
                 double float_val = eval_float_unary(expr->unary.op, operand.val);
                 return resolved_const((int64_t)(*(int64_t *)&float_val), type);
-            } else if (type == type_int) {
+            }
+            return resolved_rvalue(type_float64);
+        }
+
+        if (type->kind == TYPE_INT) {
+            if (operand.is_const) {
                 return resolved_const(eval_int_unary(expr->unary.op, operand.val), type_int);
             }
+            return resolved_rvalue(type_int);
         }
 
         return resolved_rvalue(type);
@@ -708,10 +719,9 @@ struct resolved_expr resolve_expr_binary(struct resolver *resolver, struct ast_e
     struct resolved_expr left = resolve_expr(resolver, expr->binary.left_expr);
     struct resolved_expr right = resolve_expr(resolver, expr->binary.right_expr);
 
-    if ((left.type != type_char) &&
-        (left.type != type_int) &&
-        (left.type != type_float64) &&
-        (left.type != type_float32) &&
+    if ((left.type->kind != TYPE_CHAR) &&
+        (left.type->kind != TYPE_INT) &&
+        (left.type->kind != TYPE_FLOAT) &&
         (left.type->kind != TYPE_ENUM)) {
         // TODO: error handling
         printf("left operand of + must be char, int or float");
@@ -828,8 +838,8 @@ int64_t resolve_const_expr(struct resolver *resolver, struct ast_expr *expr)
 void resolve_cond_expr(struct resolver *resolver, struct ast_expr *expr)
 {
     struct resolved_expr result = resolve_expr(resolver, expr);
-    if ((result.type != type_int) &&
-        (result.type != type_char) &&
+    if ((result.type->kind != TYPE_INT) &&
+        (result.type->kind != TYPE_CHAR) &&
         (result.type->kind != TYPE_ENUM)) {
         // TODO: error handling
         printf("conditional expressions must be of type int!\n");
@@ -914,7 +924,7 @@ void resolve_statement(struct resolver *resolver, struct ast_stmt *statement, st
             exit(1);
         }
 
-        if (statement->assign.op != '=' && left.type != type_int) {
+        if (statement->assign.op != '=' && left.type->kind != TYPE_INT) {
             // TODO: error handling
             printf("can only use assignment operators with type int\n");
             exit(1);
@@ -1206,7 +1216,13 @@ void resolver_init(struct resolver *resolver)
 
     type_void->symbol = symbol_type(resolver, intern_string(u8"void"), type_void);
     type_char->symbol = symbol_type(resolver, intern_string(u8"char"), type_char);
+
     type_int->symbol = symbol_type(resolver, intern_string(u8"int"), type_int);
+    type_int8->symbol = symbol_type(resolver, intern_string(u8"s8"), type_int8);
+    type_int16->symbol = symbol_type(resolver, intern_string(u8"s16"), type_int16);
+    type_int32->symbol = symbol_type(resolver, intern_string(u8"s32"), type_int32);
+    type_int64->symbol = symbol_type(resolver, intern_string(u8"s64"), type_int64);
+
     type_float32->symbol = symbol_type(resolver, intern_string(u8"f32"), type_float32);
     type_float64->symbol = symbol_type(resolver, intern_string(u8"f64"), type_float64);
 }

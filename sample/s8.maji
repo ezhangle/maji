@@ -1,4 +1,4 @@
-print_rect :: (r: rect*) #foreign "/Users/Koe/test/testlib/test.so";
+print_rect :: (r: rect*, n: int*) #foreign "/Users/Koe/test/testlib/test.so";
 printf :: (fmt: char*, f: f64, ff: f64, fff: f32) #foreign "/usr/lib/libc.dylib";
 
 rect :: struct {
@@ -23,7 +23,9 @@ main :: () -> int {
     r.h = 14.2;
     r.h = r.h + 2.3;
 
-    print_rect(&r);
+    n: int;
+    n = 10;
+    print_rect(&r, &n);
 
-    return 0;
+    return n;
 }

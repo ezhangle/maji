@@ -132,12 +132,14 @@ void bytecode_runner_print_instruction(struct bytecode_runner *bcr, struct bytec
 {
     if (!bcr->verbose) return;
 
-    printf("cycle %3" PRIu64 ": op = %-15s r1 = %s, r2 = %s, imm = %" PRIu64 "\n",
+    printf("cycle %3" PRIu64 ": op = %-15s r1 = %s, r2 = %s, imm = %" PRIu64 ", r1type = %s, r2type = %s\n",
             ++bcr->cycle_count,
             bytecode_opcode_str[instr->op],
             bytecode_register_str[instr->r1],
             bytecode_register_str[instr->r2],
-            bcr->text[bcr->reg[BYTECODE_REGISTER_RIP]]);
+            bcr->text[bcr->reg[BYTECODE_REGISTER_RIP]],
+            bytecode_register_kind_str[bcr->reg_type[instr->r1]],
+            bytecode_register_kind_str[bcr->reg_type[instr->r2]]);
 }
 
 static int bcr_sample_exe = 1;

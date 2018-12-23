@@ -15,6 +15,17 @@ enum bytecode_register_kind
     BYTECODE_REGISTER_KIND_NON = 6,
 };
 
+static const char *bytecode_register_kind_str[] =
+{
+    "I64",
+    "I32",
+    "I16",
+    "I8",
+    "F64",
+    "F32",
+    "NON",
+};
+
 static const char *bytecode_register_str[] =
 {
     "RIP",

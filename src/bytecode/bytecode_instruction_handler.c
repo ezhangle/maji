@@ -893,63 +893,75 @@ bytecode_instruction_handler_(exec_op_memw_int8_reg_imm)
     uint64_t raw = fetch_instruction(bcr);
     int8_t *address = (int8_t *) as_i64(bcr->reg[reg1]);
     *address = as_i8(raw);
+    bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I8;
 }
 bytecode_instruction_handler_(exec_op_memw_int16_reg_imm)
 {
     uint64_t raw = fetch_instruction(bcr);
     int16_t *address = (int16_t *) as_i64(bcr->reg[reg1]);
     *address = as_i16(raw);
+    bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I16;
 }
 bytecode_instruction_handler_(exec_op_memw_int32_reg_imm)
 {
     uint64_t raw = fetch_instruction(bcr);
     int32_t *address = (int32_t *) as_i64(bcr->reg[reg1]);
     *address = as_i32(raw);
+    bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I32;
 }
 bytecode_instruction_handler_(exec_op_memw_int64_reg_imm)
 {
     uint64_t raw = fetch_instruction(bcr);
     int64_t *address = (int64_t *) as_i64(bcr->reg[reg1]);
     *address = as_i64(raw);
+    bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I64;
 }
 bytecode_instruction_handler_(exec_op_memw_flt32_reg_imm)
 {
     uint64_t raw = fetch_instruction(bcr);
     float *address = (float *) as_i64(bcr->reg[reg1]);
     *address = as_f32(raw);
+    bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_F32;
 }
 bytecode_instruction_handler_(exec_op_memw_flt64_reg_imm)
 {
     uint64_t raw = fetch_instruction(bcr);
     double *address = (double *) as_i64(bcr->reg[reg1]);
     *address = as_f64(raw);
+    bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_F64;
 }
 bytecode_instruction_handler_(exec_op_memw_reg_reg)
 {
-    switch (bcr->reg_type[reg1]) {
+    switch (bcr->reg_type[reg2]) {
     case BYTECODE_REGISTER_KIND_I64: {
         int64_t *address = (int64_t *) as_i64(bcr->reg[reg1]);
         *address = as_i64(bcr->reg[reg2]);
+        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I64;
     } break;
     case BYTECODE_REGISTER_KIND_I32: {
         int32_t *address = (int32_t *) as_i64(bcr->reg[reg1]);
         *address = as_i32(bcr->reg[reg2]);
+        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I32;
     } break;
     case BYTECODE_REGISTER_KIND_I16: {
         int16_t *address = (int16_t *) as_i64(bcr->reg[reg1]);
         *address = as_i16(bcr->reg[reg2]);
+        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I16;
     } break;
     case BYTECODE_REGISTER_KIND_I8: {
         int8_t *address = (int8_t *) as_i64(bcr->reg[reg1]);
         *address = as_i8(bcr->reg[reg2]);
+        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I8;
     } break;
     case BYTECODE_REGISTER_KIND_F64: {
         double *address = (double *) as_i64(bcr->reg[reg1]);
         *address = as_f64(bcr->reg[reg2]);
+        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_F64;
     } break;
     case BYTECODE_REGISTER_KIND_F32: {
         float *address = (float *) as_i64(bcr->reg[reg1]);
         *address = as_f32(bcr->reg[reg2]);
+        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_F32;
     } break;
     }
 }
@@ -958,29 +970,35 @@ bytecode_instruction_handler_(exec_op_memr_int8_reg_reg)
 {
     int8_t *address = (int8_t *) as_i64(bcr->reg[reg2]);
     *as_i8_ptr(bcr->reg[reg1]) = *address;
+    bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I8;
 }
 bytecode_instruction_handler_(exec_op_memr_int16_reg_reg)
 {
     int16_t *address = (int16_t *) as_i64(bcr->reg[reg2]);
     *as_i16_ptr(bcr->reg[reg1]) = *address;
+    bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I16;
 }
 bytecode_instruction_handler_(exec_op_memr_int32_reg_reg)
 {
     int32_t *address = (int32_t *) as_i64(bcr->reg[reg2]);
     *as_i32_ptr(bcr->reg[reg1]) = *address;
+    bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I32;
 }
 bytecode_instruction_handler_(exec_op_memr_int64_reg_reg)
 {
     int64_t *address = (int64_t *) as_i64(bcr->reg[reg2]);
     *as_i64_ptr(bcr->reg[reg1]) = *address;
+    bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I64;
 }
 bytecode_instruction_handler_(exec_op_memr_flt32_reg_reg)
 {
     float *address = (float *) as_i64(bcr->reg[reg2]);
     *as_f32_ptr(bcr->reg[reg1]) = *address;
+    bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_F32;
 }
 bytecode_instruction_handler_(exec_op_memr_flt64_reg_reg)
 {
     double *address = (double *) as_i64(bcr->reg[reg2]);
     *as_f64_ptr(bcr->reg[reg1]) = *address;
+    bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_F64;
 }

@@ -60,6 +60,10 @@ main :: () {
     *v.z = 1;
     printf("v.z = %d\n", *v.z);
     printf("l[0] = %d\n", *l[0]);
+
+    wptr := &w[0].y;
+    *wptr = 99;
+    printf("v[0].y = %d\n", w[0].y);
 }
 
 vec :: struct {

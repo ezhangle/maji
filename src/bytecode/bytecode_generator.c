@@ -705,76 +705,9 @@ void bytecode_emit_expression_not(struct bytecode_emitter *emitter, struct ast_e
 
 void bytecode_emit_expression_dereference(struct bytecode_emitter *emitter, struct ast_expr *expr)
 {
-    // NOTE: The expression could be of type AST_EXPR_UNARY, which usually
-    // means we are derefencing a multi-level pointer. We need to find the innermost expression.
-    while (expr->kind == AST_EXPR_UNARY) {
-        assert(expr->unary.op == '*');
-        expr = expr->unary.expr;
-    }
-
-    if (expr->kind == AST_EXPR_FIELD) {
-        // NOTE: support expressions of type FIELD ACCESS
-        assert(expr->field.expr->symbol);
-        struct symbol *symbol = expr->field.expr->symbol;
-        assert(symbol);
-
-        printf("dereference field access %s\n", symbol->name);
-
-        struct type *type = NULL;
-        int field_offset = find_field_offset_and_type(symbol->type, expr->field.name, &type);
-
-        if (symbol->decl) {
-            bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_R9));
-        } else {
-            bytecode_emit(emitter, _lea_lcl_reg_imm(BYTECODE_REGISTER_R9));
-        }
-
-        bytecode_emit(emitter, symbol->address);
-
-        bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_R11));
-        bytecode_emit(emitter, field_offset);
-        bytecode_emit(emitter, _add_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R11));
-
-        while (type->kind == TYPE_PTR) {
-            // NOTE: if the type we are derefencing is a pointer, we need to do an additional read.
-            // This is because we load the address of a local variable to read from, but the value of the variable
-            // is the address of the variable we are pointing to; we must then read the value of that variable!
-            bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R9));
-            type = type->ptr.elem;
-        }
-
-        bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
-    } else if (expr->kind == AST_EXPR_UNARY) {
-        printf("DEREFENCING UNARY EXPR SHOULD NOT HAPPEN\n");
-        assert(0);
-    } else {
-        // NOTE: dereference an identifier
-        assert(expr->symbol);
-        struct symbol *symbol = expr->symbol;
-        assert(symbol);
-        struct type *type = symbol->type;
-        assert(type);
-
-        printf("dereference identifier %s\n", symbol->name);
-
-        if (symbol->decl) {
-            bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_R9));
-        } else {
-            bytecode_emit(emitter, _lea_lcl_reg_imm(BYTECODE_REGISTER_R9));
-        }
-
-        bytecode_emit(emitter, symbol->address);
-
-        while (type->kind == TYPE_PTR) {
-            // NOTE: if the type we are derefencing is a pointer, we need to do an additional read.
-            // This is because we load the address of a local variable to read from, but the value of the variable
-            // is the address of the variable we are pointing to; we must then read the value of that variable!
-            bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R9));
-            type = type->ptr.elem;
-        }
-
-        bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
-    }
+    bytecode_emit_expression(emitter, expr);
+    bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R9));
+    bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
 }
 
 void bytecode_emit_expression_address(struct bytecode_emitter *emitter, struct ast_expr *expr)
@@ -935,106 +868,62 @@ void bytecode_emit_expression_call(struct bytecode_emitter *emitter, struct ast_
     }
 }
 
+void bytecode_emit_expression_field_enum(struct bytecode_emitter *emitter, struct ast_expr *expr)
+{
+    struct symbol *symbol = expr->field.expr->symbol;
+
+    int field_value = -1;
+    for (size_t i = 0; i < symbol->decl->enum_decl.items_count; ++i) {
+        struct ast_enum_item item = symbol->decl->enum_decl.items[i];
+
+        if (item.expr) {
+            assert(item.expr->res.is_const);
+            field_value = item.expr->res.val;
+        } else {
+            ++field_value;
+        }
+
+        if (item.name == expr->field.name) {
+            break;
+        }
+    }
+
+    bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
+    bytecode_emit(emitter, field_value);
+}
+
+void bytecode_emit_expression_field_struct(struct bytecode_emitter *emitter, struct type *type, struct ast_expr *expr)
+{
+    int deref_count = 0;
+    while (type->kind == TYPE_PTR) {
+        type = type->ptr.elem;
+        ++deref_count;
+    }
+
+    assert(type->kind == TYPE_STRUCT);
+
+    int field_offset = find_field_offset(type, expr->field.name);
+
+    bytecode_emit_expression(emitter, expr->field.expr);
+
+    while (deref_count-- > 0) {
+        bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R9));
+    }
+
+    bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_R11));
+    bytecode_emit(emitter, field_offset);
+    bytecode_emit(emitter, _add_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R11));
+
+    bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
+}
+
 void bytecode_emit_expression_field(struct bytecode_emitter *emitter, struct ast_expr *expr)
 {
-    if (expr->field.expr->kind == AST_EXPR_UNARY) {
-        // NOTE: support unary expressions of type POINTER DEREFERENCE
-        assert(expr->field.expr->unary.op == '*');
-        assert(expr->field.expr->unary.expr->symbol);
-        struct symbol *symbol = expr->field.expr->unary.expr->symbol;
-        assert(symbol);
-        assert(symbol->type);
-        assert(symbol->type->kind == TYPE_PTR);
-
-        struct type *type = symbol->type;
-        if (type->kind == TYPE_PTR) {
-            type = type->ptr.elem;
-        }
-
-        assert(type);
-
-        int field_offset = find_field_offset(type, expr->field.name);
-
-        // printf("UNARY %s FIELD EXPR: offset %d\n", symbol->name, field_offset);
-
-        bytecode_emit_expression(emitter, expr->field.expr);
-
-        bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_R11));
-        bytecode_emit(emitter, field_offset);
-        bytecode_emit(emitter, _add_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R11));
-
-        bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
+    struct type *type = expr->field.expr->res.type;
+    if (type->kind == TYPE_ENUM) {
+        bytecode_emit_expression_field_enum(emitter, expr);
     } else {
-        assert(expr->field.expr->symbol);
-        struct symbol *symbol = expr->field.expr->symbol;
-        assert(symbol);
-        assert(symbol->type);
-
-        if (symbol->type->kind == TYPE_PTR) {
-            int deref_count = 0;
-            struct type *type = symbol->type;
-            while (type->kind == TYPE_PTR) {
-                type = type->ptr.elem;
-                ++deref_count;
-            }
-
-            assert(type);
-            assert(type->kind == TYPE_STRUCT);
-
-            int field_offset = find_field_offset(type, expr->field.name);
-
-            bytecode_emit_expression(emitter, expr->field.expr);
-            while (deref_count-- > 0) {
-                bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R9));
-            }
-
-            bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_R11));
-            bytecode_emit(emitter, field_offset);
-            bytecode_emit(emitter, _add_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R11));
-
-            bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
-        } else if (symbol->type->kind == TYPE_STRUCT) {
-            int field_offset = find_field_offset(symbol->type, expr->field.name);
-
-            // printf("%s.%s | offset: %d\n", symbol->name, expr->field.name, field_offset);
-
-            if (symbol->decl) {
-                bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_R9));
-            } else {
-                bytecode_emit(emitter, _lea_lcl_reg_imm(BYTECODE_REGISTER_R9));
-            }
-
-            bytecode_emit(emitter, symbol->address);
-
-            bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_R11));
-            bytecode_emit(emitter, field_offset);
-            bytecode_emit(emitter, _add_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R11));
-
-            bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
-        } else {
-            assert(symbol->type->kind == TYPE_ENUM);
-
-            int field_value = -1;
-            for (size_t i = 0; i < symbol->decl->enum_decl.items_count; ++i) {
-                struct ast_enum_item item = symbol->decl->enum_decl.items[i];
-
-                if (item.expr) {
-                    assert(item.expr->res.is_const);
-                    field_value = item.expr->res.val;
-                } else {
-                    ++field_value;
-                }
-
-                if (item.name == expr->field.name) {
-                    break;
-                }
-            }
-
-            // printf("%s.%s | value: %d\n", symbol->name, expr->field.name, field_value);
-
-            bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
-            bytecode_emit(emitter, field_value);
-        }
+        bytecode_emit_expression_field_struct(emitter, type, expr);
     }
 }
 

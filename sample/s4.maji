@@ -2,6 +2,7 @@ CGSMainConnectionID :: () -> int #foreign "/System/Library/Frameworks/Carbon.fra
 sleep :: (n: int) #foreign "/usr/lib/libc.dylib";
 
 printf :: (format: char*, n: int) -> int #foreign "/usr/lib/libc.dylib";
+malloc :: (n: int) -> int* #foreign "/usr/lib/libc.dylib";
 
 
 cgl_window :: struct {
@@ -12,14 +13,14 @@ cgl_window :: struct {
 cgl_window_init :: (win: cgl_window*) {
     win.connection = CGSMainConnectionID();
     ss := &win.id;
-    // *ss = 6;
+    *ss = 6;
     winptr := &win;
     conptr := &winptr.connection;
     printf("connectionid = %d\n", winptr.connection);
     printf("connectionid = %d\n", *conptr);
     printf("connectionid = %d\n", win.connection);
-    // winptr.id = 2;
-    // *ss = 8;
+    winptr.id = 2;
+    *ss = 8;
 }
 
 main :: () {
@@ -31,23 +32,38 @@ main :: () {
     v: vec;
     vptr := &v;
 
+    (*vptr).y = 8;
+    printf("v.y = %d\n", v.y);
+
     vv := &vptr;
 
-    /*
-     * FIXME
-    (**vv).y = 5;
+    (**vv).y = 9;
 
     printf("v.y = %d\n", v.y);
 
-     * FIXME
     w: vec*[4];
     w[0] = &v;
-    w[0].y = 2;
+    w[0].y = 4;
+    (*w[0]).y = 5;
     printf("v[0].y = %d\n", w[0].y);
-    */
+
+    k: int* = malloc(8);
+    *k = 9;
+    printf("k = %d\n", *k);
+
+    l: int*[4];
+    l[0] = malloc(8);
+    *l[0] = 5;
+    printf("l[0] = %d\n", *l[0]);
+
+    v.z = l[0];
+    *v.z = 1;
+    printf("v.z = %d\n", *v.z);
+    printf("l[0] = %d\n", *l[0]);
 }
 
 vec :: struct {
     x: int;
     y: int;
+    z: int*;
 }

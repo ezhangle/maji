@@ -221,9 +221,15 @@ uint64_t _ret(void)
     return encode_instruction(BYTECODE_OPCODE_RETURN);
 }
 
+enum bytecode_float_size
+{
+    FLOAT_SIZE_32 = 0,
+    FLOAT_SIZE_64 = 1,
+};
+
 struct bytecode_type_sizes
 {
-    bool emit_immediate_float64;
+    enum bytecode_float_size float_size;
 };
 
 struct bytecode_emitter
@@ -302,10 +308,17 @@ void bytecode_emit(struct bytecode_emitter *emitter, uint64_t raw_instr)
     *emitter->text_cursor++ = raw_instr;
 }
 
+enum bytecode_float_size type_to_float_size(struct bytecode_emitter *emitter, struct type *type)
+{
+    if (type == type_float64) return FLOAT_SIZE_64;
+    if (type == type_float32) return FLOAT_SIZE_32;
+    return buf_last(emitter->type_sizes).float_size;
+}
+
 void bytecode_emitter_push_type_sizes(struct bytecode_emitter *emitter, struct type *type)
 {
     buf_push(emitter->type_sizes, ((struct bytecode_type_sizes) {
-        .emit_immediate_float64 = type == type_float64,
+        .float_size = type_to_float_size(emitter, type),
     }));
 }
 
@@ -537,7 +550,7 @@ void bytecode_emit_expression_immediate_char(struct bytecode_emitter *emitter, s
 
 void bytecode_emit_expression_immediate_float(struct bytecode_emitter *emitter, struct ast_expr *expr)
 {
-    if (buf_last(emitter->type_sizes).emit_immediate_float64) {
+    if (buf_last(emitter->type_sizes).float_size == FLOAT_SIZE_64) {
         bytecode_emit(emitter, _mov_f64_reg_imm(BYTECODE_REGISTER_RCX));
         bytecode_emit(emitter, (uint64_t)(*(uint64_t *)&expr->float_val));
     } else {

@@ -366,10 +366,10 @@ struct resolved_expr resolved_lvalue(struct type *type)
     };
 }
 
-struct resolved_expr resolved_const(int64_t val)
+struct resolved_expr resolved_const(int64_t val, struct type *type)
 {
     return (struct resolved_expr){
-        .type = type_int,
+        .type = type,
         .is_const = true,
         .val = val
     };
@@ -425,12 +425,9 @@ struct resolved_expr resolve_expr_identifier(struct resolver *resolver, struct a
     if (symbol->kind == SYMBOL_VAR) {
         return resolved_lvalue(symbol->type);
     } else if (symbol->kind == SYMBOL_CONST) {
-        if (symbol->type == type_int) {
-            return resolved_const(symbol->val);
-        } else {
-            return resolved_lvalue(symbol->type);
-        }
-    } else if (symbol->kind == SYMBOL_FUNC || symbol->kind == SYMBOL_FUNC_FOREIGN) {
+        return resolved_const(symbol->val, symbol->type);
+    } else if ((symbol->kind == SYMBOL_FUNC) ||
+               (symbol->kind == SYMBOL_FUNC_FOREIGN)) {
         return resolved_rvalue(symbol->type);
     } else if (symbol->kind == SYMBOL_TYPE) {
         return resolved_rvalue(symbol->type);
@@ -600,7 +597,7 @@ struct resolved_expr resolve_expr_unary(struct resolver *resolver, struct ast_ex
             exit(1);
         }
         if (operand.is_const) {
-            return resolved_const(eval_int_unary(expr->unary.op, operand.val));
+            return resolved_const(eval_int_unary(expr->unary.op, operand.val), type_int);
         } else {
             return resolved_rvalue(type);
         }
@@ -659,7 +656,9 @@ struct resolved_expr resolve_expr_binary(struct resolver *resolver, struct ast_e
     assert(expr->kind == AST_EXPR_BINARY);
     struct resolved_expr left = resolve_expr(resolver, expr->binary.left_expr);
     struct resolved_expr right = resolve_expr(resolver, expr->binary.right_expr);
-    if (left.type != type_int && left.type->kind != TYPE_ENUM) {
+    if ((left.type != type_int) &&
+        (left.type != type_char) &&
+        (left.type->kind != TYPE_ENUM)) {
         // TODO: error handling
         printf("left operand of + must be int");
         exit(1);
@@ -670,7 +669,7 @@ struct resolved_expr resolve_expr_binary(struct resolver *resolver, struct ast_e
         exit(1);
     }
     if (left.is_const && right.is_const) {
-        return resolved_const(eval_int_binary(expr->binary.op, left.val, right.val));
+        return resolved_const(eval_int_binary(expr->binary.op, left.val, right.val), type_int);
     } else {
         return resolved_rvalue(left.type);
     }
@@ -693,7 +692,7 @@ struct resolved_expr resolve_expr_ternary(struct resolver *resolver, struct ast_
         exit(1);
     }
     if (cond.is_const && then_expr.is_const && else_expr.is_const) {
-        return resolved_const(cond.val ? then_expr.val : else_expr.val);
+        return resolved_const(cond.val ? then_expr.val : else_expr.val, type_int);
     } else {
         return resolved_rvalue(then_expr.type);
     }
@@ -708,14 +707,16 @@ struct resolved_expr resolve_expected_expr(struct resolver *resolver, struct ast
         res = resolve_expr_identifier(resolver, expr);
         break;
     case AST_EXPR_INT_LITERAL:
-        res = resolved_const(expr->int_val);
+        res = resolved_const(expr->int_val, type_int);
+        break;
+    case AST_EXPR_CHAR_LITERAL:
+        res = resolved_const(expr->int_val, type_char);
         break;
     case AST_EXPR_FLOAT_LITERAL:
         res = resolved_rvalue(type_float);
         break;
     case AST_EXPR_STRING_LITERAL: {
-        res = resolved_rvalue(type_ptr(type_char));
-        res.is_const = true;
+        res = resolved_const(expr->int_val, type_ptr(type_char));
     } break;
     case AST_EXPR_CALL:
         res = resolve_expr_call(resolver, expr);
@@ -766,7 +767,9 @@ int64_t resolve_const_expr(struct resolver *resolver, struct ast_expr *expr)
 void resolve_cond_expr(struct resolver *resolver, struct ast_expr *expr)
 {
     struct resolved_expr result = resolve_expr(resolver, expr);
-    if (result.type != type_int && result.type->kind != TYPE_ENUM) {
+    if ((result.type != type_int) &&
+        (result.type != type_char) &&
+        (result.type->kind != TYPE_ENUM)) {
         // TODO: error handling
         printf("conditional expressions must be of type int!\n");
         exit(1);

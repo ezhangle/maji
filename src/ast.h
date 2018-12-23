@@ -262,6 +262,7 @@ enum ast_expr_kind
 
     AST_EXPR_IDENTIFIER,
     AST_EXPR_INT_LITERAL,
+    AST_EXPR_CHAR_LITERAL,
     AST_EXPR_FLOAT_LITERAL,
     AST_EXPR_STRING_LITERAL,
 
@@ -354,6 +355,14 @@ static inline struct ast_expr *
 ast_expr_int(uint64_t value)
 {
     struct ast_expr *result = ast_expr_alloc(AST_EXPR_INT_LITERAL);
+    result->int_val = value;
+    return result;
+}
+
+static inline struct ast_expr *
+ast_expr_char(uint64_t value)
+{
+    struct ast_expr *result = ast_expr_alloc(AST_EXPR_CHAR_LITERAL);
     result->int_val = value;
     return result;
 }
@@ -707,6 +716,9 @@ ast_print_expr(struct ast_expr *expr)
     switch (expr->kind) {
     case AST_EXPR_INT_LITERAL:
         printf("%" PRIu64, expr->int_val);
+        break;
+    case AST_EXPR_CHAR_LITERAL:
+        printf("%c", (char)expr->int_val);
         break;
     case AST_EXPR_FLOAT_LITERAL:
         printf("%lf", expr->float_val);

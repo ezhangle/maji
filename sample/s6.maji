@@ -1,0 +1,41 @@
+printf :: (format: char*) #foreign "/usr/lib/libc.dylib";
+sprintf :: (out: char*, format: char*) #foreign "/usr/lib/libc.dylib";
+memset :: (ptr: char*, value: int, size: int) #foreign "/usr/lib/libc.dylib";
+
+set_string :: (str: char*) {
+    str[0] = h;
+    str[1] = 'e';
+    str[2] = 'l';
+    str[3] = 'l';
+    str[4] = 'o';
+    str[5] = '\n';
+    str[6] = '\0';
+}
+
+string_length :: (str: char*) -> int {
+    length := 0;
+    while (str[length]) {
+        ++length;
+    }
+    return length;
+}
+
+h :: 'h';
+four :: 4;
+greeting :: "hello, world!\n";
+
+main :: () -> int {
+    str: char[20];
+    set_string(str);
+    str[four] = '!';
+    printf(str);
+
+    heh: char[30];
+    sprintf(heh, "this is a generated string!\n");
+    printf(heh);
+
+    printf(greeting);
+    printf("free fall\n");
+
+    return string_length(heh);
+}

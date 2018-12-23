@@ -34,7 +34,12 @@ void parser_init_keywords(void)
 struct ast_expr *parse_expr_operand(struct parser *parser)
 {
     if (parser_match(parser, TOKEN_KIND_INT_LITERAL)) {
-        return ast_expr_int(parser_previous(parser).as.int_val);
+        struct token token = parser_previous(parser);
+        if (token.base == NUMBER_BASE_CHAR) {
+            return ast_expr_char(token.as.int_val);
+        } else {
+            return ast_expr_int(token.as.int_val);
+        }
     } else if (parser_match(parser, TOKEN_KIND_FLOAT_LITERAL)) {
         return ast_expr_float(parser_previous(parser).as.float_val);
     } else if (parser_match(parser, TOKEN_KIND_STRING_LITERAL)) {

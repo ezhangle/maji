@@ -61,6 +61,11 @@ uint64_t _mov_i64_reg_imm(enum bytecode_register reg)
     return encode_instruction_r1(BYTECODE_OPCODE_MOV_INT64_REG_IMM, reg);
 }
 
+uint64_t _mov_i8_reg_imm(enum bytecode_register reg)
+{
+    return encode_instruction_r1(BYTECODE_OPCODE_MOV_INT8_REG_IMM, reg);
+}
+
 uint64_t _mov_reg_reg(enum bytecode_register reg1, enum bytecode_register reg2)
 {
     return encode_instruction_r2(BYTECODE_OPCODE_MOV_REG_REG, reg1, reg2);
@@ -436,20 +441,40 @@ void bytecode_emit_expression_immediate_int(struct bytecode_emitter *emitter, st
     bytecode_emit(emitter, expr->int_val);
 }
 
+void bytecode_emit_expression_immediate_char(struct bytecode_emitter *emitter, struct ast_expr *expr)
+{
+    bytecode_emit(emitter, _mov_i8_reg_imm(BYTECODE_REGISTER_RCX));
+    bytecode_emit(emitter, expr->int_val);
+}
+
 void bytecode_emit_expression_identifier(struct bytecode_emitter *emitter, struct ast_expr *expr)
 {
     assert(expr->symbol);
     struct symbol *symbol = expr->symbol;
     assert(symbol);
 
-    if (symbol->decl) {
-        bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_R9));
+    if (symbol->kind == SYMBOL_CONST) {
+        if (symbol->type == type_int) {
+            bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
+            bytecode_emit(emitter, symbol->val);
+        } else if (symbol->type == type_char) {
+            bytecode_emit(emitter, _mov_i8_reg_imm(BYTECODE_REGISTER_RCX));
+            bytecode_emit(emitter, symbol->val);
+        } else if (symbol->type->kind == TYPE_PTR) {
+            bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_R9));
+            bytecode_emit(emitter, symbol->address);
+            bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
+        }
     } else {
-        bytecode_emit(emitter, _lea_lcl_reg_imm(BYTECODE_REGISTER_R9));
-    }
+        if (symbol->decl) {
+            bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_R9));
+        } else {
+            bytecode_emit(emitter, _lea_lcl_reg_imm(BYTECODE_REGISTER_R9));
+        }
 
-    bytecode_emit(emitter, symbol->address);
-    bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
+        bytecode_emit(emitter, symbol->address);
+        bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
+    }
 }
 
 void _bytecode_emit_expression_binary(struct bytecode_emitter *emitter, enum token_kind op, struct ast_expr *left_expr, struct ast_expr *right_expr)
@@ -624,7 +649,12 @@ void bytecode_emit_expression_call(struct bytecode_emitter *emitter, struct ast_
             struct ast_expr *arg = call.args[i];
             enum bytecode_register reg = bytecode_call_registers[i];
             bytecode_emit_expression(emitter, arg);
-            bytecode_emit(emitter, _mov_reg_reg(reg, BYTECODE_REGISTER_RCX));
+            if (arg->res.type->kind == TYPE_ARRAY) {
+                // NOTE: if we pass an array to a foreign function, we auto-decay to the address of the first element
+                bytecode_emit(emitter, _mov_reg_reg(reg, BYTECODE_REGISTER_R9));
+            } else {
+                bytecode_emit(emitter, _mov_reg_reg(reg, BYTECODE_REGISTER_RCX));
+            }
         }
 
         // locate function and library name in data segment - required by upcoming instructions
@@ -785,6 +815,9 @@ void bytecode_emit_expression(struct bytecode_emitter *emitter, struct ast_expr 
     } break;
     case AST_EXPR_INT_LITERAL: {
         bytecode_emit_expression_immediate_int(emitter, expr);
+    } break;
+    case AST_EXPR_CHAR_LITERAL: {
+        bytecode_emit_expression_immediate_char(emitter, expr);
     } break;
     case AST_EXPR_STRING_LITERAL: {
         bytecode_emit_expression_immediate_string__(emitter, expr);

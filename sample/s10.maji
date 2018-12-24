@@ -1,0 +1,5 @@
+main :: () {
+    a: char;
+    n: int;
+    n = (int) a;
+}

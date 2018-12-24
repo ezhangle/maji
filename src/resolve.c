@@ -136,6 +136,33 @@ struct type *type_func(struct type **params, size_t params_count, struct type *r
     return type;
 }
 
+bool is_ptrtype(struct type *type)
+{
+    return type->kind == TYPE_PTR;
+}
+
+bool is_inttype(struct type *type)
+{
+    switch (type->kind) {
+    case TYPE_CHAR:
+    case TYPE_INT:
+    case TYPE_ENUM:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool is_floattype(struct type *type)
+{
+    return type->kind == TYPE_FLOAT;
+}
+
+bool is_arithmetictype(struct type *type)
+{
+    return is_inttype(type) || is_floattype(type);
+}
+
 bool duplicate_fields(struct type_field *fields, size_t fields_count)
 {
     for (size_t i = 0; i < fields_count; ++i) {
@@ -486,16 +513,16 @@ struct resolved_expr resolve_expr_call(struct resolver *resolver, struct ast_exp
 struct resolved_expr resolve_expr_cast(struct resolver *resolver, struct ast_expr *expr)
 {
     assert(expr->kind == AST_EXPR_CAST);
-    struct type *type = resolve_typespec(resolver, expr->cast.type);
+    struct type *cast_type = resolve_typespec(resolver, expr->cast.type);
     struct resolved_expr result = ptr_decay(resolve_expr(resolver, expr->cast.expr));
-    if (type->kind == TYPE_PTR) {
-        if (result.type->kind != TYPE_PTR && result.type->kind != TYPE_INT) {
+    if (is_ptrtype(cast_type)) {
+        if (!is_ptrtype(result.type) && !is_inttype(result.type)) {
             // TODO: error handling
             printf("invalid cast to pointer type");
             exit(1);
         }
-    } else if (type->kind == TYPE_INT) {
-        if (result.type->kind != TYPE_PTR && result.type->kind != TYPE_INT) {
+    } else if (is_inttype(cast_type)) {
+        if (!is_ptrtype(result.type) && !is_inttype(result.type)) {
             // TODO: error handling
             printf("invalid cast to int type");
             exit(1);
@@ -505,7 +532,7 @@ struct resolved_expr resolve_expr_cast(struct resolver *resolver, struct ast_exp
         printf("invalid target cast type");
         exit(1);
     }
-    return resolved_rvalue(type);
+    return resolved_rvalue(cast_type);
 }
 
 struct resolved_expr resolve_expr_index(struct resolver *resolver, struct ast_expr *expr)
@@ -533,7 +560,7 @@ struct resolved_expr resolve_expr_field(struct resolver *resolver, struct ast_ex
     struct type *type = left.type;
     complete_type(resolver, type);
 
-    while (type->kind == TYPE_PTR) {
+    while (is_ptrtype(type)) {
         type = type->ptr.elem;
         complete_type(resolver, type);
     }
@@ -621,7 +648,7 @@ struct resolved_expr resolve_expr_unary(struct resolver *resolver, struct ast_ex
             exit(1);
         }
 
-        if (type->kind == TYPE_FLOAT) {
+        if (is_floattype(type)) {
             if (operand.is_const) {
                 double float_val = eval_float_unary(expr->unary.op, operand.val);
                 return resolved_const((int64_t)(*(int64_t *)&float_val), type);
@@ -629,7 +656,7 @@ struct resolved_expr resolve_expr_unary(struct resolver *resolver, struct ast_ex
             return resolved_rvalue(type_float64);
         }
 
-        if (type->kind == TYPE_INT) {
+        if (is_inttype(type)) {
             if (operand.is_const) {
                 return resolved_const(eval_int_unary(expr->unary.op, operand.val), type_int);
             }
@@ -720,10 +747,7 @@ struct resolved_expr resolve_expr_binary(struct resolver *resolver, struct ast_e
     struct resolved_expr left = resolve_expr(resolver, expr->binary.left_expr);
     struct resolved_expr right = resolve_expr(resolver, expr->binary.right_expr);
 
-    if ((left.type->kind != TYPE_CHAR) &&
-        (left.type->kind != TYPE_INT) &&
-        (left.type->kind != TYPE_FLOAT) &&
-        (left.type->kind != TYPE_ENUM)) {
+    if (!is_arithmetictype(left.type)) {
         // TODO: error handling
         printf("left operand of + must be char, int or float");
         exit(1);
@@ -739,7 +763,7 @@ struct resolved_expr resolve_expr_binary(struct resolver *resolver, struct ast_e
         return resolved_rvalue(left.type);
     }
 
-    if (left.type->kind == TYPE_FLOAT) {
+    if (is_floattype(left.type)) {
         double float_val = eval_float_binary(expr->binary.op, left.val, right.val);
         return resolved_const((int64_t)(*(int64_t *)&float_val), left.type);
     }

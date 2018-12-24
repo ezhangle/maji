@@ -113,6 +113,16 @@ struct ast_expr *parse_expr_unary(struct parser *parser)
     return parse_expr_base(parser);
 }
 
+struct ast_expr *parse_expr_cast(struct parser *parser)
+{
+    if (parser_match(parser, '(')) {
+        struct ast_typespec *type = parse_type(parser);
+        parser_consume(parser, ')');
+        return ast_expr_cast(type, parse_expr_cast(parser));
+    }
+    return parse_expr_unary(parser);
+}
+
 static inline bool parser_match_factor(struct parser *parser)
 {
     return ((parser_match(parser, '*')) ||
@@ -125,10 +135,10 @@ static inline bool parser_match_factor(struct parser *parser)
 
 struct ast_expr *parse_expr_factor(struct parser *parser)
 {
-    struct ast_expr *expr = parse_expr_unary(parser);
+    struct ast_expr *expr = parse_expr_cast(parser);
     while (parser_match_factor(parser)) {
         enum token_kind op = parser_previous(parser).kind;
-        expr = ast_expr_binary(op, expr, parse_expr_unary(parser));
+        expr = ast_expr_binary(op, expr, parse_expr_cast(parser));
     }
     return expr;
 }

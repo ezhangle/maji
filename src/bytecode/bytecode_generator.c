@@ -428,6 +428,10 @@ uint64_t bytecode_emitter_mark_patch_target(struct bytecode_emitter *emitter)
     return emitter->text_cursor - emitter->program_text;
 }
 
+void bytecode_emit_load_convert(struct bytecode_emitter *emitter, struct type *from, struct type *to)
+{
+}
+
 void bytecode_emit_expression_sub(struct bytecode_emitter *emitter, struct ast_expr *left, struct ast_expr *right)
 {
     bytecode_emit_expression(emitter, left);
@@ -1093,11 +1097,18 @@ void bytecode_emit_expression_index(struct bytecode_emitter *emitter, struct ast
     bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
 }
 
+void bytecode_emit_expression_cast(struct bytecode_emitter *emitter, struct ast_expr *expr)
+{
+    bytecode_emit_expression(emitter, expr->cast.expr);
+    bytecode_emit_load_convert(emitter, expr->cast.expr->res.type, resolve_typespec(emitter->resolver, expr->cast.type));
+}
+
 void bytecode_emit_expression(struct bytecode_emitter *emitter, struct ast_expr *expr)
 {
     switch (expr->kind) {
-    case AST_EXPR_CAST:
-        break;
+    case AST_EXPR_CAST: {
+        bytecode_emit_expression_cast(emitter, expr);
+    } break;
     case AST_EXPR_INDEX: {
         bytecode_emit_expression_index(emitter, expr);
     } break;

@@ -399,6 +399,7 @@ enum bytecode_int_size type_to_int_size(struct bytecode_emitter *emitter, struct
 
 enum bytecode_float_size type_to_float_size(struct bytecode_emitter *emitter, struct type *type)
 {
+    if (type == type_float)   return FLOAT_SIZE_32;
     if (type == type_float64) return FLOAT_SIZE_64;
     if (type == type_float32) return FLOAT_SIZE_32;
     return buf_last(emitter->type_sizes).float_size;
@@ -435,7 +436,9 @@ void bytecode_emit_expression_sub(struct bytecode_emitter *emitter, struct ast_e
 
     bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
 
-    if (left->res.type == type_float64) {
+    if (left->res.type == type_float) {
+        bytecode_emit(emitter, _pop_f32_reg(BYTECODE_REGISTER_RCX));
+    } else if (left->res.type == type_float64) {
         bytecode_emit(emitter, _pop_f64_reg(BYTECODE_REGISTER_RCX));
     } else if (left->res.type == type_float32) {
         bytecode_emit(emitter, _pop_f32_reg(BYTECODE_REGISTER_RCX));
@@ -467,7 +470,9 @@ void bytecode_emit_expression_add(struct bytecode_emitter *emitter, struct ast_e
 
     bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
 
-    if (left->res.type == type_float64) {
+    if (left->res.type == type_float) {
+        bytecode_emit(emitter, _pop_f32_reg(BYTECODE_REGISTER_RCX));
+    } else if (left->res.type == type_float64) {
         bytecode_emit(emitter, _pop_f64_reg(BYTECODE_REGISTER_RCX));
     } else if (left->res.type == type_float32) {
         bytecode_emit(emitter, _pop_f32_reg(BYTECODE_REGISTER_RCX));
@@ -494,7 +499,9 @@ void bytecode_emit_expression_mul(struct bytecode_emitter *emitter, struct ast_e
 
     bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
 
-    if (left->res.type == type_float64) {
+    if (left->res.type == type_float) {
+        bytecode_emit(emitter, _pop_f32_reg(BYTECODE_REGISTER_RCX));
+    } else if (left->res.type == type_float64) {
         bytecode_emit(emitter, _pop_f64_reg(BYTECODE_REGISTER_RCX));
     } else if (left->res.type == type_float32) {
         bytecode_emit(emitter, _pop_f32_reg(BYTECODE_REGISTER_RCX));
@@ -521,7 +528,9 @@ void bytecode_emit_expression_div(struct bytecode_emitter *emitter, struct ast_e
 
     bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
 
-    if (left->res.type == type_float64) {
+    if (left->res.type == type_float) {
+        bytecode_emit(emitter, _pop_f32_reg(BYTECODE_REGISTER_RCX));
+    } else if (left->res.type == type_float64) {
         bytecode_emit(emitter, _pop_f64_reg(BYTECODE_REGISTER_RCX));
     } else if (left->res.type == type_float32) {
         bytecode_emit(emitter, _pop_f32_reg(BYTECODE_REGISTER_RCX));
@@ -726,7 +735,9 @@ void bytecode_emit_expression_identifier(struct bytecode_emitter *emitter, struc
 
         bytecode_emit(emitter, symbol->address);
 
-        if (symbol->type == type_float64) {
+        if (symbol->type == type_float) {
+            bytecode_emit(emitter, _memr_f32_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
+        } else if (symbol->type == type_float64) {
             bytecode_emit(emitter, _memr_f64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
         } else if (symbol->type == type_float32) {
             bytecode_emit(emitter, _memr_f32_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
@@ -1027,7 +1038,9 @@ void bytecode_emit_expression_field_struct(struct bytecode_emitter *emitter, str
     bytecode_emit(emitter, field_offset);
     bytecode_emit(emitter, _add_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R11));
 
-    if (field_type == type_float64) {
+    if (field_type == type_float) {
+        bytecode_emit(emitter, _memr_f32_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
+    } else if (field_type == type_float64) {
         bytecode_emit(emitter, _memr_f64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
     } else if (field_type == type_float32) {
         bytecode_emit(emitter, _memr_f32_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));

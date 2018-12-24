@@ -1,5 +1,5 @@
 print_rect :: (r: rect*, n: int*) #foreign "/Users/Koe/test/testlib/test.so";
-printf :: (fmt: char*, f: f64, ff: f64, fff: f32) #foreign "/usr/lib/libc.dylib";
+printf :: (fmt: char*, f: f64, ff: f64, fff: float) #foreign "/usr/lib/libc.dylib";
 
 rect :: struct {
     x: f32;
@@ -10,7 +10,7 @@ rect :: struct {
 
 ww :: 5.0;
 www: f64 = 5.0;
-ff: f32 = 2.5;
+ff: float = 2.5;
 
 main :: () -> int {
     printf("ww = %.2f %.2f %.2f\n", ww + 0.15, www + 1.2, ff + 0.2);

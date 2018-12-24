@@ -29,6 +29,7 @@ struct type *type_int16 = &(struct type){TYPE_INT, 2, 2};
 struct type *type_int32 = &(struct type){TYPE_INT, 4, 4};
 struct type *type_int64 = &(struct type){TYPE_INT, 8, 8};
 
+struct type *type_float = &(struct type){TYPE_FLOAT, 4, 4};
 struct type *type_float32 = &(struct type){TYPE_FLOAT, 4, 4};
 struct type *type_float64 = &(struct type){TYPE_FLOAT, 8, 8};
 
@@ -473,7 +474,7 @@ struct resolved_expr resolve_expr_call(struct resolver *resolver, struct ast_exp
         struct type *param_type = func.type->func.params[i];
         struct resolved_expr arg = resolve_expected_expr(resolver, expr->call.args[i], param_type);
 
-        if (ptr_decay(arg).type != param_type && arg.type->kind != param_type->kind) {
+        if (ptr_decay(arg).type != param_type) {
             // TODO: error handling
             printf("call argument expression type doesn't match expected param type");
             exit(1);
@@ -1223,6 +1224,7 @@ void resolver_init(struct resolver *resolver)
     type_int32->symbol = symbol_type(resolver, intern_string(u8"s32"), type_int32);
     type_int64->symbol = symbol_type(resolver, intern_string(u8"s64"), type_int64);
 
+    type_float->symbol = symbol_type(resolver, intern_string(u8"float"), type_float);
     type_float32->symbol = symbol_type(resolver, intern_string(u8"f32"), type_float32);
     type_float64->symbol = symbol_type(resolver, intern_string(u8"f64"), type_float64);
 }

@@ -23,7 +23,7 @@ void complete_type(struct resolver *resolver, struct type *type);
 struct type *type_void = &(struct type){TYPE_VOID, 0};
 struct type *type_char = &(struct type){TYPE_CHAR, 1, 1};
 
-struct type *type_int = &(struct type){TYPE_INT64, 8, 8};
+struct type *type_int = &(struct type){TYPE_INT32, 4, 4};
 struct type *type_int8 = &(struct type){TYPE_INT8, 1, 1};
 struct type *type_int16 = &(struct type){TYPE_INT16, 2, 2};
 struct type *type_int32 = &(struct type){TYPE_INT32, 4, 4};
@@ -659,9 +659,9 @@ struct resolved_expr resolve_expr_unary(struct resolver *resolver, struct ast_ex
 
         if (is_inttype(type)) {
             if (operand.is_const) {
-                return resolved_const(eval_int_unary(expr->unary.op, operand.val), type_int);
+                return resolved_const(eval_int_unary(expr->unary.op, operand.val), type);
             }
-            return resolved_rvalue(type_int);
+            return resolved_rvalue(type_int64);
         }
 
         return resolved_rvalue(type);
@@ -770,7 +770,7 @@ struct resolved_expr resolve_expr_binary(struct resolver *resolver, struct ast_e
         return resolved_const((int64_t)(*(int64_t *)&float_val), left.type);
     }
 
-    return resolved_const(eval_int_binary(expr->binary.op, left.val, right.val), type_int);
+    return resolved_const(eval_int_binary(expr->binary.op, left.val, right.val), left.type);
 }
 
 struct resolved_expr resolve_expr_ternary(struct resolver *resolver, struct ast_expr *expr, struct type *expected_type)
@@ -790,7 +790,7 @@ struct resolved_expr resolve_expr_ternary(struct resolver *resolver, struct ast_
         exit(1);
     }
     if (cond.is_const && then_expr.is_const && else_expr.is_const) {
-        return resolved_const(cond.val ? then_expr.val : else_expr.val, type_int);
+        return resolved_const(cond.val ? then_expr.val : else_expr.val, type_int64);
     } else {
         return resolved_rvalue(then_expr.type);
     }
@@ -805,7 +805,7 @@ struct resolved_expr resolve_expected_expr(struct resolver *resolver, struct ast
         res = resolve_expr_identifier(resolver, expr);
         break;
     case AST_EXPR_INT_LITERAL:
-        res = resolved_const(expr->int_val, type_int);
+        res = resolved_const(expr->int_val, type_int64);
         break;
     case AST_EXPR_CHAR_LITERAL:
         res = resolved_const(expr->int_val, type_char);
@@ -970,7 +970,9 @@ void resolve_statement(struct resolver *resolver, struct ast_stmt *statement, st
         struct type *decl_type = resolve_typespec(resolver, statement->decl.type);
         if (statement->decl.expr) {
             struct resolved_expr init = resolve_expr(resolver, statement->decl.expr);
-            if (decl_type != init.type && decl_type->kind != init.type->kind) {
+            if ((is_inttype(decl_type) != is_inttype(init.type)) ||
+                (is_floattype(decl_type) != is_floattype(init.type)) ||
+                (is_ptrtype(decl_type) != is_ptrtype(init.type))) {
                 // TODO: error handling
                 printf("left-hand side of assignment does not match right-hand side type\n");
                 exit(1);

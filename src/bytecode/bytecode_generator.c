@@ -216,36 +216,6 @@ uint64_t _pop_reg(enum bytecode_register reg)
     return encode_instruction_r1(BYTECODE_OPCODE_POP_REG, reg);
 }
 
-uint64_t _pop_f64_reg(enum bytecode_register reg)
-{
-    return encode_instruction_r1(BYTECODE_OPCODE_POP_FLT64_REG, reg);
-}
-
-uint64_t _pop_f32_reg(enum bytecode_register reg)
-{
-    return encode_instruction_r1(BYTECODE_OPCODE_POP_FLT32_REG, reg);
-}
-
-uint64_t _pop_i64_reg(enum bytecode_register reg)
-{
-    return encode_instruction_r1(BYTECODE_OPCODE_POP_INT64_REG, reg);
-}
-
-uint64_t _pop_i32_reg(enum bytecode_register reg)
-{
-    return encode_instruction_r1(BYTECODE_OPCODE_POP_INT32_REG, reg);
-}
-
-uint64_t _pop_i16_reg(enum bytecode_register reg)
-{
-    return encode_instruction_r1(BYTECODE_OPCODE_POP_INT16_REG, reg);
-}
-
-uint64_t _pop_i8_reg(enum bytecode_register reg)
-{
-    return encode_instruction_r1(BYTECODE_OPCODE_POP_INT8_REG, reg);
-}
-
 uint64_t _cmp_reg_reg(enum bytecode_register reg1, enum bytecode_register reg2)
 {
     return encode_instruction_r2(BYTECODE_OPCODE_CMP_REG_REG, reg1, reg2);

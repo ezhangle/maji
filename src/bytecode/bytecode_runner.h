@@ -119,6 +119,9 @@ struct bytecode_runner
     uint64_t stack_size;
     char *stack;
 
+    uint64_t stack_info_size;
+    enum bytecode_register_kind *stack_info;
+
     uint64_t reg[BYTECODE_REGISTER_COUNT];
     uint64_t reg_type[BYTECODE_REGISTER_COUNT];
     int compare;

@@ -34,6 +34,7 @@ enum bytecode_opcode
     BYTECODE_OPCODE_PUSH_FLT64_IMM     = 0x1A,
     BYTECODE_OPCODE_PUSH_REG           = 0x1B,
 
+    BYTECODE_OPCODE_POP_REG            = 0x99,
     BYTECODE_OPCODE_POP_INT8_REG       = 0x1C,
     BYTECODE_OPCODE_POP_INT16_REG      = 0x1D,
     BYTECODE_OPCODE_POP_INT32_REG      = 0x1E,
@@ -119,6 +120,13 @@ enum bytecode_opcode
     BYTECODE_OPCODE_MEMR_FLT32_REG_REG = 0x8B,
     BYTECODE_OPCODE_MEMR_FLT64_REG_REG = 0x8C,
 
+    BYTECODE_OPCODE_CONV_INT8_REG      = 0x90,
+    BYTECODE_OPCODE_CONV_INT16_REG     = 0x91,
+    BYTECODE_OPCODE_CONV_INT32_REG     = 0x92,
+    BYTECODE_OPCODE_CONV_INT64_REG     = 0x93,
+    BYTECODE_OPCODE_CONV_FLT32_REG     = 0x94,
+    BYTECODE_OPCODE_CONV_FLT64_REG     = 0x95,
+
     BYTECODE_OPCODE_NOP                = 0xFF,
     BYTECODE_OPCODE_COUNT              = 0x100
 };
@@ -156,6 +164,7 @@ static const char *bytecode_opcode_str[BYTECODE_OPCODE_COUNT] =
     [0x1A] = "PUSH_FLT64_IMM",
     [0x1B] = "PUSH_REG",
 
+    [0x99] = "POP_REG",
     [0x1C] = "POP_INT8_REG",
     [0x1D] = "POP_INT16_REG",
     [0x1E] = "POP_INT32_REG",
@@ -240,6 +249,13 @@ static const char *bytecode_opcode_str[BYTECODE_OPCODE_COUNT] =
     [0x8A] = "MEMR_INT64_REG_REG",
     [0x8B] = "MEMR_FLT32_REG_REG",
     [0x8C] = "MEMR_FLT64_REG_REG",
+
+    [0x90] = "CONV_INT8_REG",
+    [0x91] = "CONV_INT16_REG",
+    [0x92] = "CONV_INT32_REG",
+    [0x93] = "CONV_INT64_REG",
+    [0x94] = "CONV_FLT32_REG",
+    [0x95] = "CONV_FLT64_REG",
 
     [0xFF] = "NOP"
 };

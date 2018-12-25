@@ -23,15 +23,15 @@ void complete_type(struct resolver *resolver, struct type *type);
 struct type *type_void = &(struct type){TYPE_VOID, 0};
 struct type *type_char = &(struct type){TYPE_CHAR, 1, 1};
 
-struct type *type_int = &(struct type){TYPE_INT, 8, 8};
-struct type *type_int8 = &(struct type){TYPE_INT, 1, 1};
-struct type *type_int16 = &(struct type){TYPE_INT, 2, 2};
-struct type *type_int32 = &(struct type){TYPE_INT, 4, 4};
-struct type *type_int64 = &(struct type){TYPE_INT, 8, 8};
+struct type *type_int = &(struct type){TYPE_INT64, 8, 8};
+struct type *type_int8 = &(struct type){TYPE_INT8, 1, 1};
+struct type *type_int16 = &(struct type){TYPE_INT16, 2, 2};
+struct type *type_int32 = &(struct type){TYPE_INT32, 4, 4};
+struct type *type_int64 = &(struct type){TYPE_INT64, 8, 8};
 
-struct type *type_float = &(struct type){TYPE_FLOAT, 4, 4};
-struct type *type_float32 = &(struct type){TYPE_FLOAT, 4, 4};
-struct type *type_float64 = &(struct type){TYPE_FLOAT, 8, 8};
+struct type *type_float = &(struct type){TYPE_FLOAT32, 4, 4};
+struct type *type_float32 = &(struct type){TYPE_FLOAT32, 4, 4};
+struct type *type_float64 = &(struct type){TYPE_FLOAT64, 8, 8};
 
 const size_t PTR_SIZE = 8;
 const size_t PTR_ALIGN = 8;
@@ -145,7 +145,10 @@ bool is_inttype(struct type *type)
 {
     switch (type->kind) {
     case TYPE_CHAR:
-    case TYPE_INT:
+    case TYPE_INT8:
+    case TYPE_INT16:
+    case TYPE_INT32:
+    case TYPE_INT64:
     case TYPE_ENUM:
         return true;
     default:
@@ -155,7 +158,7 @@ bool is_inttype(struct type *type)
 
 bool is_floattype(struct type *type)
 {
-    return type->kind == TYPE_FLOAT;
+    return type->kind == TYPE_FLOAT32 || type->kind == TYPE_FLOAT64;
 }
 
 bool is_arithmetictype(struct type *type)
@@ -545,7 +548,7 @@ struct resolved_expr resolve_expr_index(struct resolver *resolver, struct ast_ex
         exit(1);
     }
     struct resolved_expr index = resolve_expr(resolver, expr->index.index);
-    if (index.type->kind != TYPE_INT) {
+    if (!is_inttype(index.type)) {
         // TODO: error handling
         printf("index expression must have type int");
         exit(1);
@@ -640,9 +643,7 @@ struct resolved_expr resolve_expr_unary(struct resolver *resolver, struct ast_ex
         }
         return resolved_rvalue(type_ptr(type));
     default:
-        if ((type->kind != TYPE_INT) &&
-            (type->kind != TYPE_FLOAT) &&
-            (type->kind != TYPE_ENUM)) {
+        if (!is_arithmetictype(type)) {
             // TODO: error handling
             printf("unary operand must be int or float\n");
             exit(1);
@@ -753,7 +754,8 @@ struct resolved_expr resolve_expr_binary(struct resolver *resolver, struct ast_e
         exit(1);
     }
 
-    if (right.type != left.type && left.type->kind != right.type->kind)  {
+    if ((is_inttype(left.type) != is_inttype(right.type)) ||
+        (is_floattype(left.type) != is_floattype(right.type))) {
         // TODO: error handling
         printf("left and right operand of + must have same type");
         exit(1);
@@ -775,7 +777,7 @@ struct resolved_expr resolve_expr_ternary(struct resolver *resolver, struct ast_
 {
     assert(expr->kind == AST_EXPR_TERNARY);
     struct resolved_expr cond = ptr_decay(resolve_expr(resolver, expr->ternary.condition));
-    if (cond.type->kind != TYPE_INT && cond.type->kind != TYPE_PTR) {
+    if (!is_inttype(cond.type) && !is_ptrtype(cond.type)) {
         // TODO: error handling
         printf("ternary cond expression must have type int or ptr");
         exit(1);
@@ -863,9 +865,7 @@ int64_t resolve_const_expr(struct resolver *resolver, struct ast_expr *expr)
 void resolve_cond_expr(struct resolver *resolver, struct ast_expr *expr)
 {
     struct resolved_expr result = resolve_expr(resolver, expr);
-    if ((result.type->kind != TYPE_INT) &&
-        (result.type->kind != TYPE_CHAR) &&
-        (result.type->kind != TYPE_ENUM)) {
+    if (!is_inttype(result.type)) {
         // TODO: error handling
         printf("conditional expressions must be of type int!\n");
         exit(1);
@@ -936,7 +936,9 @@ void resolve_statement(struct resolver *resolver, struct ast_stmt *statement, st
 
         if (statement->assign.right_expr) {
             struct resolved_expr right = resolve_expected_expr(resolver, statement->assign.right_expr, left.type);
-            if (left.type != right.type && left.type->kind != right.type->kind) {
+            if ((is_inttype(left.type) != is_inttype(right.type)) ||
+                (is_floattype(left.type) != is_floattype(right.type)) ||
+                (is_ptrtype(left.type) != is_ptrtype(right.type))) {
                 // TODO: error handling
                 printf("left-hand side of assignment does not match right-hand side type\n");
                 exit(1);
@@ -949,7 +951,7 @@ void resolve_statement(struct resolver *resolver, struct ast_stmt *statement, st
             exit(1);
         }
 
-        if (statement->assign.op != '=' && left.type->kind != TYPE_INT) {
+        if (statement->assign.op != '=' && !is_inttype(left.type)) {
             // TODO: error handling
             printf("can only use assignment operators with type int\n");
             exit(1);
@@ -1003,10 +1005,14 @@ struct type *resolve_decl_var(struct resolver *resolver, struct ast_decl *decl)
     if (decl->var_decl.expr) {
         struct resolved_expr result = resolve_expected_expr(resolver, decl->var_decl.expr, type);
 
-        if (type && result.type->kind != type->kind) {
-            // TODO: error handling
-            printf("declared type does not match inferred type\n");
-            exit(1);
+        if (type) {
+            if ((is_inttype(result.type) != is_inttype(type)) ||
+                (is_floattype(result.type) != is_floattype(type)) ||
+                (is_ptrtype(result.type) != is_ptrtype(type))) {
+                // TODO: error handling
+                printf("declared type does not match inferred type\n");
+                exit(1);
+            }
         }
 
         if (!type) {

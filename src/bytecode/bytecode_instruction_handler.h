@@ -39,6 +39,7 @@ bytecode_instruction_handler_(exec_op_push_flt32_imm);
 bytecode_instruction_handler_(exec_op_push_flt64_imm);
 bytecode_instruction_handler_(exec_op_push_reg);
 
+bytecode_instruction_handler_(exec_op_pop_reg);
 bytecode_instruction_handler_(exec_op_pop_int8_reg);
 bytecode_instruction_handler_(exec_op_pop_int16_reg);
 bytecode_instruction_handler_(exec_op_pop_int32_reg);
@@ -123,5 +124,12 @@ bytecode_instruction_handler_(exec_op_memr_int32_reg_reg);
 bytecode_instruction_handler_(exec_op_memr_int64_reg_reg);
 bytecode_instruction_handler_(exec_op_memr_flt32_reg_reg);
 bytecode_instruction_handler_(exec_op_memr_flt64_reg_reg);
+
+bytecode_instruction_handler_(exec_op_conv_int8_reg);
+bytecode_instruction_handler_(exec_op_conv_int16_reg);
+bytecode_instruction_handler_(exec_op_conv_int32_reg);
+bytecode_instruction_handler_(exec_op_conv_int64_reg);
+bytecode_instruction_handler_(exec_op_conv_flt32_reg);
+bytecode_instruction_handler_(exec_op_conv_flt64_reg);
 
 #endif

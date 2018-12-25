@@ -48,6 +48,7 @@ uint64_t encode_instruction_r2(uint8_t instr, uint8_t r1, uint8_t r2);
 #define push_f64_imm(val) encode_instruction(BYTECODE_OPCODE_PUSH_FLT64_IMM), (uint64_t)(*(uint64_t *)&val)
 #define push_reg(reg) encode_instruction_r1(BYTECODE_OPCODE_PUSH_REG, reg)
 
+#define pop_reg(reg) encode_instruction_r1(BYTECODE_OPCODE_POP_REG, reg)
 #define pop_i8_reg(reg) encode_instruction_r1(BYTECODE_OPCODE_POP_INT8_REG, reg)
 #define pop_i16_reg(reg) encode_instruction_r1(BYTECODE_OPCODE_POP_INT16_REG, reg)
 #define pop_i32_reg(reg) encode_instruction_r1(BYTECODE_OPCODE_POP_INT32_REG, reg)
@@ -134,6 +135,13 @@ uint64_t encode_instruction_r2(uint8_t instr, uint8_t r1, uint8_t r2);
 #define jl_imm(val) encode_instruction(BYTECODE_OPCODE_JL_IMM), val
 #define jge_imm(val) encode_instruction(BYTECODE_OPCODE_JGE_IMM), val
 #define jg_imm(val) encode_instruction(BYTECODE_OPCODE_JG_IMM), val
+
+#define conv_i8_reg(reg) encode_instruction_r1(BYTECODE_OPCODE_CONV_INT8_REG, reg)
+#define conv_i16_reg(reg) encode_instruction_r1(BYTECODE_OPCODE_CONV_INT16_REG, reg)
+#define conv_i32_reg(reg) encode_instruction_r1(BYTECODE_OPCODE_CONV_INT32_REG, reg)
+#define conv_i64_reg(reg) encode_instruction_r1(BYTECODE_OPCODE_CONV_INT64_REG, reg)
+#define conv_f32_reg(reg) encode_instruction_r1(BYTECODE_OPCODE_CONV_FLT32_REG, reg)
+#define conv_f64_reg(reg) encode_instruction_r1(BYTECODE_OPCODE_CONV_FLT64_REG, reg)
 
 #define nop() encode_instruction(BYTECODE_OPCODE_NOP)
 #define halt() encode_instruction(BYTECODE_OPCODE_HALT)

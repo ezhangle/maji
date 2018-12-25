@@ -33,6 +33,10 @@ void bytecode_runner_init(struct bytecode_runner *bcr, struct bytecode_executabl
     bcr->stack = malloc(bcr->stack_size);
     memset(bcr->stack, 0, bcr->stack_size);
 
+    bcr->stack_info_size = program->header->stack_size;
+    bcr->stack_info = malloc(bcr->stack_info_size);
+    memset(bcr->stack_info, 0, bcr->stack_info_size);
+
     memset(bcr->reg, 0, sizeof(uint64_t) * BYTECODE_REGISTER_COUNT);
     memset(bcr->reg_type, BYTECODE_REGISTER_KIND_I64, sizeof(uint64_t) * BYTECODE_REGISTER_COUNT);
 }

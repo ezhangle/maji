@@ -91,7 +91,7 @@ void bytecode_runner_print_registers(struct bytecode_runner *bcr)
     static int num_col = 4;
 
     for (int i = 1; i <= BYTECODE_REGISTER_COUNT; ++i) {
-        printf("%16s", bytecode_register_str[i - 1]);
+        printf("%-3s %12s ", bytecode_register_kind_str[bcr->reg_type[i - 1]], bytecode_register_str[i - 1]);
         if ((i % num_col) == 0) {
             printf("\n");
             for (int j = 1; j <= num_col; ++j) {

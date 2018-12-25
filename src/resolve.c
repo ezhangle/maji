@@ -530,7 +530,7 @@ struct resolved_expr resolve_expr_cast(struct resolver *resolver, struct ast_exp
             printf("invalid cast to int type");
             exit(1);
         }
-    } else {
+    } else if (!is_arithmetictype(result.type) && !is_arithmetictype(cast_type)) {
         // TODO: error handling
         printf("invalid target cast type");
         exit(1);

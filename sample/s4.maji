@@ -1,73 +1,53 @@
 CGSMainConnectionID :: () -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+CGSNewWindow :: (cid: int, backing_type: int, x: float, y: float, region: void*, wid: int*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+CGSNewRegionWithRect :: (rect: cg_rect*, region: void**) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+CGSOrderWindow :: (cid: int, wid: int, place: int, rel_wid: int) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+
 sleep :: (n: int) #foreign "/usr/lib/libc.dylib";
-
-printf :: (format: char*, n: int) -> int #foreign "/usr/lib/libc.dylib";
+printf :: (format: char*, n: int, p: void*) -> int #foreign "/usr/lib/libc.dylib";
 malloc :: (n: int) -> int* #foreign "/usr/lib/libc.dylib";
-
 
 cgl_window :: struct {
     connection: int;
     id: int;
 }
 
+cg_rect :: struct {
+    origin: cg_point;
+    size: cg_size;
+}
+
+cg_point :: struct {
+    x: f64;
+    y: f64;
+}
+
+cg_size :: struct {
+    width: f64;
+    height: f64;
+}
+
 cgl_window_init :: (win: cgl_window*) {
+    region: void* = (void*)0;
+    rect: cg_rect;
+
+    rect.origin.x = 20.0;
+    rect.origin.y = 20.0;
+    rect.size.width = 300.0;
+    rect.size.height = 200.0;
+
     win.connection = CGSMainConnectionID();
-    ss := &win.id;
-    *ss = 6;
-    winptr := &win;
-    conptr := &winptr.connection;
-    printf("connectionid = %d\n", winptr.connection);
-    printf("connectionid = %d\n", *conptr);
-    printf("connectionid = %d\n", win.connection);
-    winptr.id = 2;
-    *ss = 8;
+    CGSNewRegionWithRect(&rect, &region);
+    CGSNewWindow(win.connection, (int)2, (float)rect.origin.x, (float)rect.origin.y, region, &win.id);
+    CGSOrderWindow(win.connection, win.id, (int)1, (int)0);
 }
 
 main :: () {
     win: cgl_window;
     cgl_window_init(&win);
-    printf("connectionid = %d\n", win.connection);
-    printf("windowid = %d\n", win.id);
 
-    v: vec;
-    vptr := &v;
+    printf("connectionid = %d .. %p\n", win.connection, (void*)&win);
+    printf("windowid = %d .. %p\n", win.id, (void*)&win);
 
-    (*vptr).y = 8;
-    printf("v.y = %d\n", v.y);
-
-    vv := &vptr;
-
-    (**vv).y = 9;
-
-    printf("v.y = %d\n", v.y);
-
-    w: vec*[4];
-    w[0] = &v;
-    w[0].y = 4;
-    (*w[0]).y = 5;
-    printf("v[0].y = %d\n", w[0].y);
-
-    k: int* = malloc(8);
-    *k = 9;
-    printf("k = %d\n", *k);
-
-    l: int*[4];
-    l[0] = malloc(8);
-    *l[0] = 5;
-    printf("l[0] = %d\n", *l[0]);
-
-    v.z = l[0];
-    *v.z = 1;
-    printf("v.z = %d\n", *v.z);
-    printf("l[0] = %d\n", *l[0]);
-
-    wptr := &w[0].y;
-    *wptr = 99;
-    printf("v.y = %d\n", v.y);
-}
-
-vec :: struct {
-    x: int;
-    y: int;
-    z: int*;
+    sleep((int)5);
 }

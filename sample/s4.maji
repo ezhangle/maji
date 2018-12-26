@@ -1,11 +1,23 @@
 CGSMainConnectionID :: () -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
-CGSNewWindow :: (cid: int, backing_type: int, x: float, y: float, region: void*, wid: int*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+CGSNewWindow :: (cid: int, type: backing_type, x: float, y: float, region: void*, wid: int*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 CGSNewRegionWithRect :: (rect: cg_rect*, region: void**) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
-CGSOrderWindow :: (cid: int, wid: int, place: int, rel_wid: int) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+CGSOrderWindow :: (cid: int, wid: int, mode: ordering_mode, rel_wid: int) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 
 sleep :: (n: int) #foreign "/usr/lib/libc.dylib";
 printf :: (format: char*, n: int, p: void*) -> int #foreign "/usr/lib/libc.dylib";
 malloc :: (n: int) -> int* #foreign "/usr/lib/libc.dylib";
+
+backing_type :: enum {
+    NON_RETAINED = 0,
+    RETAINED     = 1,
+    BUFFERED     = 2
+}
+
+ordering_mode :: enum {
+    ORDER_ABOVE =  1,
+    ORDER_BELOW = -1,
+    ORDER_OUT   =  0
+}
 
 cgl_window :: struct {
     id: int;
@@ -38,8 +50,8 @@ cgl_window_init :: (win: cgl_window*) {
     win.rect.size.height = 200.0;
 
     CGSNewRegionWithRect(&win.rect, &win.region);
-    CGSNewWindow(win.connection, (int)2, (float)win.rect.origin.x, (float)win.rect.origin.y, win.region, &win.id);
-    CGSOrderWindow(win.connection, win.id, (int)1, (int)0);
+    CGSNewWindow(win.connection, backing_type.BUFFERED, (float)win.rect.origin.x, (float)win.rect.origin.y, win.region, &win.id);
+    CGSOrderWindow(win.connection, win.id, ordering_mode.ORDER_ABOVE, (int)0);
 }
 
 main :: () {

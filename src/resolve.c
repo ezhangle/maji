@@ -324,7 +324,7 @@ void complete_type(struct resolver *resolver, struct type *type)
                     exit(1);
                 }
 
-                if (item_type != rexpr.type) {
+                if (!is_inttype(rexpr.type)) {
                     // TODO: error handling
                     printf("enum value must be int!\n");
                     exit(1);

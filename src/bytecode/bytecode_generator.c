@@ -849,18 +849,21 @@ void bytecode_emit_expression_call(struct bytecode_emitter *emitter, struct ast_
             }
         }
 
-        // locate function and library name in data segment - required by upcoming instructions
-        int func_name = bytecode_data_find_string(emitter, call.expr->string_val);
-        bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_R11));
-        bytecode_emit(emitter, func_name);
-
-        int lib_name = bytecode_data_find_string(emitter, symbol->decl->foreign_func_decl.lib);
-        bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_R12));
-        bytecode_emit(emitter, lib_name);
-
+        //
         // function name and library is read off the stack, func name first, followed by lib name (push in reverse order!!!)
-        bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_R12));
-        bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_R11));
+        //
+
+        // locate library name in data segment
+        int lib_name = bytecode_data_find_string(emitter, symbol->decl->foreign_func_decl.lib);
+        bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_R9));
+        bytecode_emit(emitter, lib_name);
+        bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_R9));
+
+        // locate function name in data segment
+        int func_name = bytecode_data_find_string(emitter, call.expr->string_val);
+        bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_R9));
+        bytecode_emit(emitter, func_name);
+        bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_R9));
 
         bytecode_emit(emitter, _call_foreign());
         bytecode_emit(emitter, call.args_count);
@@ -947,9 +950,9 @@ void bytecode_emit_expression_field_struct(struct bytecode_emitter *emitter, str
         bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R9));
     }
 
-    bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_R11));
+    bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
     bytecode_emit(emitter, field_offset);
-    bytecode_emit(emitter, _add_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R11));
+    bytecode_emit(emitter, _add_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_RCX));
     bytecode_emit_memread(emitter, field_type);
 }
 

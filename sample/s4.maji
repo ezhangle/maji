@@ -8,8 +8,10 @@ printf :: (format: char*, n: int, p: void*) -> int #foreign "/usr/lib/libc.dylib
 malloc :: (n: int) -> int* #foreign "/usr/lib/libc.dylib";
 
 cgl_window :: struct {
-    connection: int;
     id: int;
+    connection: int;
+    rect: cg_rect;
+    region: void*;
 }
 
 cg_rect :: struct {
@@ -28,17 +30,15 @@ cg_size :: struct {
 }
 
 cgl_window_init :: (win: cgl_window*) {
-    region: void* = (void*)0;
-    rect: cg_rect;
-
-    rect.origin.x = 20.0;
-    rect.origin.y = 20.0;
-    rect.size.width = 300.0;
-    rect.size.height = 200.0;
-
     win.connection = CGSMainConnectionID();
-    CGSNewRegionWithRect(&rect, &region);
-    CGSNewWindow(win.connection, (int)2, (float)rect.origin.x, (float)rect.origin.y, region, &win.id);
+
+    win.rect.origin.x = 20.0;
+    win.rect.origin.y = 20.0;
+    win.rect.size.width = 300.0;
+    win.rect.size.height = 200.0;
+
+    CGSNewRegionWithRect(&win.rect, &win.region);
+    CGSNewWindow(win.connection, (int)2, (float)win.rect.origin.x, (float)win.rect.origin.y, win.region, &win.id);
     CGSOrderWindow(win.connection, win.id, (int)1, (int)0);
 }
 

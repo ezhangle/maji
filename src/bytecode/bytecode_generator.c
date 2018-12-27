@@ -1366,8 +1366,8 @@ void bytecode_emit_entry_point(struct bytecode_emitter *emitter)
 void bytecode_emitter_init(struct bytecode_emitter *emitter, struct resolver *resolver)
 {
     memset(emitter, 0, sizeof(struct bytecode_emitter));
-    emitter->data_size = 1024;
-    emitter->text_size = 1024;
+    emitter->data_size = 4096;
+    emitter->text_size = 4096;
     emitter->resolver = resolver;
     emitter->program_data = malloc(emitter->data_size * sizeof(char));
     memset(emitter->program_data, 0, emitter->data_size * sizeof(char));
@@ -1448,7 +1448,7 @@ void bytecode_generate(struct resolver *resolver, struct compiler_options *optio
     struct bytecode_header program_header = {
         .magic = { 'b', 'c', 'r' },
         .abi_version = 0x1,
-        .stack_size = 2048,
+        .stack_size = 4096,
         .data_size = (emitter.data_cursor - emitter.program_data) * sizeof(*emitter.program_data),
         .text_size = (emitter.text_cursor - emitter.program_text) * sizeof(*emitter.program_text)
     };

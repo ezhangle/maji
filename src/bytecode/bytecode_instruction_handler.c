@@ -818,9 +818,11 @@ bytecode_instruction_handler_(exec_op_call_foreign)
     int64_t *stack = as_i64_ptr(bcr->stack[bcr->reg[BYTECODE_REGISTER_RSP]]);
     char *sym_name = (char *)((int64_t)*--stack);
     bcr->reg[BYTECODE_REGISTER_RSP] -= sizeof(int64_t);
+    --bcr->stack_info;
 
     char *lib_name = (char *)((int64_t)*--stack);
     bcr->reg[BYTECODE_REGISTER_RSP] -= sizeof(int64_t);
+    --bcr->stack_info;
 
     uint64_t reg_arg_count = fetch_instruction(bcr);
     uint64_t ret_kind = fetch_instruction(bcr);
@@ -831,7 +833,7 @@ bytecode_instruction_handler_(exec_op_call_foreign)
     void *func = dlsym(handle, sym_name);
     assert(func);
 
-    DCCallVM *vm = dcNewCallVM(4096);
+    DCCallVM *vm = dcNewCallVM(8192);
     dcMode(vm, DC_CALL_C_DEFAULT);
     dcReset(vm);
 

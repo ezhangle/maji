@@ -120,7 +120,7 @@ cgl_window_init :: (win: cgl_window *) {
     CGSAddActivationRegion(win.connection, win.id, win.region);
 
     CGSSetWindowOpacity(win.connection, win.id, (int)0);
-    CGSSetWindowLevel(win.connection, win.id, CGWindowLevelForKey(window_level.FLOATING));
+    CGSSetWindowLevel(win.connection, win.id, CGWindowLevelForKey(window_level.NORMAL));
 
     TransformProcessType(&win.psn, process_type.FOREGROUND);
     cgl_window_bring_to_front(win);
@@ -149,7 +149,7 @@ cgl_window_add_drag_region :: (win: cgl_window *, x: f64, y: f64, width: f64, he
 main :: () {
     win: cgl_window;
     cgl_window_init(&win);
-    cgl_window_add_drag_region(&win, 0.0, 0.0, win.rect.size.width, 10.0);
+    cgl_window_add_drag_region(&win, 0.0, 0.0, win.rect.size.width, 20.0);
 
     printf("connectionid = %d .. %p\n", win.connection, (void*)&win);
     printf("windowid = %d .. %p\n", win.id, (void*)&win);

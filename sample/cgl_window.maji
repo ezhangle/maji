@@ -1,11 +1,37 @@
 CGSMainConnectionID :: () -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 CGSNewWindow :: (cid: int, type: backing_type, x: float, y: float, region: void*, wid: int*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 CGSNewRegionWithRect :: (rect: cg_rect*, region: void**) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+CGSReleaseWindow :: (cid: int, wid: int) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+CGSAddDragRegion :: (cid: int, wid: int, region: void*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+CGSAddActivationRegion :: (cid: int, wid: int, region: void*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 CGSOrderWindow :: (cid: int, wid: int, mode: ordering_mode, rel_wid: int) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+CGSSetWindowLevel :: (cid: int, wid: int, window_level: int) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+CGSSetWindowOpacity :: (cid: int, wid: int, opaque: int) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+CGWindowLevelForKey :: (level: window_level) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+
+GetCurrentProcess :: (psn: proc_serial_number*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+SetFrontProcess :: (psn: proc_serial_number*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+TransformProcessType :: (psn: proc_serial_number*, type: process_type) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+
+GetEventDispatcherTarget :: () -> void* #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+SendEventToEventTarget :: (event: void*, event_target: void*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+ReceiveNextEvent :: (x: int, xx: int, wait: float, xxx: int, event: void**) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+AEProcessEvent :: (event: void*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+ReleaseEvent :: (event: void*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+GetEventClass :: (event: void*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 
 sleep :: (n: int) #foreign "/usr/lib/libc.dylib";
 printf :: (format: char*, n: int, p: void*) -> int #foreign "/usr/lib/libc.dylib";
-malloc :: (n: int) -> int* #foreign "/usr/lib/libc.dylib";
+malloc :: (size: int) -> void* #foreign "/usr/lib/libc.dylib";
+free :: (ptr: void*) #foreign "/usr/lib/libc.dylib";
+
+kEventClassMouse       : int = 1836021107;
+kEventClassKeyboard    : int = 1801812322;
+kEventClassApplication : int = 1634758764;
+kEventClassAppleEvent  : int = 1701867619;
+
+kEventDurationNoWait :: 0.0;
+noErr :: 0;
 
 backing_type :: enum {
     NON_RETAINED = 0,
@@ -19,9 +45,40 @@ ordering_mode :: enum {
     ORDER_OUT   =  0
 }
 
+process_type :: enum {
+    FOREGROUND = 1,
+    BACKGROUND = 2,
+    UIELEMENT  = 4
+}
+
+window_level :: enum {
+    BASE                =  0,
+    MINIMUM             =  1,
+    DESKTOP             =  2,
+    BACKSTOP_MENU       =  3,
+    NORMAL              =  4,
+    FLOATING            =  5,
+    TORN_OFF_MENU       =  6,
+    DOCK                =  7,
+    MAIN_MENU           =  8,
+    STATUS              =  9,
+    MODAL_PANEL         = 10,
+    POPUP_MENU          = 11,
+    DRAGGING            = 12,
+    SCREENSAVER         = 13,
+    MAXIMUM             = 14,
+    OVERLAY             = 15,
+    HELP                = 16,
+    UTILITY             = 17,
+    DESKTOP_ICON        = 18,
+    CURSOR              = 19,
+    ASSISTIVE_TECH_HIGH = 20
+}
+
 cgl_window :: struct {
     id: int;
     connection: int;
+    psn: proc_serial_number;
     rect: cg_rect;
     region: void*;
 }
@@ -41,7 +98,14 @@ cg_size :: struct {
     height: f64;
 }
 
-cgl_window_init :: (win: cgl_window*) {
+proc_serial_number :: struct {
+    high_long: int;
+    low_long: int;
+}
+
+cgl_window_init :: (win: cgl_window *) {
+    GetCurrentProcess(&win.psn);
+
     win.connection = CGSMainConnectionID();
 
     win.rect.origin.x = 20.0;
@@ -51,15 +115,63 @@ cgl_window_init :: (win: cgl_window*) {
 
     CGSNewRegionWithRect(&win.rect, &win.region);
     CGSNewWindow(win.connection, backing_type.BUFFERED, (float)win.rect.origin.x, (float)win.rect.origin.y, win.region, &win.id);
+
+    CGSAddActivationRegion(win.connection, win.id, win.region);
+
+    CGSSetWindowOpacity(win.connection, win.id, (int)0);
+    CGSSetWindowLevel(win.connection, win.id, CGWindowLevelForKey(window_level.FLOATING));
+
+    TransformProcessType(&win.psn, process_type.FOREGROUND);
+    cgl_window_bring_to_front(win);
+}
+
+cgl_window_destroy :: (win: cgl_window *) {
+    CGSReleaseWindow(win.connection, win.id);
+}
+
+cgl_window_bring_to_front :: (win: cgl_window *)
+{
     CGSOrderWindow(win.connection, win.id, ordering_mode.ORDER_ABOVE, (int)0);
+    SetFrontProcess(&win.psn);
+}
+
+cgl_window_add_drag_region :: (win: cgl_window *, x: f64, y: f64, width: f64, height: f64) {
+    region: void*;
+    rect: cg_rect;
+    rect.origin.x = x;
+    rect.origin.y = y;
+    rect.size.width = width;
+    rect.size.height = height;
+    CGSNewRegionWithRect(&rect, &region);
+    CGSAddDragRegion(win.connection, win.id, region);
 }
 
 main :: () {
     win: cgl_window;
     cgl_window_init(&win);
+    cgl_window_add_drag_region(&win, 0.0, 0.0, win.rect.size.width, 10.0);
 
     printf("connectionid = %d .. %p\n", win.connection, (void*)&win);
     printf("windowid = %d .. %p\n", win.id, (void*)&win);
 
-    sleep((int)5);
+    event_target := GetEventDispatcherTarget();
+
+    while (1) {
+        event: void* = (void*)0;
+        while (ReceiveNextEvent((int)0, (int)0, (float)kEventDurationNoWait, (int)1, &event) == (int)noErr) {
+            event_class := GetEventClass(event);
+            printf("got event: class = %d .. %p\n", win.id, event);
+
+            /*
+            if (event_class == kEventClassAppleEvent) {
+                // AEProcessEvent(event);
+            }
+            */
+
+            SendEventToEventTarget(event, event_target);
+            ReleaseEvent(event);
+        }
+    }
+
+    cgl_window_destroy(&win);
 }

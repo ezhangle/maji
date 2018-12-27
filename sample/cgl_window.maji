@@ -15,11 +15,12 @@ TransformProcessType :: (psn: proc_serial_number*, type: process_type) -> int #f
 
 GetEventDispatcherTarget :: () -> void* #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 SendEventToEventTarget :: (event: void*, event_target: void*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
-ReceiveNextEvent :: (x: int, xx: int, wait: float, xxx: int, event: void**) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+ReceiveNextEvent :: (num_types: int, typespec: void*, wait: float, pull_event: s8, event: void**) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 AEProcessEvent :: (event: void*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 ReleaseEvent :: (event: void*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 GetEventClass :: (event: void*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 
+usleep :: (n: int) #foreign "/usr/lib/libc.dylib";
 sleep :: (n: int) #foreign "/usr/lib/libc.dylib";
 printf :: (format: char*, n: int, p: void*) -> int #foreign "/usr/lib/libc.dylib";
 malloc :: (size: int) -> void* #foreign "/usr/lib/libc.dylib";
@@ -30,8 +31,8 @@ kEventClassKeyboard    : int = 1801812322;
 kEventClassApplication : int = 1634758764;
 kEventClassAppleEvent  : int = 1701867619;
 
-kEventDurationNoWait :: 0.0;
-noErr :: 0;
+kEventDurationNoWait : float = 0.0;
+noErr : int = 0;
 
 backing_type :: enum {
     NON_RETAINED = 0,
@@ -129,8 +130,7 @@ cgl_window_destroy :: (win: cgl_window *) {
     CGSReleaseWindow(win.connection, win.id);
 }
 
-cgl_window_bring_to_front :: (win: cgl_window *)
-{
+cgl_window_bring_to_front :: (win: cgl_window *) {
     CGSOrderWindow(win.connection, win.id, ordering_mode.ORDER_ABOVE, (int)0);
     SetFrontProcess(&win.psn);
 }
@@ -155,18 +155,17 @@ main :: () {
     printf("windowid = %d .. %p\n", win.id, (void*)&win);
 
     event_target := GetEventDispatcherTarget();
+    printf("%d: eventtarget = %p\n", win.id, event_target);
 
     while (1) {
-        event: void* = (void*)0;
-        while (ReceiveNextEvent((int)0, (int)0, (float)kEventDurationNoWait, (int)1, &event) == (int)noErr) {
+        event := (void*)0;
+        while (ReceiveNextEvent((int)0, (void*)0, kEventDurationNoWait, (s8)1, &event) == noErr) {
             event_class := GetEventClass(event);
-            printf("got event: class = %d .. %p\n", win.id, event);
+            printf("got event: class = %d .. %p\n", event_class, event);
 
-            /*
             if (event_class == kEventClassAppleEvent) {
-                // AEProcessEvent(event);
+                AEProcessEvent(event);
             }
-            */
 
             SendEventToEventTarget(event, event_target);
             ReleaseEvent(event);

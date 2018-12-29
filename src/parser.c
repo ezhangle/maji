@@ -16,6 +16,8 @@ static uint8_t *while_keyword;
 static uint8_t *return_keyword;
 static uint8_t *continue_keyword;
 static uint8_t *break_keyword;
+static uint8_t *cast_keyword;
+static uint8_t *sizeof_keyword;
 
 void parser_init_keywords(void)
 {
@@ -29,6 +31,8 @@ void parser_init_keywords(void)
     return_keyword = intern_string(u8"return");
     continue_keyword = intern_string(u8"continue");
     break_keyword = intern_string(u8"break");
+    cast_keyword = intern_string(u8"cast");
+    sizeof_keyword = intern_string(u8"sizeof");
 }
 
 struct ast_expr *parse_expr_operand(struct parser *parser)
@@ -44,6 +48,16 @@ struct ast_expr *parse_expr_operand(struct parser *parser)
         return ast_expr_float(parser_previous(parser).as.float_val);
     } else if (parser_match(parser, TOKEN_KIND_STRING_LITERAL)) {
         return ast_expr_string(parser_previous(parser).as.string_val);
+    } else if (parser_match_keyword(parser, cast_keyword)) {
+        parser_consume(parser, '(');
+        struct ast_typespec *type = parse_type(parser);
+        parser_consume(parser, ')');
+        return ast_expr_cast(type, parse_expr_unary(parser));
+    } else if (parser_match_keyword(parser, sizeof_keyword)) {
+        parser_consume(parser, '(');
+        struct ast_typespec *type = parse_type(parser);
+        parser_consume(parser, ')');
+        return ast_expr_sizeof_type(type);
     } else if (parser_match(parser, TOKEN_KIND_IDENTIFIER)) {
         return ast_expr_identifier(parser_previous(parser).as.name);
     } else if (parser_match(parser, '(')) {
@@ -113,16 +127,6 @@ struct ast_expr *parse_expr_unary(struct parser *parser)
     return parse_expr_base(parser);
 }
 
-struct ast_expr *parse_expr_cast(struct parser *parser)
-{
-    if (parser_match(parser, '(')) {
-        struct ast_typespec *type = parse_type(parser);
-        parser_consume(parser, ')');
-        return ast_expr_cast(type, parse_expr_cast(parser));
-    }
-    return parse_expr_unary(parser);
-}
-
 static inline bool parser_match_factor(struct parser *parser)
 {
     return ((parser_match(parser, '*')) ||
@@ -135,10 +139,10 @@ static inline bool parser_match_factor(struct parser *parser)
 
 struct ast_expr *parse_expr_factor(struct parser *parser)
 {
-    struct ast_expr *expr = parse_expr_cast(parser);
+    struct ast_expr *expr = parse_expr_unary(parser);
     while (parser_match_factor(parser)) {
         enum token_kind op = parser_previous(parser).kind;
-        expr = ast_expr_binary(op, expr, parse_expr_cast(parser));
+        expr = ast_expr_binary(op, expr, parse_expr_unary(parser));
     }
     return expr;
 }

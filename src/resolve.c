@@ -538,6 +538,14 @@ struct resolved_expr resolve_expr_cast(struct resolver *resolver, struct ast_exp
     return resolved_rvalue(cast_type);
 }
 
+struct resolved_expr resolve_expr_sizeof_type(struct resolver *resolver, struct ast_expr *expr)
+{
+    assert(expr->kind == AST_EXPR_SIZEOF_TYPE);
+    struct type *sizeof_type = resolve_typespec(resolver, expr->sizeof_type.type);
+    complete_type(resolver, sizeof_type);
+    return resolved_rvalue(type_int64);
+}
+
 struct resolved_expr resolve_expr_index(struct resolver *resolver, struct ast_expr *expr)
 {
     assert(expr->kind == AST_EXPR_INDEX);
@@ -821,6 +829,9 @@ struct resolved_expr resolve_expected_expr(struct resolver *resolver, struct ast
         break;
     case AST_EXPR_CAST:
         res = resolve_expr_cast(resolver, expr);
+        break;
+    case AST_EXPR_SIZEOF_TYPE:
+        res = resolve_expr_sizeof_type(resolver, expr);
         break;
     case AST_EXPR_INDEX:
         res = resolve_expr_index(resolver, expr);

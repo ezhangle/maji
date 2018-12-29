@@ -1001,9 +1001,19 @@ void bytecode_emit_expression_cast(struct bytecode_emitter *emitter, struct ast_
     bytecode_emit_load_convert(emitter, resolve_typespec(emitter->resolver, expr->cast.type));
 }
 
+void bytecode_emit_expression_sizeof_type(struct bytecode_emitter *emitter, struct ast_expr *expr)
+{
+    struct type *sizeof_type = resolve_typespec(emitter->resolver, expr->sizeof_type.type);
+    bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
+    bytecode_emit(emitter, type_sizeof(sizeof_type));
+}
+
 void bytecode_emit_expression(struct bytecode_emitter *emitter, struct ast_expr *expr)
 {
     switch (expr->kind) {
+    case AST_EXPR_SIZEOF_TYPE: {
+        bytecode_emit_expression_sizeof_type(emitter, expr);
+    } break;
     case AST_EXPR_CAST: {
         bytecode_emit_expression_cast(emitter, expr);
     } break;

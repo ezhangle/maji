@@ -343,17 +343,11 @@ main :: () {
     cgl_window_init(&win);
     cgl_window_add_drag_region(&win, 0.0, 0.0, win.rect.size.width, 20.0);
 
-    printf("connectionid = %d .. %p\n", win.connection, cast(void*) &win);
-    printf("windowid = %d .. %p\n", win.id, cast(void*) &win);
-
-    event_target := GetEventDispatcherTarget();
-    printf("%d: eventtarget = %p\n", win.id, event_target);
-
     while (!should_quit) {
         event := cast(void*) 0;
+        event_target := GetEventDispatcherTarget();
         while (ReceiveNextEvent(cast(int) 0, cast(void*) 0, kEventDurationNoWait, cast(s8) 1, &event) == noErr) {
             event_class := GetEventClass(event);
-            printf("got event: class = %d .. %p\n", event_class, event);
 
             if (event_class == kEventClassKeyboard) {
                 key_handler(event);

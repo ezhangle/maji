@@ -1121,94 +1121,100 @@ bytecode_instruction_handler_(exec_op_conv_int8_reg)
     } break;
     case BYTECODE_REGISTER_KIND_I16: {
         int16_t value = as_i16(bcr->reg[reg1]);
+        *as_i64_ptr(bcr->reg[reg1]) = 0;
         *as_i8_ptr(bcr->reg[reg1]) = (int8_t) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I8;
     } break;
     case BYTECODE_REGISTER_KIND_I32: {
         int32_t value = as_i32(bcr->reg[reg1]);
+        *as_i64_ptr(bcr->reg[reg1]) = 0;
         *as_i8_ptr(bcr->reg[reg1]) = (int8_t) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I8;
     } break;
     case BYTECODE_REGISTER_KIND_I64: {
         int64_t value = as_i64(bcr->reg[reg1]);
+        *as_i64_ptr(bcr->reg[reg1]) = 0;
         *as_i8_ptr(bcr->reg[reg1]) = (int8_t) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I8;
     } break;
     case BYTECODE_REGISTER_KIND_F32: {
         float value = as_f32(bcr->reg[reg1]);
+        *as_i64_ptr(bcr->reg[reg1]) = 0;
         *as_i8_ptr(bcr->reg[reg1]) = (int8_t) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I8;
     } break;
     case BYTECODE_REGISTER_KIND_F64: {
         double value = as_f64(bcr->reg[reg1]);
+        *as_i64_ptr(bcr->reg[reg1]) = 0;
         *as_i8_ptr(bcr->reg[reg1]) = (int8_t) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I8;
     } break;
     }
+
+    bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I8;
 }
 bytecode_instruction_handler_(exec_op_conv_int16_reg)
 {
     switch (bcr->reg_type[reg1]) {
     case BYTECODE_REGISTER_KIND_I8: {
         int8_t value = as_i8(bcr->reg[reg1]);
+        *as_i64_ptr(bcr->reg[reg1]) = 0;
         *as_i16_ptr(bcr->reg[reg1]) = (int16_t) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I16;
     } break;
     case BYTECODE_REGISTER_KIND_I16: {
     } break;
     case BYTECODE_REGISTER_KIND_I32: {
         int32_t value = as_i32(bcr->reg[reg1]);
+        *as_i64_ptr(bcr->reg[reg1]) = 0;
         *as_i16_ptr(bcr->reg[reg1]) = (int16_t) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I16;
     } break;
     case BYTECODE_REGISTER_KIND_I64: {
         int64_t value = as_i64(bcr->reg[reg1]);
+        *as_i64_ptr(bcr->reg[reg1]) = 0;
         *as_i16_ptr(bcr->reg[reg1]) = (int16_t) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I16;
     } break;
     case BYTECODE_REGISTER_KIND_F32: {
         float value = as_f32(bcr->reg[reg1]);
+        *as_i64_ptr(bcr->reg[reg1]) = 0;
         *as_i16_ptr(bcr->reg[reg1]) = (int16_t) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I16;
     } break;
     case BYTECODE_REGISTER_KIND_F64: {
         double value = as_f64(bcr->reg[reg1]);
+        *as_i64_ptr(bcr->reg[reg1]) = 0;
         *as_i16_ptr(bcr->reg[reg1]) = (int16_t) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I16;
     } break;
     }
+
+    bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I16;
 }
 bytecode_instruction_handler_(exec_op_conv_int32_reg)
 {
     switch (bcr->reg_type[reg1]) {
     case BYTECODE_REGISTER_KIND_I8: {
         int8_t value = as_i8(bcr->reg[reg1]);
+        *as_i64_ptr(bcr->reg[reg1]) = 0;
         *as_i32_ptr(bcr->reg[reg1]) = (int32_t) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I32;
     } break;
     case BYTECODE_REGISTER_KIND_I16: {
         int16_t value = as_i16(bcr->reg[reg1]);
+        *as_i64_ptr(bcr->reg[reg1]) = 0;
         *as_i32_ptr(bcr->reg[reg1]) = (int32_t) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I32;
     } break;
     case BYTECODE_REGISTER_KIND_I32: {
     } break;
     case BYTECODE_REGISTER_KIND_I64: {
         int64_t value = as_i64(bcr->reg[reg1]);
+        *as_i64_ptr(bcr->reg[reg1]) = 0;
         *as_i32_ptr(bcr->reg[reg1]) = (int32_t) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I32;
     } break;
     case BYTECODE_REGISTER_KIND_F32: {
         float value = as_f32(bcr->reg[reg1]);
+        *as_i64_ptr(bcr->reg[reg1]) = 0;
         *as_i32_ptr(bcr->reg[reg1]) = (int32_t) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I32;
     } break;
     case BYTECODE_REGISTER_KIND_F64: {
         double value = as_f64(bcr->reg[reg1]);
+        *as_i64_ptr(bcr->reg[reg1]) = 0;
         *as_i32_ptr(bcr->reg[reg1]) = (int32_t) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I32;
     } break;
     }
+
+    bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I32;
 }
 bytecode_instruction_handler_(exec_op_conv_int64_reg)
 {
@@ -1216,63 +1222,62 @@ bytecode_instruction_handler_(exec_op_conv_int64_reg)
     case BYTECODE_REGISTER_KIND_I8: {
         int8_t value = as_i8(bcr->reg[reg1]);
         *as_i64_ptr(bcr->reg[reg1]) = (int64_t) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I64;
     } break;
     case BYTECODE_REGISTER_KIND_I16: {
         int16_t value = as_i16(bcr->reg[reg1]);
         *as_i64_ptr(bcr->reg[reg1]) = (int64_t) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I64;
     } break;
     case BYTECODE_REGISTER_KIND_I32: {
         int32_t value = as_i32(bcr->reg[reg1]);
         *as_i64_ptr(bcr->reg[reg1]) = (int64_t) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I64;
     } break;
     case BYTECODE_REGISTER_KIND_I64: {
     } break;
     case BYTECODE_REGISTER_KIND_F32: {
         float value = as_f32(bcr->reg[reg1]);
         *as_i64_ptr(bcr->reg[reg1]) = (int64_t) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I64;
     } break;
     case BYTECODE_REGISTER_KIND_F64: {
         double value = as_f64(bcr->reg[reg1]);
         *as_i64_ptr(bcr->reg[reg1]) = (int64_t) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I64;
     } break;
     }
+
+    bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_I64;
 }
 bytecode_instruction_handler_(exec_op_conv_flt32_reg)
 {
     switch (bcr->reg_type[reg1]) {
     case BYTECODE_REGISTER_KIND_I8: {
         int8_t value = as_i8(bcr->reg[reg1]);
+        *as_i64_ptr(bcr->reg[reg1]) = 0;
         *as_f32_ptr(bcr->reg[reg1]) = (float) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_F32;
     } break;
     case BYTECODE_REGISTER_KIND_I16: {
         int16_t value = as_i16(bcr->reg[reg1]);
+        *as_i64_ptr(bcr->reg[reg1]) = 0;
         *as_f32_ptr(bcr->reg[reg1]) = (float) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_F32;
     } break;
     case BYTECODE_REGISTER_KIND_I32: {
         int32_t value = as_i32(bcr->reg[reg1]);
+        *as_i64_ptr(bcr->reg[reg1]) = 0;
         *as_f32_ptr(bcr->reg[reg1]) = (float) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_F32;
     } break;
     case BYTECODE_REGISTER_KIND_I64: {
         int64_t value = as_i64(bcr->reg[reg1]);
+        *as_i64_ptr(bcr->reg[reg1]) = 0;
         *as_f32_ptr(bcr->reg[reg1]) = (float) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_F32;
     } break;
     case BYTECODE_REGISTER_KIND_F32: {
     } break;
     case BYTECODE_REGISTER_KIND_F64: {
         double value = as_f64(bcr->reg[reg1]);
+        *as_i64_ptr(bcr->reg[reg1]) = 0;
         *as_f32_ptr(bcr->reg[reg1]) = (float) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_F32;
     } break;
     }
+
+    bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_F32;
 }
 bytecode_instruction_handler_(exec_op_conv_flt64_reg)
 {
@@ -1280,29 +1285,26 @@ bytecode_instruction_handler_(exec_op_conv_flt64_reg)
     case BYTECODE_REGISTER_KIND_I8: {
         int8_t value = as_i8(bcr->reg[reg1]);
         *as_f64_ptr(bcr->reg[reg1]) = (double) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_F64;
     } break;
     case BYTECODE_REGISTER_KIND_I16: {
         int16_t value = as_i16(bcr->reg[reg1]);
         *as_f64_ptr(bcr->reg[reg1]) = (double) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_F64;
     } break;
     case BYTECODE_REGISTER_KIND_I32: {
         int32_t value = as_i32(bcr->reg[reg1]);
         *as_f64_ptr(bcr->reg[reg1]) = (double) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_F64;
     } break;
     case BYTECODE_REGISTER_KIND_I64: {
         int64_t value = as_i64(bcr->reg[reg1]);
         *as_f64_ptr(bcr->reg[reg1]) = (double) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_F64;
     } break;
     case BYTECODE_REGISTER_KIND_F32: {
         float value = as_f32(bcr->reg[reg1]);
         *as_f64_ptr(bcr->reg[reg1]) = (double) value;
-        bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_F64;
     } break;
     case BYTECODE_REGISTER_KIND_F64: {
     } break;
     }
+
+    bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_F64;
 }

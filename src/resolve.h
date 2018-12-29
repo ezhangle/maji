@@ -20,11 +20,10 @@ enum type_kind
     TYPE_INT64,
     TYPE_FLOAT32,
     TYPE_FLOAT64,
-    TYPE_PTR,
     TYPE_ARRAY,
-    TYPE_STRUCT,
-    TYPE_UNION,
     TYPE_ENUM,
+    TYPE_PTR,
+    TYPE_STRUCT,
     TYPE_FUNC
 };
 
@@ -33,6 +32,7 @@ struct type
     enum type_kind kind;
     size_t size;
     size_t align;
+    bool is_unsigned;
     struct symbol *symbol;
     union {
         struct {

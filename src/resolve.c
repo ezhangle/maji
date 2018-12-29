@@ -20,20 +20,25 @@ int64_t resolve_const_expr(struct resolver *resolver, struct ast_expr *expr);
 void resolve_statement(struct resolver *resolver, struct ast_stmt *statement, struct type *ret_type);
 void complete_type(struct resolver *resolver, struct type *type);
 
-struct type *type_void = &(struct type){TYPE_VOID, 0};
-struct type *type_char = &(struct type){TYPE_CHAR, 1, 1};
+struct type *type_void  = &(struct type){TYPE_VOID,    0, 0, false};
+struct type *type_char  = &(struct type){TYPE_CHAR,    1, 1, false};
+struct type *type_int   = &(struct type){TYPE_INT32,   4, 4, false};
+struct type *type_float = &(struct type){TYPE_FLOAT32, 4, 4, false};
 
-struct type *type_int = &(struct type){TYPE_INT32, 4, 4};
-struct type *type_int8 = &(struct type){TYPE_INT8, 1, 1};
-struct type *type_int16 = &(struct type){TYPE_INT16, 2, 2};
-struct type *type_int32 = &(struct type){TYPE_INT32, 4, 4};
-struct type *type_int64 = &(struct type){TYPE_INT64, 8, 8};
+struct type *type_int8   = &(struct type){TYPE_INT8,  1, 1, false};
+struct type *type_int16  = &(struct type){TYPE_INT16, 2, 2, false};
+struct type *type_int32  = &(struct type){TYPE_INT32, 4, 4, false};
+struct type *type_int64  = &(struct type){TYPE_INT64, 8, 8, false};
 
-struct type *type_float = &(struct type){TYPE_FLOAT32, 4, 4};
-struct type *type_float32 = &(struct type){TYPE_FLOAT32, 4, 4};
-struct type *type_float64 = &(struct type){TYPE_FLOAT64, 8, 8};
+struct type *type_uint8  = &(struct type){TYPE_INT8,  1, 1, true};
+struct type *type_uint16 = &(struct type){TYPE_INT16, 2, 2, true};
+struct type *type_uint32 = &(struct type){TYPE_INT32, 4, 4, true};
+struct type *type_uint64 = &(struct type){TYPE_INT64, 8, 8, true};
 
-const size_t PTR_SIZE = 8;
+struct type *type_float32 = &(struct type){TYPE_FLOAT32, 4, 4, false};
+struct type *type_float64 = &(struct type){TYPE_FLOAT64, 8, 8, false};
+
+const size_t PTR_SIZE  = 8;
 const size_t PTR_ALIGN = 8;
 
 void *memdup(void *src, size_t size)
@@ -49,6 +54,13 @@ struct type *type_alloc(enum type_kind kind)
     memset(type, 0, sizeof(struct type));
     type->kind = kind;
     return type;
+}
+
+struct type *type_copy(struct type *type)
+{
+    struct type *result = malloc(sizeof(struct type));
+    memcpy(result, type, sizeof(struct type));
+    return result;
 }
 
 size_t type_sizeof(struct type *type)
@@ -161,9 +173,41 @@ bool is_floattype(struct type *type)
     return type->kind == TYPE_FLOAT32 || type->kind == TYPE_FLOAT64;
 }
 
-bool is_arithmetictype(struct type *type)
+bool is_arithmetic_type(struct type *type)
 {
     return is_inttype(type) || is_floattype(type);
+}
+
+struct type *arithmetic_type_conversion(struct type *t, struct type *u)
+{
+    assert(is_arithmetic_type(t));
+    assert(is_arithmetic_type(u));
+
+    if (t->kind < u->kind) {
+        struct type *tmp = t;
+        t = u;
+        u = tmp;
+    }
+
+    if (is_floattype(t)) {
+        return t;
+    }
+
+    assert(is_inttype(t) && t->size >= type_int->size);
+    assert(is_inttype(u) && u->size >= type_int->size);
+
+    if (t->size > u->size) {
+        return t;
+    }
+
+    assert(t->size == u->size);
+    if (t->is_unsigned == u->is_unsigned) {
+        return t;
+    }
+
+    struct type *r = type_copy(t);
+    r->is_unsigned = true;
+    return r;
 }
 
 bool duplicate_fields(struct type_field *fields, size_t fields_count)
@@ -525,12 +569,12 @@ struct resolved_expr resolve_expr_cast(struct resolver *resolver, struct ast_exp
             exit(1);
         }
     } else if (is_inttype(cast_type)) {
-        if (!is_ptrtype(result.type) && !is_inttype(result.type)) {
+        if (!is_ptrtype(result.type) && !is_arithmetic_type(result.type)) {
             // TODO: error handling
             printf("invalid cast to int type");
             exit(1);
         }
-    } else if (!is_arithmetictype(result.type) && !is_arithmetictype(cast_type)) {
+    } else if (!is_arithmetic_type(result.type) && !is_arithmetic_type(cast_type)) {
         // TODO: error handling
         printf("invalid target cast type");
         exit(1);
@@ -543,7 +587,7 @@ struct resolved_expr resolve_expr_sizeof_type(struct resolver *resolver, struct 
     assert(expr->kind == AST_EXPR_SIZEOF_TYPE);
     struct type *sizeof_type = resolve_typespec(resolver, expr->sizeof_type.type);
     complete_type(resolver, sizeof_type);
-    return resolved_rvalue(type_int64);
+    return resolved_rvalue(type_int);
 }
 
 struct resolved_expr resolve_expr_index(struct resolver *resolver, struct ast_expr *expr)
@@ -651,25 +695,22 @@ struct resolved_expr resolve_expr_unary(struct resolver *resolver, struct ast_ex
         }
         return resolved_rvalue(type_ptr(type));
     default:
-        if (!is_arithmetictype(type)) {
+        if (!is_arithmetic_type(type)) {
             // TODO: error handling
             printf("unary operand must be int or float\n");
             exit(1);
         }
 
-        if (is_floattype(type)) {
-            if (operand.is_const) {
-                double float_val = eval_float_unary(expr->unary.op, operand.val);
+        if (operand.is_const) {
+            if (is_floattype(type)) {
+                double operand_val = (double)(*(double *)&operand.val);
+                double float_val = eval_float_unary(expr->unary.op, operand_val);
                 return resolved_const((int64_t)(*(int64_t *)&float_val), type);
             }
-            return resolved_rvalue(type_float64);
-        }
 
-        if (is_inttype(type)) {
-            if (operand.is_const) {
+            if (is_inttype(type)) {
                 return resolved_const(eval_int_unary(expr->unary.op, operand.val), type);
             }
-            return resolved_rvalue(type_int64);
         }
 
         return resolved_rvalue(type);
@@ -756,29 +797,31 @@ struct resolved_expr resolve_expr_binary(struct resolver *resolver, struct ast_e
     struct resolved_expr left = resolve_expr(resolver, expr->binary.left_expr);
     struct resolved_expr right = resolve_expr(resolver, expr->binary.right_expr);
 
-    if (!is_arithmetictype(left.type)) {
-        // TODO: error handling
-        printf("left operand of + must be char, int or float");
-        exit(1);
-    }
-
-    if ((is_inttype(left.type) != is_inttype(right.type)) ||
-        (is_floattype(left.type) != is_floattype(right.type))) {
-        // TODO: error handling
-        printf("left and right operand of + must have same type");
-        exit(1);
-    }
-
-    if (!left.is_const || !right.is_const) {
+    if (is_ptrtype(left.type) && is_ptrtype(right.type)) {
         return resolved_rvalue(left.type);
     }
 
-    if (is_floattype(left.type)) {
-        double float_val = eval_float_binary(expr->binary.op, left.val, right.val);
-        return resolved_const((int64_t)(*(int64_t *)&float_val), left.type);
+    if (!is_arithmetic_type(left.type) || !is_arithmetic_type(right.type)) {
+        // TODO: error handling
+        printf("binary operand must be char, int or float");
+        exit(1);
     }
 
-    return resolved_const(eval_int_binary(expr->binary.op, left.val, right.val), left.type);
+    struct type *result_type = arithmetic_type_conversion(left.type, right.type);
+
+    if (!left.is_const || !right.is_const) {
+        return resolved_rvalue(result_type);
+    }
+
+    if (is_floattype(result_type)) {
+        double left_val = is_inttype(left.type) ? left.val : (double)(*(double *)&left.val);
+        double right_val = is_inttype(right.type) ? right.val : (double)(*(double *)&right.val);
+        double float_val = eval_float_binary(expr->binary.op, left_val, right_val);
+        printf("float val is %f\n", float_val);
+        return resolved_const((int64_t)(*(int64_t *)&float_val), result_type);
+    }
+
+    return resolved_const(eval_int_binary(expr->binary.op, left.val, right.val), result_type);
 }
 
 struct resolved_expr resolve_expr_ternary(struct resolver *resolver, struct ast_expr *expr, struct type *expected_type)
@@ -798,7 +841,7 @@ struct resolved_expr resolve_expr_ternary(struct resolver *resolver, struct ast_
         exit(1);
     }
     if (cond.is_const && then_expr.is_const && else_expr.is_const) {
-        return resolved_const(cond.val ? then_expr.val : else_expr.val, type_int64);
+        return resolved_const(cond.val ? then_expr.val : else_expr.val, type_int);
     } else {
         return resolved_rvalue(then_expr.type);
     }
@@ -813,12 +856,14 @@ struct resolved_expr resolve_expected_expr(struct resolver *resolver, struct ast
         res = resolve_expr_identifier(resolver, expr);
         break;
     case AST_EXPR_INT_LITERAL:
-        res = resolved_const(expr->int_val, type_int64);
+        // TODO: check if literal is s32 or s64 and assign the proper type
+        res = resolved_const(expr->int_val, type_int);
         break;
     case AST_EXPR_CHAR_LITERAL:
         res = resolved_const(expr->int_val, type_char);
         break;
     case AST_EXPR_FLOAT_LITERAL: {
+        // TODO: check if literal is f32 or f64 and assign the proper type
         res = resolved_const((int64_t)(*(int64_t *)&expr->float_val), type_float64);
     } break;
     case AST_EXPR_STRING_LITERAL: {
@@ -945,21 +990,20 @@ void resolve_statement(struct resolver *resolver, struct ast_stmt *statement, st
     case AST_STMT_ASSIGN: {
         struct resolved_expr left = resolve_expr(resolver, statement->assign.left_expr);
 
+        if (!left.is_lvalue) {
+            // TODO: error handling
+            printf("cannot assign to non-lvalue\n");
+            exit(1);
+        }
+
         if (statement->assign.right_expr) {
             struct resolved_expr right = resolve_expected_expr(resolver, statement->assign.right_expr, left.type);
-            if ((is_inttype(left.type) != is_inttype(right.type)) ||
-                (is_floattype(left.type) != is_floattype(right.type)) ||
+            if ((is_arithmetic_type(left.type) != is_arithmetic_type(right.type)) ||
                 (is_ptrtype(left.type) != is_ptrtype(right.type))) {
                 // TODO: error handling
                 printf("left-hand side of assignment does not match right-hand side type\n");
                 exit(1);
             }
-        }
-
-        if (!left.is_lvalue) {
-            // TODO: error handling
-            printf("cannot assign to non-lvalue\n");
-            exit(1);
         }
 
         if (statement->assign.op != '=' && !is_inttype(left.type)) {
@@ -981,8 +1025,7 @@ void resolve_statement(struct resolver *resolver, struct ast_stmt *statement, st
         struct type *decl_type = resolve_typespec(resolver, statement->decl.type);
         if (statement->decl.expr) {
             struct resolved_expr init = resolve_expr(resolver, statement->decl.expr);
-            if ((is_inttype(decl_type) != is_inttype(init.type)) ||
-                (is_floattype(decl_type) != is_floattype(init.type)) ||
+            if ((is_arithmetic_type(decl_type) != is_arithmetic_type(init.type)) ||
                 (is_ptrtype(decl_type) != is_ptrtype(init.type))) {
                 // TODO: error handling
                 printf("left-hand side of assignment does not match right-hand side type\n");
@@ -1019,8 +1062,7 @@ struct type *resolve_decl_var(struct resolver *resolver, struct ast_decl *decl)
         struct resolved_expr result = resolve_expected_expr(resolver, decl->var_decl.expr, type);
 
         if (type) {
-            if ((is_inttype(result.type) != is_inttype(type)) ||
-                (is_floattype(result.type) != is_floattype(type)) ||
+            if ((is_arithmetic_type(result.type) != is_arithmetic_type(type)) ||
                 (is_ptrtype(result.type) != is_ptrtype(type))) {
                 // TODO: error handling
                 printf("declared type does not match inferred type\n");
@@ -1266,6 +1308,11 @@ void resolver_init(struct resolver *resolver)
     type_int16->symbol = symbol_type(resolver, intern_string(u8"s16"), type_int16);
     type_int32->symbol = symbol_type(resolver, intern_string(u8"s32"), type_int32);
     type_int64->symbol = symbol_type(resolver, intern_string(u8"s64"), type_int64);
+
+    type_uint8->symbol = symbol_type(resolver, intern_string(u8"u8"), type_uint8);
+    type_uint16->symbol = symbol_type(resolver, intern_string(u8"u16"), type_uint16);
+    type_uint32->symbol = symbol_type(resolver, intern_string(u8"u32"), type_uint32);
+    type_uint64->symbol = symbol_type(resolver, intern_string(u8"u64"), type_uint64);
 
     type_float->symbol = symbol_type(resolver, intern_string(u8"float"), type_float);
     type_float32->symbol = symbol_type(resolver, intern_string(u8"f32"), type_float32);

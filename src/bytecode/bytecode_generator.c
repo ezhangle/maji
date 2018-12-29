@@ -457,6 +457,7 @@ void bytecode_emit_memread(struct bytecode_emitter *emitter, struct type *type)
 void bytecode_emit_expression_sub(struct bytecode_emitter *emitter, struct ast_expr *left, struct ast_expr *right)
 {
     bytecode_emit_expression(emitter, left);
+    bytecode_emit_load_convert(emitter, left->res.type);
     bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RCX));
 
     bytecode_emit_expression(emitter, right);
@@ -470,6 +471,7 @@ void bytecode_emit_expression_sub(struct bytecode_emitter *emitter, struct ast_e
 void bytecode_emit_expression_add(struct bytecode_emitter *emitter, struct ast_expr *left, struct ast_expr *right)
 {
     bytecode_emit_expression(emitter, left);
+    bytecode_emit_load_convert(emitter, left->res.type);
     bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RCX));
 
     bytecode_emit_expression(emitter, right);
@@ -483,6 +485,7 @@ void bytecode_emit_expression_add(struct bytecode_emitter *emitter, struct ast_e
 void bytecode_emit_expression_mul(struct bytecode_emitter *emitter, struct ast_expr *left, struct ast_expr *right)
 {
     bytecode_emit_expression(emitter, left);
+    bytecode_emit_load_convert(emitter, left->res.type);
     bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RCX));
 
     bytecode_emit_expression(emitter, right);
@@ -496,6 +499,7 @@ void bytecode_emit_expression_mul(struct bytecode_emitter *emitter, struct ast_e
 void bytecode_emit_expression_div(struct bytecode_emitter *emitter, struct ast_expr *left, struct ast_expr *right)
 {
     bytecode_emit_expression(emitter, left);
+    bytecode_emit_load_convert(emitter, left->res.type);
     bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RCX));
 
     bytecode_emit_expression(emitter, right);
@@ -622,10 +626,33 @@ void bytecode_emit_expression_immediate_string__(struct bytecode_emitter *emitte
     bytecode_emit(emitter, storage);
 }
 
+void bytecode_emit_expression_const_eval(struct bytecode_emitter *emitter, struct resolved_expr res)
+{
+    if (res.type->kind == TYPE_FLOAT64) {
+        bytecode_emit(emitter, _mov_f64_reg_imm(BYTECODE_REGISTER_RCX));
+        bytecode_emit(emitter, (uint64_t)(*(uint64_t *)&res.val));
+    } else if (res.type->kind == TYPE_FLOAT32) {
+        bytecode_emit(emitter, _mov_f32_reg_imm(BYTECODE_REGISTER_RCX));
+        bytecode_emit(emitter, (uint64_t)(*(uint64_t *)&res.val));
+    } else if (res.type->kind == TYPE_INT64) {
+        bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
+        bytecode_emit(emitter, res.val);
+    } else if (res.type->kind == TYPE_INT32) {
+        bytecode_emit(emitter, _mov_i32_reg_imm(BYTECODE_REGISTER_RCX));
+        bytecode_emit(emitter, res.val);
+    } else {
+        printf("bytecode_emit_expression_binary: INVALID CONST TYPE!!!\n");
+        assert(0);
+    }
+}
+
 void bytecode_emit_expression_immediate_int(struct bytecode_emitter *emitter, struct ast_expr *expr)
 {
     bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
     bytecode_emit(emitter, expr->int_val);
+    if (expr->res.type != type_int64) {
+        bytecode_emit_load_convert(emitter, expr->res.type);
+    }
 }
 
 void bytecode_emit_expression_immediate_char(struct bytecode_emitter *emitter, struct ast_expr *expr)
@@ -638,6 +665,9 @@ void bytecode_emit_expression_immediate_float(struct bytecode_emitter *emitter, 
 {
     bytecode_emit(emitter, _mov_f64_reg_imm(BYTECODE_REGISTER_RCX));
     bytecode_emit(emitter, (uint64_t)(*(uint64_t *)&expr->float_val));
+    if (expr->res.type != type_float64) {
+        bytecode_emit_load_convert(emitter, expr->res.type);
+    }
 }
 
 void bytecode_emit_expression_identifier(struct bytecode_emitter *emitter, struct ast_expr *expr)
@@ -650,6 +680,9 @@ void bytecode_emit_expression_identifier(struct bytecode_emitter *emitter, struc
         if (symbol->type == type_char) {
             bytecode_emit(emitter, _mov_i8_reg_imm(BYTECODE_REGISTER_RCX));
             bytecode_emit(emitter, symbol->val);
+        } else if (symbol->type == type_int) {
+            bytecode_emit(emitter, _mov_i32_reg_imm(BYTECODE_REGISTER_RCX));
+            bytecode_emit(emitter, symbol->val);
         } else if (symbol->type == type_int64) {
             bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
             bytecode_emit(emitter, symbol->val);
@@ -660,6 +693,9 @@ void bytecode_emit_expression_identifier(struct bytecode_emitter *emitter, struc
             bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_R9));
             bytecode_emit(emitter, symbol->address);
             bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
+        } else {
+            printf("const symbol %s of type %d was not handled!\n", symbol->name, symbol->type->kind);
+            assert(0);
         }
     } else {
         if (symbol->decl) {
@@ -720,14 +756,18 @@ void _bytecode_emit_expression_binary(struct bytecode_emitter *emitter, enum tok
     }
 }
 
-void bytecode_emit_expression_binary(struct bytecode_emitter *emitter, struct ast_expr_binary expr)
+void bytecode_emit_expression_binary(struct bytecode_emitter *emitter, struct ast_expr *expr)
 {
-    _bytecode_emit_expression_binary(emitter, expr.op, expr.left_expr, expr.right_expr);
+    if (expr->res.is_const) {
+        bytecode_emit_expression_const_eval(emitter, expr->res);
+    } else {
+        _bytecode_emit_expression_binary(emitter, expr->binary.op, expr->binary.left_expr, expr->binary.right_expr);
+    }
 }
 
-void bytecode_emit_expression_ternary(struct bytecode_emitter *emitter, struct ast_expr_ternary expr)
+void bytecode_emit_expression_ternary(struct bytecode_emitter *emitter, struct ast_expr *expr)
 {
-    bytecode_emit_expression(emitter, expr.condition);
+    bytecode_emit_expression(emitter, expr->ternary.condition);
     bytecode_emit(emitter, _cmp_reg_imm(BYTECODE_REGISTER_RCX));
     bytecode_emit(emitter, 0);
     bytecode_emit(emitter, _jz_imm());
@@ -735,14 +775,14 @@ void bytecode_emit_expression_ternary(struct bytecode_emitter *emitter, struct a
     uint64_t *else_branch_patch = bytecode_emitter_mark_patch_source(emitter);
     bytecode_emit(emitter, -1);
 
-    bytecode_emit_expression(emitter, expr.then_expr);
+    bytecode_emit_expression(emitter, expr->ternary.then_expr);
     bytecode_emit(emitter, _jmp_imm());
 
     uint64_t *end_branch_patch = bytecode_emitter_mark_patch_source(emitter);
     bytecode_emit(emitter, -1);
 
     int else_mark = bytecode_emitter_mark_patch_target(emitter);
-    bytecode_emit_expression(emitter, expr.else_expr);
+    bytecode_emit_expression(emitter, expr->ternary.else_expr);
     int end_mark = bytecode_emitter_mark_patch_target(emitter);
 
     *else_branch_patch = else_mark;
@@ -829,9 +869,13 @@ void _bytecode_emit_expression_unary(struct bytecode_emitter *emitter, enum toke
     }
 }
 
-void bytecode_emit_expression_unary(struct bytecode_emitter *emitter, struct ast_expr_unary expr)
+void bytecode_emit_expression_unary(struct bytecode_emitter *emitter, struct ast_expr *expr)
 {
-    _bytecode_emit_expression_unary(emitter, expr.op, expr.expr);
+    if (expr->res.is_const) {
+        bytecode_emit_expression_const_eval(emitter, expr->res);
+    } else {
+        _bytecode_emit_expression_unary(emitter, expr->unary.op, expr->unary.expr);
+    }
 }
 
 void bytecode_emit_expression_call(struct bytecode_emitter *emitter, struct ast_expr_call call)
@@ -1051,13 +1095,13 @@ void bytecode_emit_expression(struct bytecode_emitter *emitter, struct ast_expr 
         bytecode_emit_expression_immediate_string__(emitter, expr);
     } break;
     case AST_EXPR_UNARY: {
-        bytecode_emit_expression_unary(emitter, expr->unary);
+        bytecode_emit_expression_unary(emitter, expr);
     } break;
     case AST_EXPR_BINARY: {
-        bytecode_emit_expression_binary(emitter, expr->binary);
+        bytecode_emit_expression_binary(emitter, expr);
     } break;
     case AST_EXPR_TERNARY: {
-        bytecode_emit_expression_ternary(emitter, expr->ternary);
+        bytecode_emit_expression_ternary(emitter, expr);
     } break;
     case AST_EXPR_CALL: {
         bytecode_emit_expression_call(emitter, expr->call);

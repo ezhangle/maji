@@ -5,6 +5,8 @@
 #include <dyncall.h>
 #include <assert.h>
 
+#include <ffi.h>
+
 #define as_i8_ptr(val) (int8_t*)&val
 #define as_i16_ptr(val) (int16_t*)&val
 #define as_i32_ptr(val) (int32_t*)&val
@@ -245,6 +247,7 @@ static bytecode_instruction_handler *instruction_handlers[BYTECODE_OPCODE_COUNT]
     [BYTECODE_OPCODE_DIV_FLT64_REG_IMM]  = exec_op_div_flt64_reg_imm,
     [BYTECODE_OPCODE_DIV_REG_REG]        = exec_op_div_reg_reg,
 
+    [BYTECODE_OPCODE_LOG_NOT_REG]        = exec_op_log_not_reg,
     [BYTECODE_OPCODE_NOT_REG]            = exec_op_not_reg,
     [BYTECODE_OPCODE_NEG_REG]            = exec_op_neg_reg,
     [BYTECODE_OPCODE_INC_REG]            = exec_op_inc_reg,
@@ -705,6 +708,11 @@ bytecode_instruction_handler_(exec_op_div_reg_reg)
     bytecode_do_op(/=, bcr->reg[reg2]);
 }
 
+bytecode_instruction_handler_(exec_op_log_not_reg)
+{
+    bytecode_do_op(= !, bcr->reg[reg1]);
+}
+
 bytecode_instruction_handler_(exec_op_not_reg)
 {
     bytecode_do_bit_op(= ~, bcr->reg[reg1]);
@@ -816,6 +824,7 @@ bytecode_instruction_handler_(exec_op_call_reg)
 bytecode_instruction_handler_(exec_op_call_foreign)
 {
     int64_t *stack = as_i64_ptr(bcr->stack[bcr->reg[BYTECODE_REGISTER_RSP]]);
+
     char *sym_name = (char *)((int64_t)*--stack);
     bcr->reg[BYTECODE_REGISTER_RSP] -= sizeof(int64_t);
     --bcr->stack_info;
@@ -824,14 +833,20 @@ bytecode_instruction_handler_(exec_op_call_foreign)
     bcr->reg[BYTECODE_REGISTER_RSP] -= sizeof(int64_t);
     --bcr->stack_info;
 
-    uint64_t reg_arg_count = fetch_instruction(bcr);
-    uint64_t ret_kind = fetch_instruction(bcr);
-
     void *handle = dlopen(lib_name, RTLD_LAZY);
     assert(handle);
 
     void *func = dlsym(handle, sym_name);
     assert(func);
+
+    uint64_t reg_arg_count = fetch_instruction(bcr);
+    uint64_t ret_kind = fetch_instruction(bcr);
+    bcr->reg_type[BYTECODE_REGISTER_RAX] = ret_kind;
+
+#if 1
+    //
+    // DYNCALL
+    //
 
     DCCallVM *vm = dcNewCallVM(8192);
     dcMode(vm, DC_CALL_C_DEFAULT);
@@ -840,66 +855,98 @@ bytecode_instruction_handler_(exec_op_call_foreign)
     for (unsigned i = 0; i < reg_arg_count; ++i) {
         uint64_t reg = bcr->reg[bytecode_call_registers[i]];
         switch (bcr->reg_type[bytecode_call_registers[i]]) {
-        case BYTECODE_REGISTER_KIND_I64: {
-            dcArgLongLong(vm, as_i64(reg));
-        } break;
-        case BYTECODE_REGISTER_KIND_I32: {
-            dcArgInt(vm, as_i32(reg));
-        } break;
-        case BYTECODE_REGISTER_KIND_I16: {
-            dcArgShort(vm, as_i16(reg));
-        } break;
-        case BYTECODE_REGISTER_KIND_I8: {
-            dcArgChar(vm, as_i8(reg));
-        } break;
-        case BYTECODE_REGISTER_KIND_F64: {
-            dcArgDouble(vm, as_f64(reg));
-        } break;
-        case BYTECODE_REGISTER_KIND_F32: {
-            dcArgDouble(vm, as_f32(reg));
-        } break;
-        //case BYTECODE_VALUE_POINTER: {
-            //dcArgPointer(vm, as_i64(reg));
-        //} break;
-        default: {
-        } break;
+        case BYTECODE_REGISTER_KIND_I64: dcArgLongLong(vm, as_i64(reg)); break;
+        case BYTECODE_REGISTER_KIND_I32: dcArgInt(vm, as_i32(reg));      break;
+        case BYTECODE_REGISTER_KIND_I16: dcArgShort(vm, as_i16(reg));    break;
+        case BYTECODE_REGISTER_KIND_I8:  dcArgChar(vm, as_i8(reg));      break;
+        case BYTECODE_REGISTER_KIND_F64: dcArgDouble(vm, as_f64(reg));   break;
+        case BYTECODE_REGISTER_KIND_F32: dcArgDouble(vm, as_f32(reg));   break;
+        default: break;
         }
     }
 
     switch (ret_kind) {
-    case BYTECODE_REGISTER_KIND_I64: {
-        *as_i64_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = dcCallLongLong(vm, func);
-        bcr->reg_type[BYTECODE_REGISTER_RAX] = BYTECODE_REGISTER_KIND_I64;
-    } break;
-    case BYTECODE_REGISTER_KIND_I32: {
-        *as_i32_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = dcCallInt(vm, func);
-        bcr->reg_type[BYTECODE_REGISTER_RAX] = BYTECODE_REGISTER_KIND_I32;
-    } break;
-    case BYTECODE_REGISTER_KIND_I16: {
-        *as_i16_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = dcCallShort(vm, func);
-        bcr->reg_type[BYTECODE_REGISTER_RAX] = BYTECODE_REGISTER_KIND_I16;
-    } break;
-    case BYTECODE_REGISTER_KIND_I8: {
-        *as_i8_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = dcCallChar(vm, func);
-        bcr->reg_type[BYTECODE_REGISTER_RAX] = BYTECODE_REGISTER_KIND_I8;
-    } break;
-    case BYTECODE_REGISTER_KIND_F64: {
-        *as_f64_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = dcCallDouble(vm, func);
-        bcr->reg_type[BYTECODE_REGISTER_RAX] = BYTECODE_REGISTER_KIND_F64;
-    } break;
-    case BYTECODE_REGISTER_KIND_F32: {
-        *as_f32_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = dcCallFloat(vm, func);
-        bcr->reg_type[BYTECODE_REGISTER_RAX] = BYTECODE_REGISTER_KIND_F32;
-    } break;
-    //case BYTECODE_VALUE_POINTER: {
-        //*as_i64_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = (uint64_t)dcCallPointer(vm, func);
-    //} break;
-    default: {
-        dcCallVoid(vm, func);
-    } break;
+    case BYTECODE_REGISTER_KIND_I64: *as_i64_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = dcCallLongLong(vm, func); break;
+    case BYTECODE_REGISTER_KIND_I32: *as_i32_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = dcCallInt(vm, func);      break;
+    case BYTECODE_REGISTER_KIND_I16: *as_i16_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = dcCallShort(vm, func);    break;
+    case BYTECODE_REGISTER_KIND_I8:  *as_i8_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = dcCallChar(vm, func);      break;
+    case BYTECODE_REGISTER_KIND_F64: *as_f64_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = dcCallDouble(vm, func);   break;
+    case BYTECODE_REGISTER_KIND_F32: *as_f32_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = dcCallFloat(vm, func);    break;
+    default: dcCallVoid(vm, func); break;
     }
 
     dcFree(vm);
+#else
+    //
+    // LIBFFI
+    //
+
+    ffi_cif cif;
+    ffi_type *arg_types[reg_arg_count];
+    ffi_type *ret_type = NULL;
+    void *arg_values[reg_arg_count];
+    ffi_arg result;
+
+    for (unsigned i = 0; i < reg_arg_count; ++i) {
+        uint64_t reg = bcr->reg[bytecode_call_registers[i]];
+        switch (bcr->reg_type[bytecode_call_registers[i]]) {
+        case BYTECODE_REGISTER_KIND_I64: {
+            arg_types[i] = &ffi_type_sint64;
+            arg_values[i] = as_i64_ptr(reg);
+        } break;
+        case BYTECODE_REGISTER_KIND_I32: {
+            arg_types[i] = &ffi_type_sint32;
+            arg_values[i] = as_i32_ptr(reg);
+        } break;
+        case BYTECODE_REGISTER_KIND_I16: {
+            arg_types[i] = &ffi_type_sint16;
+            arg_values[i] = as_i16_ptr(reg);
+        } break;
+        case BYTECODE_REGISTER_KIND_I8: {
+            arg_types[i] = &ffi_type_sint8;
+            arg_values[i] = as_i8_ptr(reg);
+        } break;
+        case BYTECODE_REGISTER_KIND_F64: {
+            arg_types[i] = &ffi_type_double;
+            arg_values[i] = as_f64_ptr(reg);
+        } break;
+        case BYTECODE_REGISTER_KIND_F32: {
+            arg_types[i] = &ffi_type_float;
+            arg_values[i] = as_f32_ptr(reg);
+        } break;
+        default: break;
+        }
+    }
+
+    switch (ret_kind) {
+    case BYTECODE_REGISTER_KIND_I64: ret_type = &ffi_type_sint64; break;
+    case BYTECODE_REGISTER_KIND_I32: ret_type = &ffi_type_sint32; break;
+    case BYTECODE_REGISTER_KIND_I16: ret_type = &ffi_type_sint16; break;
+    case BYTECODE_REGISTER_KIND_I8:  ret_type = &ffi_type_sint8;  break;
+    case BYTECODE_REGISTER_KIND_F64: ret_type = &ffi_type_double; break;
+    case BYTECODE_REGISTER_KIND_F32: ret_type = &ffi_type_float;  break;
+    default: break;
+    }
+
+    if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, reg_arg_count, ret_type, arg_types) != FFI_OK) {
+        fprintf(stderr, "FFI_PREP_CIF FAILED\n");
+        assert(0);
+    }
+
+    // Invoke the function.
+    ffi_call(&cif, func, &result, arg_values);
+
+    switch (ret_kind) {
+    case BYTECODE_REGISTER_KIND_I64: *as_i64_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = (int64_t) result; break;
+    case BYTECODE_REGISTER_KIND_I32: *as_i32_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = (int32_t) result; break;
+    case BYTECODE_REGISTER_KIND_I16: *as_i16_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = (int16_t) result; break;
+    case BYTECODE_REGISTER_KIND_I8:  *as_i8_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = (int16_t) result;  break;
+    case BYTECODE_REGISTER_KIND_F64: *as_f64_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = (double) result;  break;
+    case BYTECODE_REGISTER_KIND_F32: *as_f32_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = (float) result;   break;
+    default: break;
+    }
+#endif
+
     dlclose(handle);
 }
 

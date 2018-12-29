@@ -79,6 +79,7 @@ bytecode_instruction_handler_(exec_op_div_flt32_reg_imm);
 bytecode_instruction_handler_(exec_op_div_flt64_reg_imm);
 bytecode_instruction_handler_(exec_op_div_reg_reg);
 
+bytecode_instruction_handler_(exec_op_log_not_reg);
 bytecode_instruction_handler_(exec_op_not_reg);
 bytecode_instruction_handler_(exec_op_neg_reg);
 bytecode_instruction_handler_(exec_op_inc_reg);

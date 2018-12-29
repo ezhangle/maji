@@ -88,6 +88,7 @@ uint64_t encode_instruction_r2(uint8_t instr, uint8_t r1, uint8_t r2);
 #define div_f64_reg_imm(reg, val) encode_instruction_r1(BYTECODE_OPCODE_DIV_FLT64_REG_IMM, reg), (uint64_t)(*(uint64_t *)&val)
 #define div_reg_reg(reg1, reg2) encode_instruction_r2(BYTECODE_OPCODE_DIV_REG_REG, reg1, reg2)
 
+#define log_not_reg(reg) encode_instruction_r1(BYTECODE_OPCODE_LOG_NOT_REG, reg)
 #define not_reg(reg) encode_instruction_r1(BYTECODE_OPCODE_NOT_REG, reg)
 #define neg_reg(reg) encode_instruction_r1(BYTECODE_OPCODE_NEG_REG, reg)
 #define inc_reg(reg) encode_instruction_r1(BYTECODE_OPCODE_INC_REG, reg)

@@ -454,56 +454,56 @@ void bytecode_emit_memread(struct bytecode_emitter *emitter, struct type *type)
     }
 }
 
-void bytecode_emit_expression_sub(struct bytecode_emitter *emitter, struct ast_expr *left, struct ast_expr *right)
+void bytecode_emit_expression_sub(struct bytecode_emitter *emitter, struct ast_expr *left, struct ast_expr *right, struct type *arithmetic_type)
 {
     bytecode_emit_expression(emitter, left);
-    bytecode_emit_load_convert(emitter, left->res.type);
+    bytecode_emit_load_convert(emitter, arithmetic_type);
     bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RCX));
 
     bytecode_emit_expression(emitter, right);
-    bytecode_emit_load_convert(emitter, left->res.type);
+    bytecode_emit_load_convert(emitter, arithmetic_type);
 
     bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
     bytecode_emit(emitter, _pop_reg(BYTECODE_REGISTER_RCX));
     bytecode_emit(emitter, _sub_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_RDX));
 }
 
-void bytecode_emit_expression_add(struct bytecode_emitter *emitter, struct ast_expr *left, struct ast_expr *right)
+void bytecode_emit_expression_add(struct bytecode_emitter *emitter, struct ast_expr *left, struct ast_expr *right, struct type *arithmetic_type)
 {
     bytecode_emit_expression(emitter, left);
-    bytecode_emit_load_convert(emitter, left->res.type);
+    bytecode_emit_load_convert(emitter, arithmetic_type);
     bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RCX));
 
     bytecode_emit_expression(emitter, right);
-    bytecode_emit_load_convert(emitter, left->res.type);
+    bytecode_emit_load_convert(emitter, arithmetic_type);
 
     bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
     bytecode_emit(emitter, _pop_reg(BYTECODE_REGISTER_RCX));
     bytecode_emit(emitter, _add_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_RDX));
 }
 
-void bytecode_emit_expression_mul(struct bytecode_emitter *emitter, struct ast_expr *left, struct ast_expr *right)
+void bytecode_emit_expression_mul(struct bytecode_emitter *emitter, struct ast_expr *left, struct ast_expr *right, struct type *arithmetic_type)
 {
     bytecode_emit_expression(emitter, left);
-    bytecode_emit_load_convert(emitter, left->res.type);
+    bytecode_emit_load_convert(emitter, arithmetic_type);
     bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RCX));
 
     bytecode_emit_expression(emitter, right);
-    bytecode_emit_load_convert(emitter, left->res.type);
+    bytecode_emit_load_convert(emitter, arithmetic_type);
 
     bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
     bytecode_emit(emitter, _pop_reg(BYTECODE_REGISTER_RCX));
     bytecode_emit(emitter, _mul_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_RDX));
 }
 
-void bytecode_emit_expression_div(struct bytecode_emitter *emitter, struct ast_expr *left, struct ast_expr *right)
+void bytecode_emit_expression_div(struct bytecode_emitter *emitter, struct ast_expr *left, struct ast_expr *right, struct type *arithmetic_type)
 {
     bytecode_emit_expression(emitter, left);
-    bytecode_emit_load_convert(emitter, left->res.type);
+    bytecode_emit_load_convert(emitter, arithmetic_type);
     bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RCX));
 
     bytecode_emit_expression(emitter, right);
-    bytecode_emit_load_convert(emitter, left->res.type);
+    bytecode_emit_load_convert(emitter, arithmetic_type);
 
     bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
     bytecode_emit(emitter, _pop_reg(BYTECODE_REGISTER_RCX));
@@ -709,20 +709,20 @@ void bytecode_emit_expression_identifier(struct bytecode_emitter *emitter, struc
     }
 }
 
-void _bytecode_emit_expression_binary(struct bytecode_emitter *emitter, enum token_kind op, struct ast_expr *left_expr, struct ast_expr *right_expr)
+void _bytecode_emit_expression_binary(struct bytecode_emitter *emitter, enum token_kind op, struct ast_expr *left_expr, struct ast_expr *right_expr, struct type *arithmetic_type)
 {
     switch (op) {
     case '+': {
-        bytecode_emit_expression_add(emitter, left_expr, right_expr);
+        bytecode_emit_expression_add(emitter, left_expr, right_expr, arithmetic_type);
     } break;
     case '-': {
-        bytecode_emit_expression_sub(emitter, left_expr, right_expr);
+        bytecode_emit_expression_sub(emitter, left_expr, right_expr, arithmetic_type);
     } break;
     case '*': {
-        bytecode_emit_expression_mul(emitter, left_expr, right_expr);
+        bytecode_emit_expression_mul(emitter, left_expr, right_expr, arithmetic_type);
     } break;
     case '/': {
-        bytecode_emit_expression_div(emitter, left_expr, right_expr);
+        bytecode_emit_expression_div(emitter, left_expr, right_expr, arithmetic_type);
     } break;
     case '=': {
         bytecode_emit_expression_assign(emitter, left_expr, right_expr);
@@ -761,7 +761,7 @@ void bytecode_emit_expression_binary(struct bytecode_emitter *emitter, struct as
     if (expr->res.is_const) {
         bytecode_emit_expression_const_eval(emitter, expr->res);
     } else {
-        _bytecode_emit_expression_binary(emitter, expr->binary.op, expr->binary.left_expr, expr->binary.right_expr);
+        _bytecode_emit_expression_binary(emitter, expr->binary.op, expr->binary.left_expr, expr->binary.right_expr, expr->res.type);
     }
 }
 
@@ -1114,7 +1114,7 @@ void bytecode_emit_expression(struct bytecode_emitter *emitter, struct ast_expr 
 void bytecode_emit_stmt_assign(struct bytecode_emitter *emitter, struct ast_stmt_assign stmt_assign)
 {
     if (stmt_assign.left_expr && stmt_assign.right_expr) {
-        _bytecode_emit_expression_binary(emitter, stmt_assign.op, stmt_assign.left_expr, stmt_assign.right_expr);
+        _bytecode_emit_expression_binary(emitter, stmt_assign.op, stmt_assign.left_expr, stmt_assign.right_expr, NULL);
     } else {
         _bytecode_emit_expression_unary(emitter, stmt_assign.op, stmt_assign.left_expr);
     }

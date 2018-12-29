@@ -3,7 +3,7 @@
 **Maji** is a simple programming language loosely based on C, but without header-files (order dependency).
 There is also a basic type-inference system.
 
-It currently outputs bytecode executable files that can be run by [bytecode runner](https://github.com/koekeishiya/bytecode)
+It currently outputs bytecode executable files that can be run by [bytecode runner](https://github.com/koekeishiya/bytecode).
 The source for the *bytecode runner* is also included in the *bytecode* subfolder,
 but there is currently no makefile instruction for it in this repository.
 

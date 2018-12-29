@@ -852,50 +852,50 @@ struct resolved_expr resolve_expected_expr(struct resolver *resolver, struct ast
     struct resolved_expr res = {};
 
     switch (expr->kind) {
-    case AST_EXPR_IDENTIFIER:
+    case AST_EXPR_IDENTIFIER: {
         res = resolve_expr_identifier(resolver, expr);
-        break;
-    case AST_EXPR_INT_LITERAL:
-        // TODO: check if literal is s32 or s64 and assign the proper type
-        res = resolved_const(expr->int_val, type_int);
-        break;
-    case AST_EXPR_CHAR_LITERAL:
+    } break;
+    case AST_EXPR_INT_LITERAL: {
+        // TODO: hexadecimal, octal and binary representation should be treated as unsigned !!!
+        struct type *type = !(expr->int_val & ~INT_MAX) ? type_int : type_int64;
+        res = resolved_const(expr->int_val, type);
+    } break;
+    case AST_EXPR_CHAR_LITERAL: {
         res = resolved_const(expr->int_val, type_char);
-        break;
+    } break;
     case AST_EXPR_FLOAT_LITERAL: {
-        // TODO: check if literal is f32 or f64 and assign the proper type
         res = resolved_const((int64_t)(*(int64_t *)&expr->float_val), type_float64);
     } break;
     case AST_EXPR_STRING_LITERAL: {
         res = resolved_const(expr->int_val, type_ptr(type_char));
     } break;
-    case AST_EXPR_CALL:
+    case AST_EXPR_CALL: {
         res = resolve_expr_call(resolver, expr);
-        break;
-    case AST_EXPR_CAST:
+    } break;
+    case AST_EXPR_CAST: {
         res = resolve_expr_cast(resolver, expr);
-        break;
-    case AST_EXPR_SIZEOF_TYPE:
+    } break;
+    case AST_EXPR_SIZEOF_TYPE: {
         res = resolve_expr_sizeof_type(resolver, expr);
-        break;
-    case AST_EXPR_INDEX:
+    } break;
+    case AST_EXPR_INDEX: {
         res = resolve_expr_index(resolver, expr);
-        break;
-    case AST_EXPR_FIELD:
+    } break;
+    case AST_EXPR_FIELD: {
         res = resolve_expr_field(resolver, expr);
-        break;
-    case AST_EXPR_UNARY:
+    } break;
+    case AST_EXPR_UNARY: {
         res = resolve_expr_unary(resolver, expr);
-        break;
-    case AST_EXPR_BINARY:
+    } break;
+    case AST_EXPR_BINARY: {
         res = resolve_expr_binary(resolver, expr);
-        break;
-    case AST_EXPR_TERNARY:
+    } break;
+    case AST_EXPR_TERNARY: {
         res = resolve_expr_ternary(resolver, expr, expected_type);
-        break;
-    default:
+    } break;
+    default: {
         assert(0);
-        break;
+    } break;
     }
 
     expr->res = res;

@@ -187,9 +187,9 @@ backing_type :: enum {
 }
 
 ordering_mode :: enum {
-    ORDER_ABOVE =  1,
-    ORDER_BELOW = -1,
-    ORDER_OUT   =  0
+    ABOVE =  1,
+    BELOW = -1,
+    OUT   =  0
 }
 
 process_type :: enum {
@@ -277,7 +277,7 @@ cgl_window_destroy :: (win: cgl_window *) {
 }
 
 cgl_window_bring_to_front :: (win: cgl_window *) {
-    CGSOrderWindow(win.connection, win.id, ordering_mode.ORDER_ABOVE, cast(int) 0);
+    CGSOrderWindow(win.connection, win.id, ordering_mode.ABOVE, cast(int) 0);
     SetFrontProcess(&win.psn);
 }
 

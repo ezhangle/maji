@@ -19,6 +19,8 @@ ReceiveNextEvent :: (num_types: int, typespec: void*, wait: float, pull_event: s
 AEProcessEvent :: (event: void*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 ReleaseEvent :: (event: void*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 GetEventClass :: (event: void*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+GetEventKind :: (event: void*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+GetEventParameter :: (event: void*, name: int, type: int, out_type: int*, in_size: int, out_size: int*, out_data: void*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 
 usleep :: (n: int) #foreign "/usr/lib/libc.dylib";
 sleep :: (n: int) #foreign "/usr/lib/libc.dylib";
@@ -26,13 +28,157 @@ printf :: (format: char*, n: int, p: void*) -> int #foreign "/usr/lib/libc.dylib
 malloc :: (size: int) -> void* #foreign "/usr/lib/libc.dylib";
 free :: (ptr: void*) #foreign "/usr/lib/libc.dylib";
 
+noErr : int = 0;
+
+kEventDurationNoWait : float = 0.0;
+
 kEventClassMouse       : int = 1836021107;
 kEventClassKeyboard    : int = 1801812322;
 kEventClassApplication : int = 1634758764;
 kEventClassAppleEvent  : int = 1701867619;
 
-kEventDurationNoWait : float = 0.0;
-noErr : int = 0;
+kEventParamKeyCode         : int = 1801678692;
+kEventParamKeyMacCharCodes : int = 1801676914;
+kEventParamKeyModifiers    : int = 1802334052;
+
+kEventParamMouseButton   : int = 1835168878;
+kEventParamMouseLocation : int = 1835822947;
+kEventParamMouseDelta    : int = 1835299937;
+
+typeUInt32 : int = 1835100014;
+typeChar   : int = 1413830740;
+
+typeMouseButton : int = 1835168878;
+typeHIPoint : int = 1751740532;
+
+kEventRawKeyDown   : int = 1;
+kEventRawKeyRepeat : int = 2;
+kEventRawKeyUp     : int = 3;
+
+kEventMouseDown    : int = 1;
+kEventMouseUp      : int = 2;
+kEventMouseMoved   : int = 5;
+kEventMouseDragged : int = 6;
+
+kEventMouseButtonPrimary   : int = 1;
+kEventMouseButtonSecondary : int = 2;
+kEventMouseButtonTertiary  : int = 3;
+
+virtual_key :: enum {
+    ANSI_A                    = 0x00,
+    ANSI_S                    = 0x01,
+    ANSI_D                    = 0x02,
+    ANSI_F                    = 0x03,
+    ANSI_H                    = 0x04,
+    ANSI_G                    = 0x05,
+    ANSI_Z                    = 0x06,
+    ANSI_X                    = 0x07,
+    ANSI_C                    = 0x08,
+    ANSI_V                    = 0x09,
+    ANSI_B                    = 0x0B,
+    ANSI_Q                    = 0x0C,
+    ANSI_W                    = 0x0D,
+    ANSI_E                    = 0x0E,
+    ANSI_R                    = 0x0F,
+    ANSI_Y                    = 0x10,
+    ANSI_T                    = 0x11,
+    ANSI_1                    = 0x12,
+    ANSI_2                    = 0x13,
+    ANSI_3                    = 0x14,
+    ANSI_4                    = 0x15,
+    ANSI_6                    = 0x16,
+    ANSI_5                    = 0x17,
+    ANSI_EQUAL                = 0x18,
+    ANSI_9                    = 0x19,
+    ANSI_7                    = 0x1A,
+    ANSI_MINUS                = 0x1B,
+    ANSI_8                    = 0x1C,
+    ANSI_0                    = 0x1D,
+    ANSI_RIGHT_BRACKET        = 0x1E,
+    ANSI_O                    = 0x1F,
+    ANSI_U                    = 0x20,
+    ANSI_LEFT_BRACKET         = 0x21,
+    ANSI_I                    = 0x22,
+    ANSI_P                    = 0x23,
+    ANSI_L                    = 0x25,
+    ANSI_J                    = 0x26,
+    ANSI_QUOTE                = 0x27,
+    ANSI_K                    = 0x28,
+    ANSI_SEMICOLON            = 0x29,
+    ANSI_BACKSLASH            = 0x2A,
+    ANSI_COMMA                = 0x2B,
+    ANSI_SLASH                = 0x2C,
+    ANSI_N                    = 0x2D,
+    ANSI_M                    = 0x2E,
+    ANSI_PERIOD               = 0x2F,
+    ANSI_GRAVE                = 0x32,
+    ANSI_KEYPAD_DECIMAL       = 0x41,
+    ANSI_KEYPAD_MULTIPLY      = 0x43,
+    ANSI_KEYPAD_PLUS          = 0x45,
+    ANSI_KEYPAD_CLEAR         = 0x47,
+    ANSI_KEYPAD_DIVIDE        = 0x4B,
+    ANSI_KEYPAD_ENTER         = 0x4C,
+    ANSI_KEYPAD_MINUS         = 0x4E,
+    ANSI_KEYPAD_EQUALS        = 0x51,
+    ANSI_KEYPAD0              = 0x52,
+    ANSI_KEYPAD1              = 0x53,
+    ANSI_KEYPAD2              = 0x54,
+    ANSI_KEYPAD3              = 0x55,
+    ANSI_KEYPAD4              = 0x56,
+    ANSI_KEYPAD5              = 0x57,
+    ANSI_KEYPAD6              = 0x58,
+    ANSI_KEYPAD7              = 0x59,
+    ANSI_KEYPAD8              = 0x5B,
+    ANSI_KEYPAD9              = 0x5C,
+    RETURN                    = 0x24,
+    TAB                       = 0x30,
+    SPACE                     = 0x31,
+    DELETE                    = 0x33,
+    ESCAPE                    = 0x35,
+    COMMAND                   = 0x37,
+    SHIFT                     = 0x38,
+    CAPSLOCK                  = 0x39,
+    OPTION                    = 0x3A,
+    CONTROL                   = 0x3B,
+    RIGHT_COMMAND             = 0x36,
+    RIGHT_SHIFT               = 0x3C,
+    RIGHT_OPTION              = 0x3D,
+    RIGHT_CONTROL             = 0x3E,
+    FUNCTION                  = 0x3F,
+    F17                       = 0x40,
+    VOLUME_UP                 = 0x48,
+    VOLUME_DOWN               = 0x49,
+    MUTE                      = 0x4A,
+    F18                       = 0x4F,
+    F19                       = 0x50,
+    F20                       = 0x5A,
+    F5                        = 0x60,
+    F6                        = 0x61,
+    F7                        = 0x62,
+    F3                        = 0x63,
+    F8                        = 0x64,
+    F9                        = 0x65,
+    F11                       = 0x67,
+    F13                       = 0x69,
+    F16                       = 0x6A,
+    F14                       = 0x6B,
+    F10                       = 0x6D,
+    F12                       = 0x6F,
+    F15                       = 0x71,
+    HELP                      = 0x72,
+    HOME                      = 0x73,
+    PAGE_UP                   = 0x74,
+    FORWARD_DELETE            = 0x75,
+    F4                        = 0x76,
+    END                       = 0x77,
+    F2                        = 0x78,
+    PAGE_DOWN                 = 0x79,
+    F1                        = 0x7A,
+    LEFT_ARROW                = 0x7B,
+    RIGHT_ARROW               = 0x7C,
+    DOWN_ARROW                = 0x7D,
+    UP_ARROW                  = 0x7E
+}
 
 backing_type :: enum {
     NON_RETAINED = 0,
@@ -146,6 +292,52 @@ cgl_window_add_drag_region :: (win: cgl_window *, x: f64, y: f64, width: f64, he
     CGSAddDragRegion(win.connection, win.id, region);
 }
 
+key_handler :: (event: void *) {
+    event_kind := GetEventKind(event);
+    if ((event_kind == kEventRawKeyDown) ||
+        (event_kind == kEventRawKeyRepeat) ||
+        (event_kind == kEventRawKeyUp)) {
+        keycode: s32 = 0;
+        charcode: char = '0';
+        modifiers: s32 = 0;
+
+        GetEventParameter(event, kEventParamKeyCode, typeUInt32, cast(int*) 0, cast(int) sizeof(s32), cast(int*) 0, cast(void*) &keycode);
+        GetEventParameter(event, kEventParamKeyMacCharCodes, typeChar, cast(int*) 0, cast(int) sizeof(s8), cast(int*) 0, cast(void*) &charcode);
+        GetEventParameter(event, kEventParamKeyModifiers, typeUInt32, cast(int*) 0, cast(int) sizeof(s32), cast(int*) 0, cast(void*) &modifiers);
+
+        printf("modifiers = %08x .. %p\n", cast(int) modifiers, event);
+        printf("keycode   = %d .. %p\n", cast(int) keycode, event);
+        printf("charcode  = %c .. %p\n", cast(int) charcode, event);
+
+        if (event_kind == kEventRawKeyDown && keycode == virtual_key.ANSI_Q) {
+            is_running = 0;
+        }
+    }
+}
+
+mouse_handler :: (event: void *) {
+    event_kind := GetEventKind(event);
+    if ((event_kind == kEventMouseDown) ||
+        (event_kind == kEventMouseUp) ||
+        (event_kind == kEventMouseDragged) ||
+        (event_kind == kEventMouseMoved)) {
+        button: s16 = 0;
+        modifiers: int = 0;
+        location: cg_point;
+        delta: cg_point;
+
+        GetEventParameter(event, kEventParamMouseButton, typeMouseButton, cast(int*) 0, cast(int) sizeof(s16), cast(int*) 0, cast(void*) &button);
+        GetEventParameter(event, kEventParamKeyModifiers, typeUInt32, cast(int*) 0, cast(int) sizeof(s32), cast(int*) 0, cast(void*) &modifiers);
+        GetEventParameter(event, kEventParamMouseLocation, typeHIPoint, cast(int*) 0, cast(int) sizeof(cg_point), cast(int*) 0, cast(void*) &location);
+        GetEventParameter(event, kEventParamMouseDelta, typeHIPoint, cast(int*) 0, cast(int) sizeof(cg_point), cast(int*) 0, cast(void*) &delta);
+
+        printf("modifiers = %08x .. %p\n", cast(int) modifiers, event);
+        printf("button    = %d .. %p\n", cast(int) button, event);
+    }
+}
+
+is_running : int = 1;
+
 main :: () {
     win: cgl_window;
     cgl_window_init(&win);
@@ -157,13 +349,17 @@ main :: () {
     event_target := GetEventDispatcherTarget();
     printf("%d: eventtarget = %p\n", win.id, event_target);
 
-    while (1) {
+    while (is_running) {
         event := cast(void*) 0;
         while (ReceiveNextEvent(cast(int) 0, cast(void*) 0, kEventDurationNoWait, cast(s8) 1, &event) == noErr) {
             event_class := GetEventClass(event);
             printf("got event: class = %d .. %p\n", event_class, event);
 
-            if (event_class == kEventClassAppleEvent) {
+            if (event_class == kEventClassKeyboard) {
+                key_handler(event);
+            } else if (event_class == kEventClassMouse) {
+                mouse_handler(event);
+            } else if (event_class == kEventClassAppleEvent) {
                 AEProcessEvent(event);
             }
 

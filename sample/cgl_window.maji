@@ -28,41 +28,41 @@ printf :: (format: char*, n: int, p: void*) -> int #foreign "/usr/lib/libc.dylib
 malloc :: (size: int) -> void* #foreign "/usr/lib/libc.dylib";
 free :: (ptr: void*) #foreign "/usr/lib/libc.dylib";
 
-noErr : int = 0;
+noErr := 0;
 
 kEventDurationNoWait : float = 0.0;
 
-kEventClassMouse       : int = 1836021107;
-kEventClassKeyboard    : int = 1801812322;
-kEventClassApplication : int = 1634758764;
-kEventClassAppleEvent  : int = 1701867619;
+kEventClassMouse       := 1836021107;
+kEventClassKeyboard    := 1801812322;
+kEventClassApplication := 1634758764;
+kEventClassAppleEvent  := 1701867619;
 
-kEventParamKeyCode         : int = 1801678692;
-kEventParamKeyMacCharCodes : int = 1801676914;
-kEventParamKeyModifiers    : int = 1802334052;
+kEventParamKeyCode         := 1801678692;
+kEventParamKeyMacCharCodes := 1801676914;
+kEventParamKeyModifiers    := 1802334052;
 
-kEventParamMouseButton   : int = 1835168878;
-kEventParamMouseLocation : int = 1835822947;
-kEventParamMouseDelta    : int = 1835299937;
+kEventParamMouseButton   := 1835168878;
+kEventParamMouseLocation := 1835822947;
+kEventParamMouseDelta    := 1835299937;
 
-typeUInt32 : int = 1835100014;
-typeChar   : int = 1413830740;
+typeUInt32 := 1835100014;
+typeChar   := 1413830740;
 
-typeMouseButton : int = 1835168878;
-typeHIPoint : int = 1751740532;
+typeMouseButton := 1835168878;
+typeHIPoint     := 1751740532;
 
-kEventRawKeyDown   : int = 1;
-kEventRawKeyRepeat : int = 2;
-kEventRawKeyUp     : int = 3;
+kEventRawKeyDown   := 1;
+kEventRawKeyRepeat := 2;
+kEventRawKeyUp     := 3;
 
-kEventMouseDown    : int = 1;
-kEventMouseUp      : int = 2;
-kEventMouseMoved   : int = 5;
-kEventMouseDragged : int = 6;
+kEventMouseDown    := 1;
+kEventMouseUp      := 2;
+kEventMouseMoved   := 5;
+kEventMouseDragged := 6;
 
-kEventMouseButtonPrimary   : int = 1;
-kEventMouseButtonSecondary : int = 2;
-kEventMouseButtonTertiary  : int = 3;
+kEventMouseButtonPrimary   := 1;
+kEventMouseButtonSecondary := 2;
+kEventMouseButtonTertiary  := 3;
 
 virtual_key :: enum {
     ANSI_A                    = 0x00,
@@ -265,7 +265,7 @@ cgl_window_init :: (win: cgl_window *) {
 
     CGSAddActivationRegion(win.connection, win.id, win.region);
 
-    CGSSetWindowOpacity(win.connection, win.id, cast(int) 0);
+    CGSSetWindowOpacity(win.connection, win.id, 0);
     CGSSetWindowLevel(win.connection, win.id, CGWindowLevelForKey(window_level.NORMAL));
 
     TransformProcessType(&win.psn, process_type.FOREGROUND);
@@ -277,7 +277,7 @@ cgl_window_destroy :: (win: cgl_window *) {
 }
 
 cgl_window_bring_to_front :: (win: cgl_window *) {
-    CGSOrderWindow(win.connection, win.id, ordering_mode.ABOVE, cast(int) 0);
+    CGSOrderWindow(win.connection, win.id, ordering_mode.ABOVE, 0);
     SetFrontProcess(&win.psn);
 }
 
@@ -301,9 +301,9 @@ key_handler :: (event: void *) {
         charcode: char = '0';
         modifiers: s32 = 0;
 
-        GetEventParameter(event, kEventParamKeyCode, typeUInt32, cast(int*) 0, cast(int) sizeof(s32), cast(int*) 0, cast(void*) &keycode);
-        GetEventParameter(event, kEventParamKeyMacCharCodes, typeChar, cast(int*) 0, cast(int) sizeof(s8), cast(int*) 0, cast(void*) &charcode);
-        GetEventParameter(event, kEventParamKeyModifiers, typeUInt32, cast(int*) 0, cast(int) sizeof(s32), cast(int*) 0, cast(void*) &modifiers);
+        GetEventParameter(event, kEventParamKeyCode, typeUInt32, cast(int*) 0, sizeof(s32), cast(int*) 0, cast(void*) &keycode);
+        GetEventParameter(event, kEventParamKeyMacCharCodes, typeChar, cast(int*) 0, sizeof(s8), cast(int*) 0, cast(void*) &charcode);
+        GetEventParameter(event, kEventParamKeyModifiers, typeUInt32, cast(int*) 0, sizeof(s32), cast(int*) 0, cast(void*) &modifiers);
 
         printf("modifiers = %08x .. %p\n", cast(int) modifiers, event);
         printf("keycode   = %d .. %p\n", cast(int) keycode, event);
@@ -326,17 +326,17 @@ mouse_handler :: (event: void *) {
         location: cg_point;
         delta: cg_point;
 
-        GetEventParameter(event, kEventParamMouseButton, typeMouseButton, cast(int*) 0, cast(int) sizeof(s16), cast(int*) 0, cast(void*) &button);
-        GetEventParameter(event, kEventParamKeyModifiers, typeUInt32, cast(int*) 0, cast(int) sizeof(s32), cast(int*) 0, cast(void*) &modifiers);
-        GetEventParameter(event, kEventParamMouseLocation, typeHIPoint, cast(int*) 0, cast(int) sizeof(cg_point), cast(int*) 0, cast(void*) &location);
-        GetEventParameter(event, kEventParamMouseDelta, typeHIPoint, cast(int*) 0, cast(int) sizeof(cg_point), cast(int*) 0, cast(void*) &delta);
+        GetEventParameter(event, kEventParamMouseButton, typeMouseButton, cast(int*) 0, sizeof(s16), cast(int*) 0, cast(void*) &button);
+        GetEventParameter(event, kEventParamKeyModifiers, typeUInt32, cast(int*) 0, sizeof(s32), cast(int*) 0, cast(void*) &modifiers);
+        GetEventParameter(event, kEventParamMouseLocation, typeHIPoint, cast(int*) 0, sizeof(cg_point), cast(int*) 0, cast(void*) &location);
+        GetEventParameter(event, kEventParamMouseDelta, typeHIPoint, cast(int*) 0, sizeof(cg_point), cast(int*) 0, cast(void*) &delta);
 
         printf("modifiers = %08x .. %p\n", cast(int) modifiers, event);
         printf("button    = %d .. %p\n", cast(int) button, event);
     }
 }
 
-should_quit : int = 0;
+should_quit := 0;
 
 main :: () {
     win: cgl_window;
@@ -346,7 +346,7 @@ main :: () {
     while (!should_quit) {
         event := cast(void*) 0;
         event_target := GetEventDispatcherTarget();
-        while (ReceiveNextEvent(cast(int) 0, cast(void*) 0, kEventDurationNoWait, cast(s8) 1, &event) == noErr) {
+        while (ReceiveNextEvent(0, cast(void*) 0, kEventDurationNoWait, cast(s8) 1, &event) == noErr) {
             event_class := GetEventClass(event);
 
             if (event_class == kEventClassKeyboard) {

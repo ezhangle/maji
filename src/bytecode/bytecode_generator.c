@@ -41,6 +41,11 @@ uint64_t _conv_f32_reg(enum bytecode_register reg)
     return encode_instruction_r1(BYTECODE_OPCODE_CONV_FLT32_REG, reg);
 }
 
+uint64_t _log_not_reg(enum bytecode_register reg)
+{
+    return encode_instruction_r1(BYTECODE_OPCODE_LOG_NOT_REG, reg);
+}
+
 uint64_t _not_reg(enum bytecode_register reg)
 {
     return encode_instruction_r1(BYTECODE_OPCODE_NOT_REG, reg);
@@ -764,14 +769,18 @@ void bytecode_emit_expression_neg(struct bytecode_emitter *emitter, struct ast_e
 {
     bytecode_emit_expression(emitter, expr);
     bytecode_emit(emitter, _neg_reg(BYTECODE_REGISTER_RCX));
-    bytecode_emit(emitter, _memw_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_RCX));
 }
 
 void bytecode_emit_expression_not(struct bytecode_emitter *emitter, struct ast_expr *expr)
 {
     bytecode_emit_expression(emitter, expr);
     bytecode_emit(emitter, _not_reg(BYTECODE_REGISTER_RCX));
-    bytecode_emit(emitter, _memw_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_RCX));
+}
+
+void bytecode_emit_expression_log_not(struct bytecode_emitter *emitter, struct ast_expr *expr)
+{
+    bytecode_emit_expression(emitter, expr);
+    bytecode_emit(emitter, _log_not_reg(BYTECODE_REGISTER_RCX));
 }
 
 void bytecode_emit_expression_dereference(struct bytecode_emitter *emitter, struct ast_expr *expr)
@@ -805,6 +814,9 @@ void _bytecode_emit_expression_unary(struct bytecode_emitter *emitter, enum toke
     } break;
     case '~': {
         bytecode_emit_expression_not(emitter, expr);
+    } break;
+    case '!': {
+        bytecode_emit_expression_log_not(emitter, expr);
     } break;
     case TOKEN_KIND_INC: {
         bytecode_emit_expression_inc(emitter, expr);

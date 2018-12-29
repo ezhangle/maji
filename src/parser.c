@@ -114,6 +114,7 @@ static inline bool parser_match_unary(struct parser *parser)
             (parser_match(parser, '*')) ||
             (parser_match(parser, '&')) ||
             (parser_match(parser, '~')) ||
+            (parser_match(parser, '!')) ||
             (parser_match(parser, TOKEN_KIND_INC)) ||
             (parser_match(parser, TOKEN_KIND_DEC)));
 }

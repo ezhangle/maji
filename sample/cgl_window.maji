@@ -310,7 +310,7 @@ key_handler :: (event: void *) {
         printf("charcode  = %c .. %p\n", cast(int) charcode, event);
 
         if (event_kind == kEventRawKeyDown && keycode == virtual_key.ANSI_Q) {
-            is_running = 0;
+            should_quit = 1;
         }
     }
 }
@@ -336,7 +336,7 @@ mouse_handler :: (event: void *) {
     }
 }
 
-is_running : int = 1;
+should_quit : int = 0;
 
 main :: () {
     win: cgl_window;
@@ -349,7 +349,7 @@ main :: () {
     event_target := GetEventDispatcherTarget();
     printf("%d: eventtarget = %p\n", win.id, event_target);
 
-    while (is_running) {
+    while (!should_quit) {
         event := cast(void*) 0;
         while (ReceiveNextEvent(cast(int) 0, cast(void*) 0, kEventDurationNoWait, cast(s8) 1, &event) == noErr) {
             event_class := GetEventClass(event);

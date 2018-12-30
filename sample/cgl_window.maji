@@ -337,7 +337,7 @@ mouse_handler :: (event: void *) {
 
 should_quit := 0;
 
-main :: () {
+main :: () -> int {
     win: cgl_window;
     cgl_window_init(&win);
     cgl_window_add_drag_region(&win, 0.0, 0.0, win.rect.size.width, 20.0);
@@ -362,4 +362,5 @@ main :: () {
     }
 
     cgl_window_destroy(&win);
+    return 0;
 }

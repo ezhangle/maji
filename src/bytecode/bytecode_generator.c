@@ -1378,6 +1378,12 @@ void bytecode_emit_var(struct bytecode_emitter *emitter, struct symbol *symbol)
     assert(symbol->type);
     assert(symbol->decl);
 
+    if ((symbol->kind == SYMBOL_CONST) &&
+        (symbol->type->kind != TYPE_PTR)) {
+        // NOTE: don't allocate space for const values unless it is a string
+        return;
+    }
+
     symbol->address = emitter->data_cursor - emitter->program_data;
     emitter->data_cursor += type_sizeof(symbol->type);
     printf("allocating address '%" PRIu64 "' for global: '%s'\n", symbol->address, symbol->name);

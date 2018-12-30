@@ -11,6 +11,21 @@
 #include "bytecode_executable.h"
 #include "bytecode_executable.c"
 
+uint64_t _and_reg_reg(enum bytecode_register reg1, enum bytecode_register reg2)
+{
+    return encode_instruction_r2(BYTECODE_OPCODE_AND_REG_REG, reg1, reg2);
+}
+
+uint64_t _or_reg_reg(enum bytecode_register reg1, enum bytecode_register reg2)
+{
+    return encode_instruction_r2(BYTECODE_OPCODE_OR_REG_REG, reg1, reg2);
+}
+
+uint64_t _xor_reg_reg(enum bytecode_register reg1, enum bytecode_register reg2)
+{
+    return encode_instruction_r2(BYTECODE_OPCODE_XOR_REG_REG, reg1, reg2);
+}
+
 uint64_t _conv_i64_reg(enum bytecode_register reg)
 {
     return encode_instruction_r1(BYTECODE_OPCODE_CONV_INT64_REG, reg);
@@ -558,6 +573,42 @@ void bytecode_emit_expression_assign(struct bytecode_emitter *emitter, struct as
     bytecode_emit(emitter, _memw_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_RCX));
 }
 
+void bytecode_emit_expression_bit_and(struct bytecode_emitter *emitter, struct ast_expr *left_expr, struct ast_expr *right_expr)
+{
+    bytecode_emit_expression(emitter, left_expr);
+    bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RCX));
+
+    bytecode_emit_expression(emitter, right_expr);
+
+    bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
+    bytecode_emit(emitter, _pop_reg(BYTECODE_REGISTER_RCX));
+    bytecode_emit(emitter, _and_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_RDX));
+}
+
+void bytecode_emit_expression_bit_xor(struct bytecode_emitter *emitter, struct ast_expr *left_expr, struct ast_expr *right_expr)
+{
+    bytecode_emit_expression(emitter, left_expr);
+    bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RCX));
+
+    bytecode_emit_expression(emitter, right_expr);
+
+    bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
+    bytecode_emit(emitter, _pop_reg(BYTECODE_REGISTER_RCX));
+    bytecode_emit(emitter, _xor_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_RDX));
+}
+
+void bytecode_emit_expression_bit_or(struct bytecode_emitter *emitter, struct ast_expr *left_expr, struct ast_expr *right_expr)
+{
+    bytecode_emit_expression(emitter, left_expr);
+    bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RCX));
+
+    bytecode_emit_expression(emitter, right_expr);
+
+    bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
+    bytecode_emit(emitter, _pop_reg(BYTECODE_REGISTER_RCX));
+    bytecode_emit(emitter, _or_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_RDX));
+}
+
 struct bytecode_data_string
 {
     const uint8_t *string;
@@ -707,6 +758,15 @@ void _bytecode_emit_expression_binary(struct bytecode_emitter *emitter, enum tok
     } break;
     case '=': {
         bytecode_emit_expression_assign(emitter, left_expr, right_expr);
+    } break;
+    case '&': {
+        bytecode_emit_expression_bit_and(emitter, left_expr, right_expr);
+    } break;
+    case '^': {
+        bytecode_emit_expression_bit_xor(emitter, left_expr, right_expr);
+    } break;
+    case '|': {
+        bytecode_emit_expression_bit_or(emitter, left_expr, right_expr);
     } break;
     case '>': {
         bytecode_emit_expression_cmp(emitter, left_expr, right_expr, _jg_imm());

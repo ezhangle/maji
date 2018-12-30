@@ -195,11 +195,38 @@ struct ast_expr *parse_expr_cmp(struct parser *parser)
     return expr;
 }
 
-struct ast_expr *parse_expr_and(struct parser *parser)
+struct ast_expr *parse_expr_bit_and(struct parser *parser)
 {
     struct ast_expr *expr = parse_expr_cmp(parser);
+    while (parser_match(parser, '&')) {
+        expr = ast_expr_binary('&', expr, parse_expr_cmp(parser));
+    }
+    return expr;
+}
+
+struct ast_expr *parse_expr_bit_xor(struct parser *parser)
+{
+    struct ast_expr *expr = parse_expr_bit_and(parser);
+    while (parser_match(parser, '^')) {
+        expr = ast_expr_binary('^', expr, parse_expr_bit_and(parser));
+    }
+    return expr;
+}
+
+struct ast_expr *parse_expr_bit_or(struct parser *parser)
+{
+    struct ast_expr *expr = parse_expr_bit_xor(parser);
+    while (parser_match(parser, '|')) {
+        expr = ast_expr_binary('|', expr, parse_expr_bit_xor(parser));
+    }
+    return expr;
+}
+
+struct ast_expr *parse_expr_and(struct parser *parser)
+{
+    struct ast_expr *expr = parse_expr_bit_or(parser);
     while (parser_match(parser, TOKEN_KIND_AND)) {
-        expr = ast_expr_binary(TOKEN_KIND_AND, expr, parse_expr_cmp(parser));
+        expr = ast_expr_binary(TOKEN_KIND_AND, expr, parse_expr_bit_or(parser));
     }
     return expr;
 }

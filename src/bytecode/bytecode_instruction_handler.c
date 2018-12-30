@@ -253,6 +253,8 @@ static bytecode_instruction_handler *instruction_handlers[BYTECODE_OPCODE_COUNT]
     [BYTECODE_OPCODE_INC_REG]            = exec_op_inc_reg,
     [BYTECODE_OPCODE_DEC_REG]            = exec_op_dec_reg,
     [BYTECODE_OPCODE_XOR_REG_REG]        = exec_op_xor_reg_reg,
+    [BYTECODE_OPCODE_OR_REG_REG]         = exec_op_or_reg_reg,
+    [BYTECODE_OPCODE_AND_REG_REG]        = exec_op_and_reg_reg,
 
     [BYTECODE_OPCODE_TEST_REG_IMM]       = exec_op_test_reg_imm,
     [BYTECODE_OPCODE_TEST_REG_REG]       = exec_op_test_reg_reg,
@@ -738,6 +740,16 @@ bytecode_instruction_handler_(exec_op_dec_reg)
 bytecode_instruction_handler_(exec_op_xor_reg_reg)
 {
     bytecode_do_bit_op(^=, bcr->reg[reg2]);
+}
+
+bytecode_instruction_handler_(exec_op_or_reg_reg)
+{
+    bytecode_do_bit_op(|=, bcr->reg[reg2]);
+}
+
+bytecode_instruction_handler_(exec_op_and_reg_reg)
+{
+    bytecode_do_bit_op(&=, bcr->reg[reg2]);
 }
 
 bytecode_instruction_handler_(exec_op_test_reg_imm)

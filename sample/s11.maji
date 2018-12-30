@@ -15,6 +15,9 @@ main :: () {
 
     xxx := size_of(vec3);
     printf("size_of = %d\n", xxx);
+
+    xxxx := (0b011 | 0b100) ^ 0b010;
+    printf("xxxx = %d\n", xxxx & 0b111);
 }
 
 vec3 :: struct {

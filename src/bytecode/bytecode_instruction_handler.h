@@ -85,6 +85,8 @@ bytecode_instruction_handler_(exec_op_neg_reg);
 bytecode_instruction_handler_(exec_op_inc_reg);
 bytecode_instruction_handler_(exec_op_dec_reg);
 bytecode_instruction_handler_(exec_op_xor_reg_reg);
+bytecode_instruction_handler_(exec_op_or_reg_reg);
+bytecode_instruction_handler_(exec_op_and_reg_reg);
 
 bytecode_instruction_handler_(exec_op_test_reg_imm);
 bytecode_instruction_handler_(exec_op_test_reg_reg);

@@ -11,6 +11,16 @@
 #include "bytecode_executable.h"
 #include "bytecode_executable.c"
 
+uint64_t _lshift_reg_reg(enum bytecode_register reg1, enum bytecode_register reg2)
+{
+    return encode_instruction_r2(BYTECODE_OPCODE_LSHIFT_REG_REG, reg1, reg2);
+}
+
+uint64_t _rshift_reg_reg(enum bytecode_register reg1, enum bytecode_register reg2)
+{
+    return encode_instruction_r2(BYTECODE_OPCODE_RSHIFT_REG_REG, reg1, reg2);
+}
+
 uint64_t _and_reg_reg(enum bytecode_register reg1, enum bytecode_register reg2)
 {
     return encode_instruction_r2(BYTECODE_OPCODE_AND_REG_REG, reg1, reg2);
@@ -609,6 +619,30 @@ void bytecode_emit_expression_bit_or(struct bytecode_emitter *emitter, struct as
     bytecode_emit(emitter, _or_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_RDX));
 }
 
+void bytecode_emit_expression_lshift(struct bytecode_emitter *emitter, struct ast_expr *left_expr, struct ast_expr *right_expr)
+{
+    bytecode_emit_expression(emitter, left_expr);
+    bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RCX));
+
+    bytecode_emit_expression(emitter, right_expr);
+
+    bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
+    bytecode_emit(emitter, _pop_reg(BYTECODE_REGISTER_RCX));
+    bytecode_emit(emitter, _lshift_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_RDX));
+}
+
+void bytecode_emit_expression_rshift(struct bytecode_emitter *emitter, struct ast_expr *left_expr, struct ast_expr *right_expr)
+{
+    bytecode_emit_expression(emitter, left_expr);
+    bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RCX));
+
+    bytecode_emit_expression(emitter, right_expr);
+
+    bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
+    bytecode_emit(emitter, _pop_reg(BYTECODE_REGISTER_RCX));
+    bytecode_emit(emitter, _rshift_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_RDX));
+}
+
 struct bytecode_data_string
 {
     const uint8_t *string;
@@ -791,6 +825,12 @@ void _bytecode_emit_expression_binary(struct bytecode_emitter *emitter, enum tok
     } break;
     case TOKEN_KIND_OR: {
         bytecode_emit_expression_or(emitter, left_expr, right_expr);
+    } break;
+    case TOKEN_KIND_LSHIFT: {
+        bytecode_emit_expression_lshift(emitter, left_expr, right_expr);
+    } break;
+    case TOKEN_KIND_RSHIFT: {
+        bytecode_emit_expression_rshift(emitter, left_expr, right_expr);
     } break;
     default: {
     } break;

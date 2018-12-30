@@ -175,6 +175,17 @@ struct ast_expr *parse_expr_term(struct parser *parser)
     return expr;
 }
 
+struct ast_expr *parse_expr_bitshift(struct parser *parser)
+{
+    struct ast_expr *expr = parse_expr_term(parser);
+    while ((parser_match(parser, TOKEN_KIND_LSHIFT)) ||
+           (parser_match(parser, TOKEN_KIND_RSHIFT))) {
+        enum token_kind op = parser_previous(parser).kind;
+        expr = ast_expr_binary(op, expr, parse_expr_term(parser));
+    }
+    return expr;
+}
+
 static inline bool parser_match_cmp(struct parser *parser)
 {
     return ((parser_match(parser, '<')) ||
@@ -187,10 +198,10 @@ static inline bool parser_match_cmp(struct parser *parser)
 
 struct ast_expr *parse_expr_cmp(struct parser *parser)
 {
-    struct ast_expr *expr = parse_expr_term(parser);
+    struct ast_expr *expr = parse_expr_bitshift(parser);
     while (parser_match_cmp(parser)) {
         enum token_kind op = parser_previous(parser).kind;
-        expr = ast_expr_binary(op, expr, parse_expr_term(parser));
+        expr = ast_expr_binary(op, expr, parse_expr_bitshift(parser));
     }
     return expr;
 }

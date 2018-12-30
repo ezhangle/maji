@@ -18,6 +18,9 @@ main :: () {
 
     xxxx := (0b011 | 0b100) ^ 0b010;
     printf("xxxx = %d\n", xxxx & 0b111);
+
+    xxxxx := 0b1 << 3;
+    printf("xxxxx = %d\n", xxxxx);
 }
 
 vec3 :: struct {

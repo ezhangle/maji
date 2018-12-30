@@ -82,6 +82,8 @@ enum bytecode_opcode
     BYTECODE_OPCODE_XOR_REG_REG        = 0x43,
     BYTECODE_OPCODE_OR_REG_REG         = 0x4F,
     BYTECODE_OPCODE_AND_REG_REG        = 0x53,
+    BYTECODE_OPCODE_LSHIFT_REG_REG     = 0x54,
+    BYTECODE_OPCODE_RSHIFT_REG_REG     = 0x55,
 
     BYTECODE_OPCODE_TEST_REG_IMM       = 0x44,
     BYTECODE_OPCODE_TEST_REG_REG       = 0x45,
@@ -215,6 +217,8 @@ static const char *bytecode_opcode_str[BYTECODE_OPCODE_COUNT] =
     [0x43] = "XOR_REG_REG",
     [0x4F] = "OR_REG_REG",
     [0x53] = "AND_REG_REG",
+    [0x54] = "LEFT_SHIFT",
+    [0x55] = "RIGHT_SHIFT",
 
     [0x44] = "TEST_REG_IMM",
     [0x45] = "TEST_REG_REG",

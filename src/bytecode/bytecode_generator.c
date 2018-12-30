@@ -301,26 +301,6 @@ uint64_t _ret(void)
     return encode_instruction(BYTECODE_OPCODE_RETURN);
 }
 
-enum bytecode_int_size
-{
-    INT_SIZE_8  = 0,
-    INT_SIZE_16 = 1,
-    INT_SIZE_32 = 2,
-    INT_SIZE_64 = 3,
-};
-
-enum bytecode_float_size
-{
-    FLOAT_SIZE_32 = 0,
-    FLOAT_SIZE_64 = 1,
-};
-
-struct bytecode_type_sizes
-{
-    enum bytecode_int_size int_size;
-    enum bytecode_float_size float_size;
-};
-
 struct bytecode_emitter
 {
     char *data_cursor;

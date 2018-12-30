@@ -33,8 +33,8 @@ void parser_init_keywords(void)
     continue_keyword = intern_string(u8"continue");
     break_keyword = intern_string(u8"break");
     cast_keyword = intern_string(u8"cast");
-    sizeof_keyword = intern_string(u8"sizeof");
-    offsetof_keyword = intern_string(u8"offsetof");
+    sizeof_keyword = intern_string(u8"size_of");
+    offsetof_keyword = intern_string(u8"offset_of");
 }
 
 struct ast_expr *parse_expr_operand(struct parser *parser)

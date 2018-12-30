@@ -9,6 +9,9 @@ main :: () {
     printf("a.x = %d\n", a.x);
     printf("a.y = %d\n", a.y);
     printf("a.z = %d\n", a.z);
+
+    xx := offsetof(vec3, z);
+    printf("offsetof = %d\n", xx);
 }
 
 vec3 :: struct {

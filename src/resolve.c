@@ -21,7 +21,7 @@ void resolve_statement(struct resolver *resolver, struct ast_stmt *statement, st
 void complete_type(struct resolver *resolver, struct type *type);
 
 struct type *type_void  = &(struct type){TYPE_VOID,    0, 0, false};
-struct type *type_char  = &(struct type){TYPE_CHAR,    1, 1, false};
+struct type *type_char  = &(struct type){TYPE_INT8,    1, 1, false};
 struct type *type_int   = &(struct type){TYPE_INT32,   4, 4, false};
 struct type *type_float = &(struct type){TYPE_FLOAT32, 4, 4, false};
 
@@ -156,7 +156,6 @@ bool is_ptrtype(struct type *type)
 bool is_inttype(struct type *type)
 {
     switch (type->kind) {
-    case TYPE_CHAR:
     case TYPE_INT8:
     case TYPE_INT16:
     case TYPE_INT32:
@@ -856,18 +855,28 @@ struct resolved_expr resolve_expected_expr(struct resolver *resolver, struct ast
         res = resolve_expr_identifier(resolver, expr);
     } break;
     case AST_EXPR_INT_LITERAL: {
-        // TODO: hexadecimal, octal and binary representation should be treated as unsigned !!!
-        struct type *type = !(expr->int_val & ~INT_MAX) ? type_int : type_int64;
-        res = resolved_const(expr->int_val, type);
+        struct type *type = NULL;
+        if (expr->int_literal.base == NUMBER_BASE_DECIMAL) {
+            type = !(expr->int_literal.val & ~(long)INT_MAX) ? type_int : type_int64;
+        } else {
+            type = !(expr->int_literal.val & ~(unsigned long)INT_MAX)
+                 ? type_int
+                 : !(expr->int_literal.val & ~(unsigned long)UINT_MAX)
+                 ? type_uint32
+                 : !(expr->int_literal.val & ~(unsigned long)LONG_MAX)
+                 ? type_int64
+                 : type_uint64;
+        }
+        res = resolved_const(expr->int_literal.val, type);
     } break;
     case AST_EXPR_CHAR_LITERAL: {
-        res = resolved_const(expr->int_val, type_char);
+        res = resolved_const(expr->int_literal.val, type_char);
     } break;
     case AST_EXPR_FLOAT_LITERAL: {
         res = resolved_const((int64_t)(*(int64_t *)&expr->float_val), type_float64);
     } break;
     case AST_EXPR_STRING_LITERAL: {
-        res = resolved_const(expr->int_val, type_ptr(type_char));
+        res = resolved_const(0, type_ptr(type_char));
     } break;
     case AST_EXPR_CALL: {
         res = resolve_expr_call(resolver, expr);

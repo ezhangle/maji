@@ -13,7 +13,6 @@ enum type_kind
     TYPE_INCOMPLETE,
     TYPE_COMPLETING,
     TYPE_VOID,
-    TYPE_CHAR,
     TYPE_INT8,
     TYPE_INT16,
     TYPE_INT32,

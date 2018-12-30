@@ -327,6 +327,12 @@ struct ast_expr_ternary
     struct ast_expr *else_expr;
 };
 
+struct ast_expr_int
+{
+    enum number_base base;
+    uint64_t val;
+};
+
 struct ast_expr
 {
     enum ast_expr_kind kind;
@@ -334,10 +340,10 @@ struct ast_expr
     struct resolved_expr res;
 
     union {
-        uint64_t int_val;
         double float_val;
         const uint8_t *string_val;
         const uint8_t *name;
+        struct ast_expr_int int_literal;
         struct ast_expr_call call;
         struct ast_expr_cast cast;
         struct ast_expr_sizeof_type sizeof_type;
@@ -359,10 +365,11 @@ ast_expr_alloc(enum ast_expr_kind kind)
 }
 
 static inline struct ast_expr *
-ast_expr_int(uint64_t value)
+ast_expr_int(uint64_t value, enum number_base base)
 {
     struct ast_expr *result = ast_expr_alloc(AST_EXPR_INT_LITERAL);
-    result->int_val = value;
+    result->int_literal.val = value;
+    result->int_literal.base = base;
     return result;
 }
 
@@ -370,7 +377,8 @@ static inline struct ast_expr *
 ast_expr_char(uint64_t value)
 {
     struct ast_expr *result = ast_expr_alloc(AST_EXPR_CHAR_LITERAL);
-    result->int_val = value;
+    result->int_literal.val = value;
+    result->int_literal.base = NUMBER_BASE_CHAR;
     return result;
 }
 
@@ -720,10 +728,10 @@ ast_print_expr(struct ast_expr *expr)
 {
     switch (expr->kind) {
     case AST_EXPR_INT_LITERAL:
-        printf("%" PRIu64, expr->int_val);
+        printf("%" PRIu64, expr->int_literal.val);
         break;
     case AST_EXPR_CHAR_LITERAL:
-        printf("%c", (char)expr->int_val);
+        printf("%c", (char)expr->int_literal.val);
         break;
     case AST_EXPR_FLOAT_LITERAL:
         printf("%lf", expr->float_val);

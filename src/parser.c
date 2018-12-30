@@ -42,7 +42,7 @@ struct ast_expr *parse_expr_operand(struct parser *parser)
         if (token.base == NUMBER_BASE_CHAR) {
             return ast_expr_char(token.as.int_val);
         } else {
-            return ast_expr_int(token.as.int_val);
+            return ast_expr_int(token.as.int_val, token.base);
         }
     } else if (parser_match(parser, TOKEN_KIND_FLOAT_LITERAL)) {
         return ast_expr_float(parser_previous(parser).as.float_val);

@@ -409,7 +409,6 @@ uint64_t bytecode_emitter_mark_patch_target(struct bytecode_emitter *emitter)
 void bytecode_emit_load_convert(struct bytecode_emitter *emitter, struct type *to_type)
 {
     switch(to_type->kind) {
-    case TYPE_CHAR:
     case TYPE_INT8: {
         bytecode_emit(emitter, _conv_i8_reg(BYTECODE_REGISTER_RCX));
     } break;
@@ -433,21 +432,17 @@ void bytecode_emit_load_convert(struct bytecode_emitter *emitter, struct type *t
 
 void bytecode_emit_memread(struct bytecode_emitter *emitter, struct type *type)
 {
-    if (type == type_float) {
-        bytecode_emit(emitter, _memr_f32_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
-    } else if (type == type_float64) {
+    if (type->kind == TYPE_FLOAT64) {
         bytecode_emit(emitter, _memr_f64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
-    } else if (type == type_float32) {
+    } else if (type->kind == TYPE_FLOAT32) {
         bytecode_emit(emitter, _memr_f32_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
-    } else if (type == type_int) {
-        bytecode_emit(emitter, _memr_i32_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
-    } else if (type == type_int64) {
+    } else if (type->kind == TYPE_INT64) {
         bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
-    } else if (type == type_int32) {
+    } else if (type->kind == TYPE_INT32) {
         bytecode_emit(emitter, _memr_i32_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
-    } else if (type == type_int16) {
+    } else if (type->kind == TYPE_INT16) {
         bytecode_emit(emitter, _memr_i16_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
-    } else if (type == type_int8) {
+    } else if (type->kind == TYPE_INT8) {
         bytecode_emit(emitter, _memr_i8_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
     } else {
         bytecode_emit(emitter, _memr_i64_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_R9));
@@ -649,7 +644,7 @@ void bytecode_emit_expression_const_eval(struct bytecode_emitter *emitter, struc
 void bytecode_emit_expression_immediate_int(struct bytecode_emitter *emitter, struct ast_expr *expr)
 {
     bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
-    bytecode_emit(emitter, expr->int_val);
+    bytecode_emit(emitter, expr->int_literal.val);
     if (expr->res.type != type_int64) {
         bytecode_emit_load_convert(emitter, expr->res.type);
     }
@@ -658,7 +653,7 @@ void bytecode_emit_expression_immediate_int(struct bytecode_emitter *emitter, st
 void bytecode_emit_expression_immediate_char(struct bytecode_emitter *emitter, struct ast_expr *expr)
 {
     bytecode_emit(emitter, _mov_i8_reg_imm(BYTECODE_REGISTER_RCX));
-    bytecode_emit(emitter, expr->int_val);
+    bytecode_emit(emitter, expr->int_literal.val);
 }
 
 void bytecode_emit_expression_immediate_float(struct bytecode_emitter *emitter, struct ast_expr *expr)
@@ -677,17 +672,23 @@ void bytecode_emit_expression_identifier(struct bytecode_emitter *emitter, struc
     assert(symbol);
 
     if (symbol->kind == SYMBOL_CONST) {
-        if (symbol->type == type_char) {
-            bytecode_emit(emitter, _mov_i8_reg_imm(BYTECODE_REGISTER_RCX));
+        if (symbol->type->kind == TYPE_FLOAT64) {
+            bytecode_emit(emitter, _mov_f64_reg_imm(BYTECODE_REGISTER_RCX));
             bytecode_emit(emitter, symbol->val);
-        } else if (symbol->type == type_int) {
-            bytecode_emit(emitter, _mov_i32_reg_imm(BYTECODE_REGISTER_RCX));
+        } else if (symbol->type->kind == TYPE_FLOAT32) {
+            bytecode_emit(emitter, _mov_f32_reg_imm(BYTECODE_REGISTER_RCX));
             bytecode_emit(emitter, symbol->val);
-        } else if (symbol->type == type_int64) {
+        } else if (symbol->type->kind == TYPE_INT64) {
             bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
             bytecode_emit(emitter, symbol->val);
-        } else if (symbol->type == type_float64) {
-            bytecode_emit(emitter, _mov_f64_reg_imm(BYTECODE_REGISTER_RCX));
+        } else if (symbol->type->kind == TYPE_INT32) {
+            bytecode_emit(emitter, _mov_i32_reg_imm(BYTECODE_REGISTER_RCX));
+            bytecode_emit(emitter, symbol->val);
+        } else if (symbol->type->kind == TYPE_INT16) {
+            bytecode_emit(emitter, _mov_i16_reg_imm(BYTECODE_REGISTER_RCX));
+            bytecode_emit(emitter, symbol->val);
+        } else if (symbol->type->kind == TYPE_INT8) {
+            bytecode_emit(emitter, _mov_i8_reg_imm(BYTECODE_REGISTER_RCX));
             bytecode_emit(emitter, symbol->val);
         } else if (symbol->type->kind == TYPE_PTR) {
             bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_R9));

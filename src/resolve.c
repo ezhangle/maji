@@ -192,8 +192,8 @@ struct type *arithmetic_type_conversion(struct type *t, struct type *u)
         return t;
     }
 
-    assert(is_inttype(t) && t->size >= type_int->size);
-    assert(is_inttype(u) && u->size >= type_int->size);
+    assert(is_inttype(t) && t->size >= type_int8->size);
+    assert(is_inttype(u) && u->size >= type_int8->size);
 
     if (t->size > u->size) {
         return t;

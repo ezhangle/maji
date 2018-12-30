@@ -269,6 +269,7 @@ enum ast_expr_kind
     AST_EXPR_CALL,
     AST_EXPR_CAST,
     AST_EXPR_SIZEOF_TYPE,
+    AST_EXPR_OFFSETOF,
     AST_EXPR_INDEX,
     AST_EXPR_FIELD,
 
@@ -293,6 +294,12 @@ struct ast_expr_cast
 struct ast_expr_sizeof_type
 {
     struct ast_typespec *type;
+};
+
+struct ast_expr_offsetof
+{
+    struct ast_typespec *type;
+    struct ast_expr *expr;
 };
 
 struct ast_expr_index
@@ -347,6 +354,7 @@ struct ast_expr
         struct ast_expr_call call;
         struct ast_expr_cast cast;
         struct ast_expr_sizeof_type sizeof_type;
+        struct ast_expr_offsetof offsetof;
         struct ast_expr_index index;
         struct ast_expr_field field;
         struct ast_expr_unary unary;
@@ -430,6 +438,15 @@ ast_expr_sizeof_type(struct ast_typespec *type)
 {
     struct ast_expr *result = ast_expr_alloc(AST_EXPR_SIZEOF_TYPE);
     result->sizeof_type.type = type;
+    return result;
+}
+
+static inline struct ast_expr *
+ast_expr_offsetof(struct ast_typespec *type, struct ast_expr *expr)
+{
+    struct ast_expr *result = ast_expr_alloc(AST_EXPR_OFFSETOF);
+    result->offsetof.type = type;
+    result->offsetof.expr = expr;
     return result;
 }
 
@@ -763,6 +780,13 @@ ast_print_expr(struct ast_expr *expr)
     case AST_EXPR_SIZEOF_TYPE:
         printf("(sizeof_type ");
         ast_print_typespec(expr->sizeof_type.type);
+        printf(")");
+        break;
+    case AST_EXPR_OFFSETOF:
+        printf("(offsetof ");
+        ast_print_typespec(expr->offsetof.type);
+        printf(" ");
+        ast_print_expr(expr->offsetof.expr);
         printf(")");
         break;
     case AST_EXPR_INDEX:

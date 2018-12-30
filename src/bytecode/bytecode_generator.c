@@ -1045,9 +1045,20 @@ void bytecode_emit_expression_sizeof_type(struct bytecode_emitter *emitter, stru
     bytecode_emit(emitter, type_sizeof(sizeof_type));
 }
 
+void bytecode_emit_expression_offsetof(struct bytecode_emitter *emitter, struct ast_expr *expr)
+{
+    struct type *type = resolve_typespec(emitter->resolver, expr->offsetof.type);
+    int offset = find_field_offset(type, expr->offsetof.expr->name);
+    bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
+    bytecode_emit(emitter, offset);
+}
+
 void bytecode_emit_expression(struct bytecode_emitter *emitter, struct ast_expr *expr)
 {
     switch (expr->kind) {
+    case AST_EXPR_OFFSETOF: {
+        bytecode_emit_expression_offsetof(emitter, expr);
+    } break;
     case AST_EXPR_SIZEOF_TYPE: {
         bytecode_emit_expression_sizeof_type(emitter, expr);
     } break;

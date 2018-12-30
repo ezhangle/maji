@@ -589,6 +589,34 @@ struct resolved_expr resolve_expr_sizeof_type(struct resolver *resolver, struct 
     return resolved_rvalue(type_int);
 }
 
+struct resolved_expr resolve_expr_offsetof(struct resolver *resolver, struct ast_expr *expr)
+{
+    assert(expr->kind == AST_EXPR_OFFSETOF);
+    struct type *type = resolve_typespec(resolver, expr->offsetof.type);
+    complete_type(resolver, type);
+    if (type->kind != TYPE_STRUCT) {
+        // TODO: error handling
+        printf("offsetof can only be used with struct-types");
+        exit(1);
+    }
+
+    if (expr->offsetof.expr->kind != AST_EXPR_IDENTIFIER) {
+        // TODO: error handling
+        printf("offsetof expression is not a valid identifier");
+        exit(1);
+    }
+
+    for (size_t i = 0; i < type->aggregate.fields_count; ++i) {
+        struct type_field field = type->aggregate.fields[i];
+        if (field.name == expr->offsetof.expr->name) {
+            return resolved_rvalue(type_int);
+        }
+    }
+
+    printf("offsetof no field named '%s' in specified type", expr->offsetof.expr->name);
+    exit(1);
+}
+
 struct resolved_expr resolve_expr_index(struct resolver *resolver, struct ast_expr *expr)
 {
     assert(expr->kind == AST_EXPR_INDEX);
@@ -886,6 +914,9 @@ struct resolved_expr resolve_expected_expr(struct resolver *resolver, struct ast
     } break;
     case AST_EXPR_SIZEOF_TYPE: {
         res = resolve_expr_sizeof_type(resolver, expr);
+    } break;
+    case AST_EXPR_OFFSETOF: {
+        res = resolve_expr_offsetof(resolver, expr);
     } break;
     case AST_EXPR_INDEX: {
         res = resolve_expr_index(resolver, expr);

@@ -18,6 +18,7 @@ static uint8_t *continue_keyword;
 static uint8_t *break_keyword;
 static uint8_t *cast_keyword;
 static uint8_t *sizeof_keyword;
+static uint8_t *offsetof_keyword;
 
 void parser_init_keywords(void)
 {
@@ -33,6 +34,7 @@ void parser_init_keywords(void)
     break_keyword = intern_string(u8"break");
     cast_keyword = intern_string(u8"cast");
     sizeof_keyword = intern_string(u8"sizeof");
+    offsetof_keyword = intern_string(u8"offsetof");
 }
 
 struct ast_expr *parse_expr_operand(struct parser *parser)
@@ -58,6 +60,13 @@ struct ast_expr *parse_expr_operand(struct parser *parser)
         struct ast_typespec *type = parse_type(parser);
         parser_consume(parser, ')');
         return ast_expr_sizeof_type(type);
+    } else if (parser_match_keyword(parser, offsetof_keyword)) {
+        parser_consume(parser, '(');
+        struct ast_typespec *type = parse_type(parser);
+        parser_consume(parser, ',');
+        struct ast_expr *expr = parse_expr(parser);
+        parser_consume(parser, ')');
+        return ast_expr_offsetof(type, expr);
     } else if (parser_match(parser, TOKEN_KIND_IDENTIFIER)) {
         return ast_expr_identifier(parser_previous(parser).as.name);
     } else if (parser_match(parser, '(')) {

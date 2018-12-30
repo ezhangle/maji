@@ -625,7 +625,7 @@ void bytecode_emit_expression_immediate_int(struct bytecode_emitter *emitter, st
 {
     bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
     bytecode_emit(emitter, expr->int_literal.val);
-    if (expr->res.type != type_int64) {
+    if (expr->res.type->kind != TYPE_INT64) {
         bytecode_emit_load_convert(emitter, expr->res.type);
     }
 }
@@ -640,7 +640,7 @@ void bytecode_emit_expression_immediate_float(struct bytecode_emitter *emitter, 
 {
     bytecode_emit(emitter, _mov_f64_reg_imm(BYTECODE_REGISTER_RCX));
     bytecode_emit(emitter, (uint64_t)(*(uint64_t *)&expr->float_val));
-    if (expr->res.type != type_float64) {
+    if (expr->res.type->kind != TYPE_FLOAT64) {
         bytecode_emit_load_convert(emitter, expr->res.type);
     }
 }

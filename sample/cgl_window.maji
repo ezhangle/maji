@@ -28,41 +28,40 @@ printf :: (format: char*, n: int, p: void*) -> int #foreign "/usr/lib/libc.dylib
 malloc :: (size: int) -> void* #foreign "/usr/lib/libc.dylib";
 free :: (ptr: void*) #foreign "/usr/lib/libc.dylib";
 
-noErr := 0;
+noErr :: 0;
+kEventDurationNoWait :: 0.0;
 
-kEventDurationNoWait : float = 0.0;
+kEventClassMouse       :: 1836021107;
+kEventClassKeyboard    :: 1801812322;
+kEventClassApplication :: 1634758764;
+kEventClassAppleEvent  :: 1701867619;
 
-kEventClassMouse       := 1836021107;
-kEventClassKeyboard    := 1801812322;
-kEventClassApplication := 1634758764;
-kEventClassAppleEvent  := 1701867619;
+kEventParamKeyCode         :: 1801678692;
+kEventParamKeyMacCharCodes :: 1801676914;
+kEventParamKeyModifiers    :: 1802334052;
 
-kEventParamKeyCode         := 1801678692;
-kEventParamKeyMacCharCodes := 1801676914;
-kEventParamKeyModifiers    := 1802334052;
+kEventParamMouseButton   :: 1835168878;
+kEventParamMouseLocation :: 1835822947;
+kEventParamMouseDelta    :: 1835299937;
 
-kEventParamMouseButton   := 1835168878;
-kEventParamMouseLocation := 1835822947;
-kEventParamMouseDelta    := 1835299937;
+typeUInt32 :: 1835100014;
+typeChar   :: 1413830740;
 
-typeUInt32 := 1835100014;
-typeChar   := 1413830740;
+typeMouseButton :: 1835168878;
+typeHIPoint     :: 1751740532;
 
-typeMouseButton := 1835168878;
-typeHIPoint     := 1751740532;
+kEventRawKeyDown   :: 1;
+kEventRawKeyRepeat :: 2;
+kEventRawKeyUp     :: 3;
 
-kEventRawKeyDown   := 1;
-kEventRawKeyRepeat := 2;
-kEventRawKeyUp     := 3;
+kEventMouseDown    :: 1;
+kEventMouseUp      :: 2;
+kEventMouseMoved   :: 5;
+kEventMouseDragged :: 6;
 
-kEventMouseDown    := 1;
-kEventMouseUp      := 2;
-kEventMouseMoved   := 5;
-kEventMouseDragged := 6;
-
-kEventMouseButtonPrimary   := 1;
-kEventMouseButtonSecondary := 2;
-kEventMouseButtonTertiary  := 3;
+kEventMouseButtonPrimary   :: 1;
+kEventMouseButtonSecondary :: 2;
+kEventMouseButtonTertiary  :: 3;
 
 virtual_key :: enum {
     ANSI_A                    = 0x00,
@@ -346,7 +345,7 @@ main :: () {
     while (!should_quit) {
         event := cast(void*) 0;
         event_target := GetEventDispatcherTarget();
-        while (ReceiveNextEvent(0, cast(void*) 0, kEventDurationNoWait, cast(s8) 1, &event) == noErr) {
+        while (ReceiveNextEvent(0, cast(void*) 0, cast(float) kEventDurationNoWait, cast(s8) 1, &event) == noErr) {
             event_class := GetEventClass(event);
 
             if (event_class == kEventClassKeyboard) {

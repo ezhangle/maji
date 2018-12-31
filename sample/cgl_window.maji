@@ -24,7 +24,7 @@ GetEventParameter :: (event: void*, name: int, type: int, out_type: int*, in_siz
 
 usleep :: (n: int) #foreign "/usr/lib/libc.dylib";
 sleep :: (n: int) #foreign "/usr/lib/libc.dylib";
-printf :: (format: char*, n: int, p: void*) -> int #foreign "/usr/lib/libc.dylib";
+printf :: (format: char*, args: var_args) -> int #foreign "/usr/lib/libc.dylib";
 malloc :: (size: int) -> void* #foreign "/usr/lib/libc.dylib";
 free :: (ptr: void*) #foreign "/usr/lib/libc.dylib";
 

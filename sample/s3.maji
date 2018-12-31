@@ -1,4 +1,4 @@
-printf :: (format: char*, a: int, b: int) -> int #foreign "/usr/lib/libc.dylib";
+printf :: (format: char*, args: var_args) -> int #foreign "/usr/lib/libc.dylib";
 malloc :: (size: int) -> int* #foreign "/usr/lib/libc.dylib";
 memset :: (ptr: int*, value: int, size: int) #foreign "/usr/lib/libc.dylib";
 free :: (ptr: int*) #foreign "/usr/lib/libc.dylib";

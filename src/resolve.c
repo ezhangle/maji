@@ -38,6 +38,8 @@ struct type *type_uint64 = &(struct type){TYPE_INT64, 8, 8, true};
 struct type *type_float32 = &(struct type){TYPE_FLOAT32, 4, 4, false};
 struct type *type_float64 = &(struct type){TYPE_FLOAT64, 8, 8, false};
 
+struct type *type_variadic = &(struct type){TYPE_VARIADIC, 0, 0, false};
+
 const size_t PTR_SIZE  = 8;
 const size_t PTR_ALIGN = 8;
 
@@ -132,7 +134,7 @@ struct type *type_array(struct resolver *resolver, struct type *elem, size_t siz
 }
 
 struct cached_func_type *cached_func_types;
-struct type *type_func(struct type **params, size_t params_count, struct type *ret)
+struct type *type_func(struct type **params, size_t params_count, struct type *ret, bool is_variadic)
 {
     for (int i = 0; i < buf_len(cached_func_types); ++i) {
         struct cached_func_type *it = cached_func_types + i;
@@ -156,6 +158,7 @@ struct type *type_func(struct type **params, size_t params_count, struct type *r
     type->func.params = memdup(params, params_count * sizeof(*params));
     type->func.params_count = params_count;
     type->func.ret = ret;
+    type->func.is_variadic = is_variadic;
 
     buf_push(cached_func_types, ((struct cached_func_type) {
         .params = params,
@@ -532,7 +535,7 @@ struct type *resolve_typespec(struct resolver *resolver, struct ast_typespec *ty
         if (typespec->func.ret) {
             ret = resolve_typespec(resolver, typespec->func.ret);
         }
-        return type_func(args, buf_len(args), ret);
+        return type_func(args, buf_len(args), ret, false);
     }
     default: {
         assert(0);
@@ -583,28 +586,38 @@ struct resolved_expr resolve_expr_call(struct resolver *resolver, struct ast_exp
         printf("trying to call non-function value");
         exit(1);
     }
-    if (expr->call.args_count != func.type->func.params_count) {
-        // TODO: error handling
-        printf("tried to call function with wrong number of arguments");
-        exit(1);
-    }
-    for (size_t i = 0; i < expr->call.args_count; ++i) {
-        struct type *param_type = func.type->func.params[i];
-        struct resolved_expr arg = resolve_expected_expr(resolver, expr->call.args[i], param_type);
-        struct type *arg_type = ptr_decay(arg).type;
 
-        if (arg_type->kind == TYPE_PTR && param_type->kind == TYPE_PTR) {
-            if (arg_type->ptr.elem == type_void || param_type->ptr.elem == type_void) {
-                continue;
-            }
-        }
-
-        if (arg_type != param_type) {
+    if (!func.type->func.is_variadic) {
+        if (expr->call.args_count != func.type->func.params_count) {
             // TODO: error handling
-            printf("call argument expression type doesn't match expected param type");
+            printf("tried to call function with wrong number of arguments");
             exit(1);
         }
     }
+
+    for (size_t i = 0; i < expr->call.args_count; ++i) {
+        struct resolved_expr arg = resolve_expr(resolver, expr->call.args[i]);
+
+        if (i < func.type->func.params_count) {
+            struct type *param_type = func.type->func.params[i];
+            if (param_type == type_variadic) continue;
+
+            struct type *arg_type = ptr_decay(arg).type;
+
+            if (arg_type->kind == TYPE_PTR && param_type->kind == TYPE_PTR) {
+                if (arg_type->ptr.elem == type_void || param_type->ptr.elem == type_void) {
+                    continue;
+                }
+            }
+
+            if (arg_type != param_type) {
+                // TODO: error handling
+                printf("call argument expression type doesn't match expected param type");
+                exit(1);
+            }
+        }
+    }
+
     return resolved_rvalue(func.type->func.ret);
 }
 
@@ -1198,6 +1211,12 @@ struct type *resolve_decl_func(struct resolver *resolver, struct ast_decl *decl)
         struct type *type = resolve_typespec(resolver, decl->func_decl.params[i].type);
         complete_type(resolver, type);
         buf_push(params, type);
+
+        if (type == type_variadic) {
+            decl->func_decl.is_variadic = true;
+            printf("VARIADIC FUNCTIONS ARE NOT YET SUPPORTED\n");
+            exit(1);
+        }
     }
 
     for (size_t i = 0; i < decl->func_decl.block.statements_count; ++i) {
@@ -1214,7 +1233,7 @@ struct type *resolve_decl_func(struct resolver *resolver, struct ast_decl *decl)
         complete_type(resolver, ret_type);
     }
 
-    return type_func(params, buf_len(params), ret_type);
+    return type_func(params, buf_len(params), ret_type, decl->func_decl.is_variadic);
 }
 
 struct type *resolve_decl_func_foreign(struct resolver *resolver, struct ast_decl *decl)
@@ -1226,6 +1245,10 @@ struct type *resolve_decl_func_foreign(struct resolver *resolver, struct ast_dec
         struct type *type = resolve_typespec(resolver, decl->foreign_func_decl.params[i].type);
         complete_type(resolver, type);
         buf_push(params, type);
+
+        if (type == type_variadic) {
+            decl->foreign_func_decl.is_variadic = true;
+        }
     }
 
     struct type *ret_type = type_void;
@@ -1234,7 +1257,7 @@ struct type *resolve_decl_func_foreign(struct resolver *resolver, struct ast_dec
         complete_type(resolver, ret_type);
     }
 
-    return type_func(params, buf_len(params), ret_type);
+    return type_func(params, buf_len(params), ret_type, decl->foreign_func_decl.is_variadic);
 }
 
 void resolve_func(struct resolver *resolver, struct symbol *symbol)
@@ -1412,4 +1435,6 @@ void resolver_init(struct resolver *resolver)
     type_float->symbol = symbol_type(resolver, intern_string(u8"float"), type_float);
     type_float32->symbol = symbol_type(resolver, intern_string(u8"f32"), type_float32);
     type_float64->symbol = symbol_type(resolver, intern_string(u8"f64"), type_float64);
+
+    type_variadic->symbol = symbol_type(resolver, intern_string(u8"var_args"), type_variadic);
 }

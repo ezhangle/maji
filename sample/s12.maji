@@ -1,4 +1,4 @@
-printf :: (fmt: char*, n: int, p: void*) #foreign "/usr/lib/libc.dylib";
+printf :: (fmt: char*, args: var_args) #foreign "/usr/lib/libc.dylib";
 
 vec2 :: struct {
     x: int = 1;

@@ -23,7 +23,8 @@ enum type_kind
     TYPE_ENUM,
     TYPE_PTR,
     TYPE_STRUCT,
-    TYPE_FUNC
+    TYPE_FUNC,
+    TYPE_VARIADIC
 };
 
 struct type
@@ -49,6 +50,7 @@ struct type
             struct type **params;
             size_t params_count;
             struct type *ret;
+            bool is_variadic;
         } func;
     };
 };

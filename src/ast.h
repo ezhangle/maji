@@ -143,6 +143,7 @@ struct ast_decl_func
     struct ast_typespec *ret_type;
     struct ast_stmt_block block;
     size_t ar_size;
+    bool is_variadic;
 };
 
 struct ast_decl_func_foreign
@@ -151,6 +152,7 @@ struct ast_decl_func_foreign
     size_t params_count;
     struct ast_typespec *ret_type;
     const uint8_t *lib;
+    bool is_variadic;
 };
 
 struct ast_decl_enum

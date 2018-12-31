@@ -57,6 +57,7 @@ struct type_field
 {
     const uint8_t *name;
     struct type *type;
+    struct ast_expr *expr;
 };
 
 enum symbol_kind

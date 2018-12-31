@@ -489,8 +489,12 @@ struct ast_struct_item parse_decl_struct_item(struct parser *parser)
     const uint8_t *name = parse_name(parser);
     parser_consume(parser, ':');
     struct ast_typespec *type = parse_type(parser);
+    struct ast_expr *expr = NULL;
+    if (parser_match(parser, '=')) {
+        expr = parse_expr(parser);
+    }
     parser_consume(parser, ';');
-    return (struct ast_struct_item) {name, type};
+    return (struct ast_struct_item) {name, type, expr};
 }
 
 struct ast_decl *parse_decl_struct(struct parser *parser, struct token identifier)

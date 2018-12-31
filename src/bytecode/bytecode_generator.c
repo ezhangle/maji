@@ -1053,26 +1053,30 @@ void bytecode_emit_expression_call(struct bytecode_emitter *emitter, struct ast_
 
 void bytecode_emit_expression_field_enum(struct bytecode_emitter *emitter, struct ast_expr *expr)
 {
-    struct symbol *symbol = expr->field.expr->symbol;
+    struct type *enum_type = expr->field.expr->symbol->type;
+    assert(enum_type->kind == TYPE_ENUM);
 
+    struct type *field_type = NULL;
     int field_value = -1;
-    for (size_t i = 0; i < symbol->decl->enum_decl.items_count; ++i) {
-        struct ast_enum_item item = symbol->decl->enum_decl.items[i];
 
-        if (item.expr) {
-            assert(item.expr->res.is_const);
-            field_value = item.expr->res.val;
+    for (int i = 0; i < enum_type->aggregate.fields_count; ++i) {
+        struct type_field field = enum_type->aggregate.fields[i];
+
+        if (field.expr) {
+            field_value = field.expr->res.val;
         } else {
             ++field_value;
         }
 
-        if (item.name == expr->field.name) {
+        if (field.name == expr->field.name) {
+            field_type = field.type;
             break;
         }
     }
 
     bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
     bytecode_emit(emitter, field_value);
+    bytecode_emit_load_convert(emitter, field_type);
 }
 
 void bytecode_emit_expression_field_struct(struct bytecode_emitter *emitter, struct type *type, struct ast_expr *expr)
@@ -1230,14 +1234,41 @@ void bytecode_emit_stmt_init_local(struct bytecode_emitter *emitter, struct ast_
     bytecode_emit(emitter, stmt_init.address);
 }
 
+void bytecode_emit_struct_init_local(struct bytecode_emitter *emitter, struct type *type, uint64_t address)
+{
+    assert(type->kind == TYPE_STRUCT);
+
+    for (int i = 0; i < type->aggregate.fields_count; ++i) {
+        struct type_field field = type->aggregate.fields[i];
+        int field_offset = find_field_offset(type, field.name);
+
+        if (field.type->kind == TYPE_STRUCT) {
+            bytecode_emit_struct_init_local(emitter, field.type, address + field_offset);
+        }
+
+        if (field.expr) {
+            bytecode_emit_expression(emitter, field.expr);
+            bytecode_emit_load_convert(emitter, field.type);
+            bytecode_emit(emitter, _mov_lcl_reg(BYTECODE_REGISTER_RCX));
+            bytecode_emit(emitter, address + field_offset);
+        }
+    }
+}
+
 void bytecode_emit_stmt_decl_local(struct bytecode_emitter *emitter, struct ast_stmt_decl stmt_decl)
 {
+    struct type *decl_type = resolve_typespec(emitter->resolver, stmt_decl.type);
+
+    if (decl_type->kind == TYPE_STRUCT) {
+        bytecode_emit_struct_init_local(emitter, decl_type, stmt_decl.address);
+    }
+
     if (stmt_decl.expr) {
         bytecode_emit_expression(emitter, stmt_decl.expr);
-        bytecode_emit_load_convert(emitter, resolve_typespec(emitter->resolver, stmt_decl.type));
+        bytecode_emit_load_convert(emitter, decl_type);
+        bytecode_emit(emitter, _mov_lcl_reg(BYTECODE_REGISTER_RCX));
+        bytecode_emit(emitter, stmt_decl.address);
     }
-    bytecode_emit(emitter, _mov_lcl_reg(BYTECODE_REGISTER_RCX));
-    bytecode_emit(emitter, stmt_decl.address);
 }
 
 void bytecode_emit_stmt_if(struct bytecode_emitter *emitter, struct ast_stmt_if stmt)
@@ -1493,6 +1524,28 @@ void bytecode_emit_function(struct bytecode_emitter *emitter, struct symbol *sym
     emitter->return_patches_count = 0;
 }
 
+void bytecode_emit_struct_init(struct bytecode_emitter *emitter, struct type *type, uint64_t address)
+{
+    assert(type->kind == TYPE_STRUCT);
+
+    for (int i = 0; i < type->aggregate.fields_count; ++i) {
+        struct type_field field = type->aggregate.fields[i];
+        int field_offset = find_field_offset(type, field.name);
+
+        if (field.type->kind == TYPE_STRUCT) {
+            bytecode_emit_struct_init(emitter, field.type, address + field_offset);
+        }
+
+        if (field.expr) {
+            bytecode_emit_expression(emitter, field.expr);
+            bytecode_emit_load_convert(emitter, field.type);
+            bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_R9));
+            bytecode_emit(emitter, address + field_offset);
+            bytecode_emit(emitter, _memw_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_RCX));
+        }
+    }
+}
+
 void bytecode_emit_var(struct bytecode_emitter *emitter, struct symbol *symbol)
 {
     assert(symbol->type);
@@ -1507,6 +1560,10 @@ void bytecode_emit_var(struct bytecode_emitter *emitter, struct symbol *symbol)
     symbol->address = emitter->data_cursor - emitter->program_data;
     emitter->data_cursor += type_sizeof(symbol->type);
     printf("allocating address '%" PRIu64 "' for global: '%s'\n", symbol->address, symbol->name);
+
+    if (symbol->type->kind == TYPE_STRUCT) {
+        bytecode_emit_struct_init(emitter, symbol->type, symbol->address);
+    }
 
     struct ast_expr *init_expr = symbol->kind == SYMBOL_CONST
                                ? symbol->decl->const_decl.expr

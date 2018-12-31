@@ -133,6 +133,7 @@ struct ast_struct_item
 {
     const uint8_t *name;
     struct ast_typespec *type;
+    struct ast_expr *expr;
 };
 
 struct ast_decl_func
@@ -870,7 +871,12 @@ ast_print_decl(struct ast_decl *decl)
             ast_print_newline();
             printf("(");
             ast_print_typespec(it->type);
-            printf(" %s", it->name);
+            printf(" %s ", it->name);
+            if (it->expr) {
+                ast_print_expr(it->expr);
+            } else {
+                printf("null");
+            }
             printf(")");
         }
         --ast_print_indent;

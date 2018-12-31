@@ -1,0 +1,32 @@
+printf :: (fmt: char*, n: int, p: void*) #foreign "/usr/lib/libc.dylib";
+
+vec2 :: struct {
+    x: int = 1;
+    y: int = 4;
+}
+
+vec3 :: struct {
+    a: vec2;
+    z: int = 9;
+}
+
+vec4 :: struct {
+    a: vec3;
+    w: int = 23;
+}
+
+v: vec4;
+main :: () -> int {
+    printf("v.x = %d, &v.x = %p\n", v.a.a.x, &v.a.a.x);
+    printf("v.y = %d, &v.y = %p\n", v.a.a.y, &v.a.a.y);
+    printf("v.z = %d, &v.z = %p\n", v.a.z, &v.a.z);
+    printf("v.w = %d, &v.w = %p\n\n", v.w, &v.w);
+
+    w: vec4;
+    printf("w.x = %d, &w.x = %p\n", w.a.a.x, &w.a.a.x);
+    printf("w.y = %d, &w.y = %p\n", w.a.a.y, &w.a.a.y);
+    printf("w.z = %d, &w.z = %p\n", w.a.z, &w.a.z);
+    printf("w.w = %d, &w.w = %p\n", w.w, &w.w);
+
+    return 0;
+}

@@ -56,6 +56,13 @@ struct type *type_alloc(enum type_kind kind)
     return type;
 }
 
+struct type *type_incomplete(struct symbol *symbol)
+{
+    struct type *type = type_alloc(TYPE_INCOMPLETE);
+    type->symbol = symbol;
+    return type;
+}
+
 struct type *type_copy(struct type *type)
 {
     struct type *result = malloc(sizeof(struct type));
@@ -90,8 +97,12 @@ struct type *type_ptr(struct type *elem)
     type->size = PTR_SIZE;
     type->align = PTR_ALIGN;
     type->ptr.elem = elem;
-    struct cached_ptr_type ptr_type = { elem, type };
-    buf_push(cached_ptr_types, ptr_type);
+
+    buf_push(cached_ptr_types, ((struct cached_ptr_type) {
+        .elem = elem,
+        .ptr = type
+    }));
+
     return type;
 }
 
@@ -111,8 +122,12 @@ struct type *type_array(struct resolver *resolver, struct type *elem, size_t siz
     type->array.elem = elem;
     type->array.size = size;
 
-    struct cached_array_type array_type = {elem, size, type};
-    buf_push(cached_array_types, array_type);
+    buf_push(cached_array_types, ((struct cached_array_type) {
+        .elem = elem,
+        .size = size,
+        .array = type
+    }));
+
     return type;
 }
 
@@ -142,8 +157,12 @@ struct type *type_func(struct type **params, size_t params_count, struct type *r
     type->func.params_count = params_count;
     type->func.ret = ret;
 
-    struct cached_func_type cached_func_type = { params, params_count, ret, type };
-    buf_push(cached_func_types, cached_func_type);
+    buf_push(cached_func_types, ((struct cached_func_type) {
+        .params = params,
+        .params_count = params_count,
+        .ret = ret,
+        .func = type
+    }));
 
     return type;
 }
@@ -300,13 +319,6 @@ struct scope *symbol_leave(struct resolver *resolver)
     return resolver->current_scope;
 }
 
-struct type *type_incomplete(struct symbol *symbol)
-{
-    struct type *type = type_alloc(TYPE_INCOMPLETE);
-    type->symbol = symbol;
-    return type;
-}
-
 void complete_type_struct(struct resolver *resolver, struct ast_decl *decl, struct type *type)
 {
     assert(type->kind == TYPE_COMPLETING);
@@ -317,8 +329,32 @@ void complete_type_struct(struct resolver *resolver, struct ast_decl *decl, stru
         struct type *item_type = resolve_typespec(resolver, item.type);
         complete_type(resolver, item_type);
 
-        struct type_field field = { item.name, item_type };
-        buf_push(fields, field);
+        if (item.expr) {
+            struct resolved_expr rexpr = resolve_expected_expr(resolver, item.expr, item_type);
+            if (!rexpr.is_const) {
+                // TODO: error handling
+                printf("struct init value must be const!\n");
+                exit(1);
+            }
+
+            if (!is_arithmetic_type(rexpr.type)) {
+                // TODO: error handling
+                printf("default struct value can only be of type char, int or float\n");
+                exit(1);
+            }
+
+            if (item_type->kind == TYPE_STRUCT) {
+                // TODO: error handling
+                printf("default struct value is not allowed for fields of struct-type\n");
+                exit(1);
+            }
+        }
+
+        buf_push(fields, ((struct type_field) {
+            .name = item.name,
+            .type = item_type,
+            .expr = item.expr
+        }));
     }
 
     int fields_count = buf_len(fields);
@@ -356,7 +392,6 @@ void complete_type_enum(struct resolver *resolver, struct ast_decl *decl, struct
     for (size_t i = 0; i < decl->enum_decl.items_count; ++i) {
         struct ast_enum_item item = decl->enum_decl.items[i];
         struct type *item_type = type_int;
-        complete_type(resolver, item_type);
 
         if (item.expr) {
             struct resolved_expr rexpr = resolve_expr(resolver, item.expr);
@@ -371,10 +406,16 @@ void complete_type_enum(struct resolver *resolver, struct ast_decl *decl, struct
                 printf("enum value must be int!\n");
                 exit(1);
             }
+
+            item_type = rexpr.type;
         }
 
-        struct type_field field = { item.name, item_type };
-        buf_push(fields, field);
+        complete_type(resolver, item_type);
+        buf_push(fields, ((struct type_field) {
+            .name = item.name,
+            .type = item_type,
+            .expr = item.expr
+        }));
     }
 
     int fields_count = buf_len(fields);

@@ -307,9 +307,33 @@ struct type *type_incomplete(struct symbol *symbol)
     return type;
 }
 
-void type_complete_struct(struct type *type, struct type_field *fields, size_t fields_count)
+void complete_type_struct(struct resolver *resolver, struct ast_decl *decl, struct type *type)
 {
     assert(type->kind == TYPE_COMPLETING);
+
+    struct type_field *fields = NULL;
+    for (size_t i = 0; i < decl->struct_decl.items_count; ++i) {
+        struct ast_struct_item item = decl->struct_decl.items[i];
+        struct type *item_type = resolve_typespec(resolver, item.type);
+        complete_type(resolver, item_type);
+
+        struct type_field field = { item.name, item_type };
+        buf_push(fields, field);
+    }
+
+    int fields_count = buf_len(fields);
+
+    if (fields_count == 0) {
+        // TODO: error handling
+        printf("no fields!\n");
+        exit(1);
+    }
+
+    if (duplicate_fields(fields, fields_count)) {
+        // TODO: error handling
+        printf("duplicate fields!\n");
+        exit(1);
+    }
 
     type->kind = TYPE_STRUCT;
     type->size = 0;
@@ -324,9 +348,48 @@ void type_complete_struct(struct type *type, struct type_field *fields, size_t f
     type->aggregate.fields_count = fields_count;
 }
 
-void type_complete_enum(struct type *type, struct type_field *fields, size_t fields_count)
+void complete_type_enum(struct resolver *resolver, struct ast_decl *decl, struct type *type)
 {
     assert(type->kind == TYPE_COMPLETING);
+
+    struct type_field *fields = NULL;
+    for (size_t i = 0; i < decl->enum_decl.items_count; ++i) {
+        struct ast_enum_item item = decl->enum_decl.items[i];
+        struct type *item_type = type_int;
+        complete_type(resolver, item_type);
+
+        if (item.expr) {
+            struct resolved_expr rexpr = resolve_expr(resolver, item.expr);
+            if (!rexpr.is_const) {
+                // TODO: error handling
+                printf("enum value must be const!\n");
+                exit(1);
+            }
+
+            if (!is_inttype(rexpr.type)) {
+                // TODO: error handling
+                printf("enum value must be int!\n");
+                exit(1);
+            }
+        }
+
+        struct type_field field = { item.name, item_type };
+        buf_push(fields, field);
+    }
+
+    int fields_count = buf_len(fields);
+
+    if (fields_count == 0) {
+        // TODO: error handling
+        printf("no fields!\n");
+        exit(1);
+    }
+
+    if (duplicate_fields(fields, fields_count)) {
+        // TODO: error handling
+        printf("duplicate fields!\n");
+        exit(1);
+    }
 
     type->kind = TYPE_ENUM;
     type->size = type_sizeof(type_int);
@@ -353,68 +416,9 @@ void complete_type(struct resolver *resolver, struct type *type)
     assert(decl->kind == AST_DECL_STRUCT || decl->kind == AST_DECL_ENUM);
 
     if (decl->kind == AST_DECL_ENUM) {
-        struct type_field *fields = NULL;
-        for (size_t i = 0; i < decl->enum_decl.items_count; ++i) {
-            struct ast_enum_item item = decl->enum_decl.items[i];
-            struct type *item_type = type_int;
-            complete_type(resolver, item_type);
-
-            if (item.expr) {
-                struct resolved_expr rexpr = resolve_expr(resolver, item.expr);
-                if (!rexpr.is_const) {
-                    // TODO: error handling
-                    printf("enum value must be const!\n");
-                    exit(1);
-                }
-
-                if (!is_inttype(rexpr.type)) {
-                    // TODO: error handling
-                    printf("enum value must be int!\n");
-                    exit(1);
-                }
-            }
-
-            struct type_field field = { item.name, item_type };
-            buf_push(fields, field);
-        }
-
-        if (buf_len(fields) == 0) {
-            // TODO: error handling
-            printf("no fields!\n");
-            exit(1);
-        }
-
-        if (duplicate_fields(fields, buf_len(fields))) {
-            // TODO: error handling
-            printf("duplicate fields!\n");
-            exit(1);
-        }
-
-        type_complete_enum(type, fields, buf_len(fields));
+        complete_type_enum(resolver, decl, type);
     } else if (decl->kind == AST_DECL_STRUCT) {
-        struct type_field *fields = NULL;
-        for (size_t i = 0; i < decl->struct_decl.items_count; ++i) {
-            struct ast_struct_item item = decl->struct_decl.items[i];
-            struct type *item_type = resolve_typespec(resolver, item.type);
-            complete_type(resolver, item_type);
-
-            struct type_field field = { item.name, item_type };
-            buf_push(fields, field);
-        }
-
-        if (buf_len(fields) == 0) {
-            // TODO: error handling
-            printf("no fields!\n");
-            exit(1);
-        }
-
-        if (duplicate_fields(fields, buf_len(fields))) {
-            // TODO: error handling
-            printf("duplicate fields!\n");
-            exit(1);
-        }
-
-        type_complete_struct(type, fields, buf_len(fields));
+        complete_type_struct(resolver, decl, type);
     }
 
     buf_push(resolver->ordered_symbols, type->symbol);

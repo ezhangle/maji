@@ -508,9 +508,10 @@ struct ast_enum_item parse_decl_enum_item(struct parser *parser)
 {
     const uint8_t *name = parse_name(parser);
     struct ast_expr *expr = NULL;
-    if (parser_match(parser, '=')) {
+    if (parser_match(parser, TOKEN_KIND_CONST_ASSIGN)) {
         expr = parse_expr(parser);
     }
+    parser_consume(parser, ';');
     return (struct ast_enum_item) {name, expr};
 }
 
@@ -518,11 +519,8 @@ struct ast_decl *parse_decl_enum(struct parser *parser, struct token identifier)
 {
     parser_consume(parser, '{');
     struct ast_enum_item *items = NULL;
-    if (!parser_check(parser, '}')) {
+    while (!parser_check(parser, '}')) {
         buf_push(items, parse_decl_enum_item(parser));
-        while (parser_match(parser, ',')) {
-            buf_push(items, parse_decl_enum_item(parser));
-        }
     }
     parser_consume(parser, '}');
     return ast_decl_enum(identifier.as.name, items, buf_len(items));

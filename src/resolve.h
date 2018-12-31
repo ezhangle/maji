@@ -23,8 +23,7 @@ enum type_kind
     TYPE_ENUM,
     TYPE_PTR,
     TYPE_STRUCT,
-    TYPE_FUNC,
-    TYPE_VARIADIC
+    TYPE_FUNC
 };
 
 struct type

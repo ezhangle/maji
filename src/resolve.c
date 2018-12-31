@@ -20,6 +20,8 @@ int64_t resolve_const_expr(struct resolver *resolver, struct ast_expr *expr);
 void resolve_statement(struct resolver *resolver, struct ast_stmt *statement, struct type *ret_type);
 void complete_type(struct resolver *resolver, struct type *type);
 
+struct type *type_variadic = &(struct type){TYPE_VOID, 0, 0, false};
+
 struct type *type_void  = &(struct type){TYPE_VOID,    0, 0, false};
 struct type *type_char  = &(struct type){TYPE_INT8,    1, 1, false};
 struct type *type_int   = &(struct type){TYPE_INT32,   4, 4, false};
@@ -37,8 +39,6 @@ struct type *type_uint64 = &(struct type){TYPE_INT64, 8, 8, true};
 
 struct type *type_float32 = &(struct type){TYPE_FLOAT32, 4, 4, false};
 struct type *type_float64 = &(struct type){TYPE_FLOAT64, 8, 8, false};
-
-struct type *type_variadic = &(struct type){TYPE_VARIADIC, 0, 0, false};
 
 const size_t PTR_SIZE  = 8;
 const size_t PTR_ALIGN = 8;

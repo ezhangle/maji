@@ -19,6 +19,7 @@ static uint8_t *break_keyword;
 static uint8_t *cast_keyword;
 static uint8_t *sizeof_keyword;
 static uint8_t *offsetof_keyword;
+static uint8_t *null_keyword;
 
 void parser_init_keywords(void)
 {
@@ -35,6 +36,7 @@ void parser_init_keywords(void)
     cast_keyword = intern_string(u8"cast");
     sizeof_keyword = intern_string(u8"size_of");
     offsetof_keyword = intern_string(u8"offset_of");
+    null_keyword = intern_string(u8"null");
 }
 
 struct ast_expr *parse_expr_operand(struct parser *parser)
@@ -50,6 +52,8 @@ struct ast_expr *parse_expr_operand(struct parser *parser)
         return ast_expr_float(parser_previous(parser).as.float_val);
     } else if (parser_match(parser, TOKEN_KIND_STRING_LITERAL)) {
         return ast_expr_string(parser_previous(parser).as.string_val);
+    } else if (parser_match_keyword(parser, null_keyword)) {
+        return ast_expr_null_literal();
     } else if (parser_match_keyword(parser, cast_keyword)) {
         parser_consume(parser, '(');
         struct ast_typespec *type = parse_type(parser);

@@ -300,9 +300,9 @@ key_handler :: (event: void *) {
         charcode: char = '0';
         modifiers: s32 = 0;
 
-        GetEventParameter(event, kEventParamKeyCode, typeUInt32, cast(int*) 0, sizeof(s32), cast(int*) 0, cast(void*) &keycode);
-        GetEventParameter(event, kEventParamKeyMacCharCodes, typeChar, cast(int*) 0, sizeof(s8), cast(int*) 0, cast(void*) &charcode);
-        GetEventParameter(event, kEventParamKeyModifiers, typeUInt32, cast(int*) 0, sizeof(s32), cast(int*) 0, cast(void*) &modifiers);
+        GetEventParameter(event, kEventParamKeyCode, typeUInt32, null, size_of(s32), null, &keycode);
+        GetEventParameter(event, kEventParamKeyMacCharCodes, typeChar, null, size_of(s8), null, &charcode);
+        GetEventParameter(event, kEventParamKeyModifiers, typeUInt32, null, size_of(s32), null, &modifiers);
 
         printf("modifiers = %08x .. %p\n", cast(int) modifiers, event);
         printf("keycode   = %d .. %p\n", cast(int) keycode, event);
@@ -325,10 +325,10 @@ mouse_handler :: (event: void *) {
         location: cg_point;
         delta: cg_point;
 
-        GetEventParameter(event, kEventParamMouseButton, typeMouseButton, cast(int*) 0, sizeof(s16), cast(int*) 0, cast(void*) &button);
-        GetEventParameter(event, kEventParamKeyModifiers, typeUInt32, cast(int*) 0, sizeof(s32), cast(int*) 0, cast(void*) &modifiers);
-        GetEventParameter(event, kEventParamMouseLocation, typeHIPoint, cast(int*) 0, sizeof(cg_point), cast(int*) 0, cast(void*) &location);
-        GetEventParameter(event, kEventParamMouseDelta, typeHIPoint, cast(int*) 0, sizeof(cg_point), cast(int*) 0, cast(void*) &delta);
+        GetEventParameter(event, kEventParamMouseButton, typeMouseButton, null, size_of(s16), null, &button);
+        GetEventParameter(event, kEventParamKeyModifiers, typeUInt32, null, size_of(s32), null, &modifiers);
+        GetEventParameter(event, kEventParamMouseLocation, typeHIPoint, null, size_of(cg_point), null, &location);
+        GetEventParameter(event, kEventParamMouseDelta, typeHIPoint, null, size_of(cg_point), null, &delta);
 
         printf("modifiers = %08x .. %p\n", cast(int) modifiers, event);
         printf("button    = %d .. %p\n", cast(int) button, event);
@@ -343,9 +343,9 @@ main :: () -> int {
     cgl_window_add_drag_region(&win, 0.0, 0.0, win.rect.size.width, 20.0);
 
     while (!should_quit) {
-        event := cast(void*) 0;
+        event := null;
         event_target := GetEventDispatcherTarget();
-        while (ReceiveNextEvent(0, cast(void*) 0, cast(float) kEventDurationNoWait, cast(s8) 1, &event) == noErr) {
+        while (ReceiveNextEvent(0, null, cast(float) kEventDurationNoWait, cast(s8) 1, &event) == noErr) {
             event_class := GetEventClass(event);
 
             if (event_class == kEventClassKeyboard) {

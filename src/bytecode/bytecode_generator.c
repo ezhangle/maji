@@ -730,6 +730,12 @@ void bytecode_emit_expression_immediate_float(struct bytecode_emitter *emitter, 
     }
 }
 
+void bytecode_emit_expression_immediate_null(struct bytecode_emitter *emitter, struct ast_expr *expr)
+{
+    bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
+    bytecode_emit(emitter, expr->res.val);
+}
+
 void bytecode_emit_expression_identifier(struct bytecode_emitter *emitter, struct ast_expr *expr)
 {
     assert(expr->symbol);
@@ -1185,6 +1191,9 @@ void bytecode_emit_expression(struct bytecode_emitter *emitter, struct ast_expr 
     } break;
     case AST_EXPR_STRING_LITERAL: {
         bytecode_emit_expression_immediate_string__(emitter, expr);
+    } break;
+    case AST_EXPR_NULL_LITERAL: {
+        bytecode_emit_expression_immediate_null(emitter, expr);
     } break;
     case AST_EXPR_UNARY: {
         bytecode_emit_expression_unary(emitter, expr);

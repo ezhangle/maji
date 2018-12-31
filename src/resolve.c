@@ -546,8 +546,15 @@ struct resolved_expr resolve_expr_call(struct resolver *resolver, struct ast_exp
     for (size_t i = 0; i < expr->call.args_count; ++i) {
         struct type *param_type = func.type->func.params[i];
         struct resolved_expr arg = resolve_expected_expr(resolver, expr->call.args[i], param_type);
+        struct type *arg_type = ptr_decay(arg).type;
 
-        if (ptr_decay(arg).type != param_type) {
+        if (arg_type->kind == TYPE_PTR && param_type->kind == TYPE_PTR) {
+            if (arg_type->ptr.elem == type_void || param_type->ptr.elem == type_void) {
+                continue;
+            }
+        }
+
+        if (arg_type != param_type) {
             // TODO: error handling
             printf("call argument expression type doesn't match expected param type");
             exit(1);
@@ -905,6 +912,9 @@ struct resolved_expr resolve_expected_expr(struct resolver *resolver, struct ast
     } break;
     case AST_EXPR_STRING_LITERAL: {
         res = resolved_const(0, type_ptr(type_char));
+    } break;
+    case AST_EXPR_NULL_LITERAL: {
+        res = resolved_const(0, type_ptr(type_void));
     } break;
     case AST_EXPR_CALL: {
         res = resolve_expr_call(resolver, expr);

@@ -265,6 +265,7 @@ enum ast_expr_kind
     AST_EXPR_CHAR_LITERAL,
     AST_EXPR_FLOAT_LITERAL,
     AST_EXPR_STRING_LITERAL,
+    AST_EXPR_NULL_LITERAL,
 
     AST_EXPR_CALL,
     AST_EXPR_CAST,
@@ -411,6 +412,13 @@ ast_expr_identifier(const uint8_t *name)
 {
     struct ast_expr *result = ast_expr_alloc(AST_EXPR_IDENTIFIER);
     result->name = name;
+    return result;
+}
+
+static inline struct ast_expr *
+ast_expr_null_literal()
+{
+    struct ast_expr *result = ast_expr_alloc(AST_EXPR_NULL_LITERAL);
     return result;
 }
 
@@ -758,6 +766,9 @@ ast_print_expr(struct ast_expr *expr)
         break;
     case AST_EXPR_IDENTIFIER:
         printf("%s", expr->name);
+        break;
+    case AST_EXPR_NULL_LITERAL:
+        printf("null");
         break;
     case AST_EXPR_CALL:
         printf("(call ");

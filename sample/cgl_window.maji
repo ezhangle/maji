@@ -304,9 +304,7 @@ key_handler :: (event: void *) {
         GetEventParameter(event, kEventParamKeyMacCharCodes, typeChar, null, size_of(s8), null, &charcode);
         GetEventParameter(event, kEventParamKeyModifiers, typeUInt32, null, size_of(s32), null, &modifiers);
 
-        printf("modifiers = %08x .. %p\n", cast(int) modifiers, event);
-        printf("keycode   = %d .. %p\n", cast(int) keycode, event);
-        printf("charcode  = %c .. %p\n", cast(int) charcode, event);
+        printf("modifiers = %08x, keycode = %d, charcode = %c\n", modifiers, keycode, charcode);
 
         if (event_kind == kEventRawKeyDown && keycode == virtual_key.ANSI_Q) {
             should_quit = 1;
@@ -330,8 +328,7 @@ mouse_handler :: (event: void *) {
         GetEventParameter(event, kEventParamMouseLocation, typeHIPoint, null, size_of(cg_point), null, &location);
         GetEventParameter(event, kEventParamMouseDelta, typeHIPoint, null, size_of(cg_point), null, &delta);
 
-        printf("modifiers = %08x .. %p\n", cast(int) modifiers, event);
-        printf("button    = %d .. %p\n", cast(int) button, event);
+        printf("modifiers = %08x, button = %d, loc.x = %.2f, loc.y = %.2f\n", modifiers, button, location.x, location.y);
     }
 }
 

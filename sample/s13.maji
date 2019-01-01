@@ -43,7 +43,7 @@ main :: () -> int {
 
     z : vec3;
     z = y;
-    printf("z.x = %.2f, z.y = %.2f, z.z = %.2f\n", y.x, y.y, y.z);
+    printf("z.x = %.2f, z.y = %.2f, z.z = %.2f\n", z.x, z.y, z.z);
 
     printf("\n----- GLOBAL bytecode struct return and assignment -----\n");
     printf("global_d.x = %.2f, global_d.y = %.2f\n", global_d.x, global_d.y);

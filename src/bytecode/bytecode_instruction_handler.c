@@ -6,8 +6,6 @@
 #include <assert.h>
 #include <string.h>
 
-#include <ffi.h>
-
 #define as_i8_ptr(val) (int8_t*)&val
 #define as_i16_ptr(val) (int16_t*)&val
 #define as_i32_ptr(val) (int32_t*)&val
@@ -870,11 +868,6 @@ bytecode_instruction_handler_(exec_op_call_foreign)
     uint64_t ret_kind = fetch_instruction(bcr);
     bcr->reg_type[BYTECODE_REGISTER_RAX] = ret_kind;
 
-#if 1
-    //
-    // DYNCALL
-    //
-
     DCCallVM *vm = dcNewCallVM(8192);
     dcMode(vm, DC_CALL_C_DEFAULT);
     dcReset(vm);
@@ -903,77 +896,6 @@ bytecode_instruction_handler_(exec_op_call_foreign)
     }
 
     dcFree(vm);
-#else
-    //
-    // LIBFFI
-    //
-
-    ffi_cif cif;
-    ffi_type *arg_types[reg_arg_count];
-    ffi_type *ret_type = NULL;
-    void *arg_values[reg_arg_count];
-    ffi_arg result;
-
-    for (unsigned i = 0; i < reg_arg_count; ++i) {
-        uint64_t reg = bcr->reg[bytecode_call_registers[i]];
-        switch (bcr->reg_type[bytecode_call_registers[i]]) {
-        case BYTECODE_REGISTER_KIND_I64: {
-            arg_types[i] = &ffi_type_sint64;
-            arg_values[i] = as_i64_ptr(reg);
-        } break;
-        case BYTECODE_REGISTER_KIND_I32: {
-            arg_types[i] = &ffi_type_sint32;
-            arg_values[i] = as_i32_ptr(reg);
-        } break;
-        case BYTECODE_REGISTER_KIND_I16: {
-            arg_types[i] = &ffi_type_sint16;
-            arg_values[i] = as_i16_ptr(reg);
-        } break;
-        case BYTECODE_REGISTER_KIND_I8: {
-            arg_types[i] = &ffi_type_sint8;
-            arg_values[i] = as_i8_ptr(reg);
-        } break;
-        case BYTECODE_REGISTER_KIND_F64: {
-            arg_types[i] = &ffi_type_double;
-            arg_values[i] = as_f64_ptr(reg);
-        } break;
-        case BYTECODE_REGISTER_KIND_F32: {
-            arg_types[i] = &ffi_type_float;
-            arg_values[i] = as_f32_ptr(reg);
-        } break;
-        default: break;
-        }
-    }
-
-    switch (ret_kind) {
-    case BYTECODE_REGISTER_KIND_I64: ret_type = &ffi_type_sint64; break;
-    case BYTECODE_REGISTER_KIND_I32: ret_type = &ffi_type_sint32; break;
-    case BYTECODE_REGISTER_KIND_I16: ret_type = &ffi_type_sint16; break;
-    case BYTECODE_REGISTER_KIND_I8:  ret_type = &ffi_type_sint8;  break;
-    case BYTECODE_REGISTER_KIND_F64: ret_type = &ffi_type_double; break;
-    case BYTECODE_REGISTER_KIND_F32: ret_type = &ffi_type_float;  break;
-    default: break;
-    }
-
-    if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, reg_arg_count, ret_type, arg_types) != FFI_OK) {
-        fprintf(stderr, "FFI_PREP_CIF FAILED\n");
-        assert(0);
-    }
-
-    // Invoke the function.
-    ffi_call(&cif, func, &result, arg_values);
-
-    switch (ret_kind) {
-    case BYTECODE_REGISTER_KIND_I64: *as_i64_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = (int64_t) result; break;
-    case BYTECODE_REGISTER_KIND_I32: *as_i32_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = (int32_t) result; break;
-    case BYTECODE_REGISTER_KIND_I16: *as_i16_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = (int16_t) result; break;
-    case BYTECODE_REGISTER_KIND_I8:  *as_i8_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = (int16_t) result;  break;
-    case BYTECODE_REGISTER_KIND_F64: *as_f64_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = (double) result;  break;
-    case BYTECODE_REGISTER_KIND_F32: *as_f32_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = (float) result;   break;
-    default: break;
-    }
-#endif
-
     dlclose(handle);
 }
 

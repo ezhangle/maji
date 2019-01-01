@@ -249,16 +249,21 @@ proc_serial_number :: struct {
     low_long: int;
 }
 
+make_rect :: (x: f64, y: f64, w: f64, h: f64) -> cg_rect {
+    rect: cg_rect;
+    rect.origin.x = x;
+    rect.origin.y = y;
+    rect.size.width = w;
+    rect.size.height = h;
+    return rect;
+}
+
 cgl_window_init :: (win: cgl_window *) {
     GetCurrentProcess(&win.psn);
 
     win.connection = CGSMainConnectionID();
 
-    win.rect.origin.x = 20.0;
-    win.rect.origin.y = 20.0;
-    win.rect.size.width = 300.0;
-    win.rect.size.height = 200.0;
-
+    win.rect = make_rect(20.0, 20.0, 300.0, 200.0);
     CGSNewRegionWithRect(&win.rect, &win.region);
     CGSNewWindow(win.connection, backing_type.BUFFERED, cast(float) win.rect.origin.x, cast(float) win.rect.origin.y, win.region, &win.id);
 

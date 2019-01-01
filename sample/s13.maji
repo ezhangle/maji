@@ -1,0 +1,67 @@
+printf :: (fmt: char*, args: var_args) #foreign "/usr/lib/libc.dylib";
+make_vec3 :: (x: f64, y: f64, z: f64) -> vec3 #foreign "/Users/Koe/test/testlib/test.so";
+
+vec3 :: struct {
+    x: f64;
+    y: f64;
+    z: f64;
+}
+
+vec2 :: struct {
+    x: float;
+    y: float;
+}
+
+make_vec2 :: (x: float, y: float) -> vec2 {
+    v: vec2;
+    v.x = x;
+    v.y = y;
+    return v;
+}
+
+global_a: vec3 = make_vec3(2.2, 3.3, 4.4);
+global_b := global_a;
+global_c: vec3;
+
+global_d: vec2 = make_vec2(cast(float)7.2, cast(float)9.3);
+global_e := global_d;
+global_f: vec2;
+main :: () -> int {
+    printf("----- GLOBAL foreign_func struct return and assignment -----\n");
+    printf("global_a.x = %.2f, global_a.y = %.2f, global_a.z = %.2f\n", global_a.x, global_a.y, global_a.z);
+    printf("global_b.x = %.2f, global_b.y = %.2f, global_b.z = %.2f\n", global_b.x, global_b.y, global_b.z);
+    global_c = global_a;
+    printf("global_c.x = %.2f, global_c.y = %.2f, global_c.z = %.2f\n", global_c.x, global_c.y, global_c.z);
+
+    printf("\n----- LOCAL foreign_func struct return and assignment -----\n");
+
+    x: vec3 = make_vec3(1.1, 4.4, 9.9);
+    printf("x.x = %.2f, x.y = %.2f, x.z = %.2f\n", x.x, x.y, x.z);
+
+    y := x;
+    printf("y.x = %.2f, y.y = %.2f, y.z = %.2f\n", y.x, y.y, y.z);
+
+    z : vec3;
+    z = y;
+    printf("z.x = %.2f, z.y = %.2f, z.z = %.2f\n", y.x, y.y, y.z);
+
+    printf("\n----- GLOBAL bytecode struct return and assignment -----\n");
+    printf("global_d.x = %.2f, global_d.y = %.2f\n", global_d.x, global_d.y);
+    printf("global_e.x = %.2f, global_e.y = %.2f\n", global_e.x, global_e.y);
+    global_f = global_d;
+    printf("global_f.x = %.2f, global_f.y = %.2f\n", global_f.x, global_f.y);
+
+    printf("\n----- LOCAL bytecode struct return and assignment -----\n");
+
+    a: vec2 = make_vec2(cast(float)2.5, cast(float)4.5);
+    printf("a.x = %.2f, a.y = %.2f\n", a.x, a.y);
+
+    b := a;
+    printf("b.x = %.2f, b.y = %.2f\n", b.x, b.y);
+
+    c: vec2;
+    c = b;
+    printf("c.x = %.2f, c.y = %.2f\n", c.x, c.y);
+
+    return 0;
+}

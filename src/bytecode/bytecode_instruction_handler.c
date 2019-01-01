@@ -4,6 +4,7 @@
 #include <dlfcn.h>
 #include <dyncall.h>
 #include <assert.h>
+#include <string.h>
 
 #include <ffi.h>
 
@@ -297,6 +298,8 @@ static bytecode_instruction_handler *instruction_handlers[BYTECODE_OPCODE_COUNT]
     [BYTECODE_OPCODE_MEMR_INT64_REG_REG] = exec_op_memr_int64_reg_reg,
     [BYTECODE_OPCODE_MEMR_FLT32_REG_REG] = exec_op_memr_flt32_reg_reg,
     [BYTECODE_OPCODE_MEMR_FLT64_REG_REG] = exec_op_memr_flt64_reg_reg,
+
+    [BYTECODE_OPCODE_MEMC_REG_REG_IMM]   = exec_op_memc_reg_reg_imm,
 
     [BYTECODE_OPCODE_CONV_INT8_REG]      = exec_op_conv_int8_reg,
     [BYTECODE_OPCODE_CONV_INT16_REG]     = exec_op_conv_int16_reg,
@@ -1136,6 +1139,14 @@ bytecode_instruction_handler_(exec_op_memr_flt64_reg_reg)
     double *address = (double *) as_i64(bcr->reg[reg2]);
     *as_f64_ptr(bcr->reg[reg1]) = *address;
     bcr->reg_type[reg1] = BYTECODE_REGISTER_KIND_F64;
+}
+
+bytecode_instruction_handler_(exec_op_memc_reg_reg_imm)
+{
+    uint64_t size = fetch_instruction(bcr);
+    void *src = (void *) as_i64(bcr->reg[reg2]);
+    void *dest = (void *) as_i64(bcr->reg[reg1]);
+    memcpy(dest, src, size);
 }
 
 bytecode_instruction_handler_(exec_op_conv_int8_reg)

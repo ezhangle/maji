@@ -81,6 +81,11 @@ uint64_t _neg_reg(enum bytecode_register reg)
     return encode_instruction_r1(BYTECODE_OPCODE_NEG_REG, reg);
 }
 
+uint64_t _memc_reg_reg_imm(enum bytecode_register reg1, enum bytecode_register reg2)
+{
+    return encode_instruction_r2(BYTECODE_OPCODE_MEMC_REG_REG_IMM, reg1, reg2);
+}
+
 uint64_t _memw_i64_reg_imm(enum bytecode_register reg)
 {
     return encode_instruction_r1(BYTECODE_OPCODE_MEMW_INT64_REG_IMM, reg);
@@ -134,6 +139,11 @@ uint64_t _memr_i16_reg_reg(enum bytecode_register reg1, enum bytecode_register r
 uint64_t _memr_i8_reg_reg(enum bytecode_register reg1, enum bytecode_register reg2)
 {
     return encode_instruction_r2(BYTECODE_OPCODE_MEMR_INT8_REG_REG, reg1, reg2);
+}
+
+uint64_t _lea_lcl_reg_reg(enum bytecode_register reg1, enum bytecode_register reg2)
+{
+    return encode_instruction_r2(BYTECODE_OPCODE_LEA_LCL_REG_REG, reg1, reg2);
 }
 
 uint64_t _lea_lcl_reg_imm(enum bytecode_register reg)
@@ -579,8 +589,15 @@ void bytecode_emit_expression_assign(struct bytecode_emitter *emitter, struct as
     bytecode_emit_expression(emitter, right_expr);
     bytecode_emit_load_convert(emitter, left_expr->res.type);
 
-    bytecode_emit(emitter, _pop_reg(BYTECODE_REGISTER_R9));
-    bytecode_emit(emitter, _memw_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_RCX));
+    if (left_expr->res.type->kind == TYPE_STRUCT) {
+        bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_R15, BYTECODE_REGISTER_R9));
+        bytecode_emit(emitter, _pop_reg(BYTECODE_REGISTER_R9));
+        bytecode_emit(emitter, _memc_reg_reg_imm(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R15));
+        bytecode_emit(emitter, type_sizeof(left_expr->res.type));
+    } else {
+        bytecode_emit(emitter, _pop_reg(BYTECODE_REGISTER_R9));
+        bytecode_emit(emitter, _memw_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_RCX));
+    }
 }
 
 void bytecode_emit_expression_bit_and(struct bytecode_emitter *emitter, struct ast_expr *left_expr, struct ast_expr *right_expr)
@@ -968,21 +985,37 @@ void bytecode_emit_expression_unary(struct bytecode_emitter *emitter, struct ast
 void bytecode_emit_expression_call(struct bytecode_emitter *emitter, struct ast_expr_call call)
 {
     struct symbol *symbol = symbol_get(emitter->resolver, call.expr->string_val);
+
+    struct type *func_type = symbol->type;
+    assert(func_type->kind == TYPE_FUNC);
+
+    struct type *return_type = func_type->func.ret;
+    assert(return_type);
+
     if (symbol->kind == SYMBOL_FUNC_FOREIGN) {
         // emit function name and corresponding library to data segment
         bytecode_emit_expression_immediate_string(emitter, call.expr);
         bytecode_emit_expression_immediate_string_(emitter, symbol->decl->foreign_func_decl.lib);
 
+        int is_return_type_struct = return_type->kind == TYPE_STRUCT ? 1 : 0;
+
         // NOTE: push registers to the stack so that we don't trash the state !!!
-        for (size_t i = 0; i < call.args_count; ++i) {
+        for (size_t i = 0; i < call.args_count + is_return_type_struct; ++i) {
             enum bytecode_register reg = bytecode_call_registers[i];
             bytecode_emit(emitter, _push_reg(reg));
+        }
+
+        if (is_return_type_struct) {
+            bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RDI, BYTECODE_REGISTER_RSP));
+            bytecode_emit(emitter, _lea_lcl_reg_reg(BYTECODE_REGISTER_RDI, BYTECODE_REGISTER_RDI));
+            bytecode_emit(emitter, _add_i64_reg_imm(BYTECODE_REGISTER_RSP));
+            bytecode_emit(emitter, type_sizeof(return_type));
         }
 
         // emit code for arguments
         for (size_t i = 0; i < call.args_count; ++i) {
             struct ast_expr *arg = call.args[i];
-            enum bytecode_register reg = bytecode_call_registers[i];
+            enum bytecode_register reg = bytecode_call_registers[i+is_return_type_struct];
             bytecode_emit_expression(emitter, arg);
             if (arg->res.type->kind == TYPE_ARRAY) {
                 // NOTE: if we pass an array to a foreign function, we auto-decay to the address of the first element
@@ -1009,12 +1042,18 @@ void bytecode_emit_expression_call(struct bytecode_emitter *emitter, struct ast_
         bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_R9));
 
         bytecode_emit(emitter, _call_foreign());
-        bytecode_emit(emitter, call.args_count);
+        bytecode_emit(emitter, call.args_count + is_return_type_struct);
         bytecode_emit(emitter, BYTECODE_REGISTER_KIND_I64);
         bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_RAX));
+        bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_RAX));
+
+        if (is_return_type_struct) {
+            bytecode_emit(emitter, _sub_i64_reg_imm(BYTECODE_REGISTER_RSP));
+            bytecode_emit(emitter, type_sizeof(return_type));
+        }
 
         // NOTE: pop registers from the stack so that we don't trash the state !!!
-        for (size_t i = 0; i < call.args_count; ++i) {
+        for (size_t i = 0; i < call.args_count + is_return_type_struct; ++i) {
             enum bytecode_register reg = bytecode_call_registers[call.args_count - i - 1];
             bytecode_emit(emitter, _pop_reg(reg));
         }
@@ -1230,8 +1269,16 @@ void bytecode_emit_stmt_init_local(struct bytecode_emitter *emitter, struct ast_
     bytecode_emit_expression(emitter, stmt_init.expr);
     bytecode_emit_load_convert(emitter, stmt_init.expr->res.type);
 
-    bytecode_emit(emitter, _mov_lcl_reg(BYTECODE_REGISTER_RCX));
-    bytecode_emit(emitter, stmt_init.address);
+    if (stmt_init.expr->res.type->kind == TYPE_STRUCT) {
+        bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_R15, BYTECODE_REGISTER_R9));
+        bytecode_emit(emitter, _lea_lcl_reg_imm(BYTECODE_REGISTER_R9));
+        bytecode_emit(emitter, stmt_init.address);
+        bytecode_emit(emitter, _memc_reg_reg_imm(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R15));
+        bytecode_emit(emitter, type_sizeof(stmt_init.expr->res.type));
+    } else {
+        bytecode_emit(emitter, _mov_lcl_reg(BYTECODE_REGISTER_RCX));
+        bytecode_emit(emitter, stmt_init.address);
+    }
 }
 
 void bytecode_emit_struct_init_local(struct bytecode_emitter *emitter, struct type *type, uint64_t address)
@@ -1266,8 +1313,17 @@ void bytecode_emit_stmt_decl_local(struct bytecode_emitter *emitter, struct ast_
     if (stmt_decl.expr) {
         bytecode_emit_expression(emitter, stmt_decl.expr);
         bytecode_emit_load_convert(emitter, decl_type);
-        bytecode_emit(emitter, _mov_lcl_reg(BYTECODE_REGISTER_RCX));
-        bytecode_emit(emitter, stmt_decl.address);
+
+        if (stmt_decl.expr->res.type->kind == TYPE_STRUCT) {
+            bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_R15, BYTECODE_REGISTER_R9));
+            bytecode_emit(emitter, _lea_lcl_reg_imm(BYTECODE_REGISTER_R9));
+            bytecode_emit(emitter, stmt_decl.address);
+            bytecode_emit(emitter, _memc_reg_reg_imm(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R15));
+            bytecode_emit(emitter, type_sizeof(stmt_decl.expr->res.type));
+        } else {
+            bytecode_emit(emitter, _mov_lcl_reg(BYTECODE_REGISTER_RCX));
+            bytecode_emit(emitter, stmt_decl.address);
+        }
     }
 }
 
@@ -1573,9 +1629,19 @@ void bytecode_emit_var(struct bytecode_emitter *emitter, struct symbol *symbol)
         bytecode_emit_expression(emitter, init_expr);
         bytecode_emit_load_convert(emitter, symbol->type);
 
-        bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_R9));
-        bytecode_emit(emitter, symbol->address);
-        bytecode_emit(emitter, _memw_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_RCX));
+        if (symbol->type->kind == TYPE_STRUCT) {
+            bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_R15, BYTECODE_REGISTER_R9));
+
+            bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_R9));
+            bytecode_emit(emitter, symbol->address);
+
+            bytecode_emit(emitter, _memc_reg_reg_imm(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_R15));
+            bytecode_emit(emitter, type_sizeof(symbol->type));
+        } else {
+            bytecode_emit(emitter, _lea_bss_reg_imm(BYTECODE_REGISTER_R9));
+            bytecode_emit(emitter, symbol->address);
+            bytecode_emit(emitter, _memw_reg_reg(BYTECODE_REGISTER_R9, BYTECODE_REGISTER_RCX));
+        }
     }
 }
 

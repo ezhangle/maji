@@ -130,6 +130,8 @@ bytecode_instruction_handler_(exec_op_memr_int64_reg_reg);
 bytecode_instruction_handler_(exec_op_memr_flt32_reg_reg);
 bytecode_instruction_handler_(exec_op_memr_flt64_reg_reg);
 
+bytecode_instruction_handler_(exec_op_memc_reg_reg_imm);
+
 bytecode_instruction_handler_(exec_op_conv_int8_reg);
 bytecode_instruction_handler_(exec_op_conv_int16_reg);
 bytecode_instruction_handler_(exec_op_conv_int32_reg);

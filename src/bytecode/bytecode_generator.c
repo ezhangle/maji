@@ -1055,12 +1055,12 @@ void bytecode_emit_expression_call(struct bytecode_emitter *emitter, struct ast_
     } else {
         // NOTE: push registers to the stack so that we don't trash the state !!!
         for (size_t i = 0; i < call.args_count; ++i) {
-            enum bytecode_register reg = bytecode_internal_call_registers[i];
+            enum bytecode_register reg = bytecode_call_registers[i];
             bytecode_emit(emitter, _push_reg(reg));
         }
 
         for (size_t i = 0; i < call.args_count; ++i) {
-            enum bytecode_register reg = bytecode_internal_call_registers[i];
+            enum bytecode_register reg = bytecode_call_registers[i];
             bytecode_emit_expression(emitter, call.args[i]);
             if (call.args[i]->res.type->kind == TYPE_ARRAY) {
                 bytecode_emit(emitter, _mov_reg_reg(reg, BYTECODE_REGISTER_RBX));
@@ -1078,7 +1078,7 @@ void bytecode_emit_expression_call(struct bytecode_emitter *emitter, struct ast_
 
         // NOTE: pop registers from the stack so that we don't trash the state !!!
         for (size_t i = 0; i < call.args_count; ++i) {
-            enum bytecode_register reg = bytecode_internal_call_registers[call.args_count - i - 1];
+            enum bytecode_register reg = bytecode_call_registers[call.args_count - i - 1];
             bytecode_emit(emitter, _pop_reg(reg));
         }
 
@@ -1557,7 +1557,7 @@ void bytecode_emit_function(struct bytecode_emitter *emitter, struct symbol *sym
     bytecode_emit(emitter, ar_size);
 
     for (size_t i = 0; i < decl->params_count; ++i) {
-        enum bytecode_register reg = bytecode_internal_call_registers[i];
+        enum bytecode_register reg = bytecode_call_registers[i];
         struct type *param_type = resolve_typespec(emitter->resolver, decl->params[i].type);
         if (param_type->kind == TYPE_STRUCT) {
             bytecode_emit(emitter, _lea_lcl_reg_imm(BYTECODE_REGISTER_RBX));

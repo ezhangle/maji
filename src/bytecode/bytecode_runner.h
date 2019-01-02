@@ -17,38 +17,38 @@ enum bytecode_register_kind
 
 static const char *bytecode_register_kind_str[] =
 {
-    "I64",
-    "I32",
-    "I16",
-    "I8",
-    "F64",
-    "F32",
-    "NON",
+    "i64",
+    "i32",
+    "i16",
+    "i8",
+    "f64",
+    "f32",
+    "non",
 };
 
 static const char *bytecode_register_str[] =
 {
-    "RIP",
+    "rip",
 
-    "RAX",
-    "RBX",
-    "RCX",
-    "RDX",
-    "RBP",
-    "RSP",
-    "RSI",
-    "RDI",
+    "rax",
+    "rbx",
+    "rcx",
+    "rdx",
+    "rbp",
+    "rsp",
+    "rsi",
+    "rdi",
 
-    "R8",
-    "R9",
-    "R10",
-    "R11",
-    "R12",
-    "R13",
-    "R14",
-    "R15",
+    "r8",
+    "r9",
+    "r10",
+    "r11",
+    "r12",
+    "r13",
+    "r14",
+    "r15",
 
-    "COUNT"
+    "count"
 };
 
 enum bytecode_register
@@ -105,6 +105,7 @@ static enum bytecode_register bytecode_internal_call_registers[] =
 struct bytecode_runner
 {
     bool verbose;
+    bool disassemble;
     bool single_step;
 
     bool is_running;

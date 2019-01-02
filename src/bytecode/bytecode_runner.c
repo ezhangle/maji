@@ -7,6 +7,8 @@
 #include "bytecode_instruction_handler.h"
 #include "bytecode_instruction_handler.c"
 
+#include "bytecode_disassembler.c"
+
 #include "bytecode_executable.h"
 #include "bytecode_executable.c"
 
@@ -45,6 +47,17 @@ void bytecode_runner_destroy(struct bytecode_runner *bcr)
 {
     free(bcr->stack);
     memset(bcr, 0, sizeof(struct bytecode_runner));
+}
+
+void bytecode_disassembler_run(struct bytecode_runner *bcr)
+{
+    uint64_t *end = bcr->text + bcr->text_size;
+    while (bcr->text < end) {
+        uint64_t raw_instr = fetch_instruction(bcr);
+        struct bytecode_instruction instr = decode_instruction(raw_instr);
+        disassemble_instruction(bcr, instr);
+        if (instr.op == BYTECODE_OPCODE_HALT) break;
+    }
 }
 
 struct bytecode_result bytecode_runner_run(struct bytecode_runner *bcr)
@@ -150,9 +163,10 @@ static int bcr_sample_exe = 1;
 static const char *program;
 void parse_arguments(int argc, char **argv, struct bytecode_runner *bcr)
 {
-    const char *short_opt = "vds:p:";
+    const char *short_opt = "vds:p:D";
     struct option long_opt[] = {
         { "verbose", no_argument, NULL, 'v' },
+        { "disasm", no_argument, NULL, 'D' },
         { "debug", no_argument, NULL, 'd' },
         { "sample", required_argument, NULL, 's' },
         { "program", required_argument, NULL, 'p' },
@@ -168,6 +182,9 @@ void parse_arguments(int argc, char **argv, struct bytecode_runner *bcr)
         case 'd': {
             bcr->verbose = true;
             bcr->single_step = true;
+        } break;
+        case 'D': {
+            bcr->disassemble = true;
         } break;
         case 's': {
             sscanf(optarg, "%d", &bcr_sample_exe);
@@ -192,10 +209,17 @@ int main(int argc, char **argv)
         memcpy(exe_path, program, strlen(program)+1);
     }
 
+    struct bytecode_result result = {};
     struct bytecode_executable executable;
     if (bytecode_load_executable(exe_path, &executable)) {
         bytecode_runner_init(&bcr, &executable);
-        struct bytecode_result result = bytecode_runner_run(&bcr);
+
+        if (bcr.disassemble) {
+            bytecode_disassembler_run(&bcr);
+        } else {
+            result = bytecode_runner_run(&bcr);
+        }
+
         bytecode_runner_destroy(&bcr);
         return result.i32;
     }

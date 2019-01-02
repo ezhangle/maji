@@ -711,7 +711,7 @@ static bytecode_instruction_handler *instruction_disasm_handlers[BYTECODE_OPCODE
 void disassemble_instruction(struct bytecode_runner *bcr, struct bytecode_instruction instr)
 {
     if (instruction_disasm_handlers[instr.op]) {
-        printf("0x%08llx: %18s", bcr->reg[BYTECODE_REGISTER_RIP], bytecode_opcode_str[instr.op]);
+        printf("0x%08llx: %18s", bcr->reg[BYTECODE_REGISTER_RIP]-1, bytecode_opcode_str[instr.op]);
         instruction_disasm_handlers[instr.op](bcr, instr.op, instr.r1, instr.r2);
         printf("\n");
     } else {

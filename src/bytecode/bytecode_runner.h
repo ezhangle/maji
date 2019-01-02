@@ -29,16 +29,16 @@ static const char *bytecode_register_kind_str[] =
 static const char *bytecode_register_str[] =
 {
     "rip",
+    "rbp",
+    "rsp",
 
     "rax",
     "rbx",
     "rcx",
     "rdx",
-    "rbp",
-    "rsp",
-    "rsi",
-    "rdi",
 
+    "rdi",
+    "rsi",
     "r8",
     "r9",
     "r10",
@@ -47,6 +47,9 @@ static const char *bytecode_register_str[] =
     "r13",
     "r14",
     "r15",
+    "r16",
+    "r17",
+    "r18",
 
     "count"
 };
@@ -54,16 +57,16 @@ static const char *bytecode_register_str[] =
 enum bytecode_register
 {
     BYTECODE_REGISTER_RIP,
+    BYTECODE_REGISTER_RBP,
+    BYTECODE_REGISTER_RSP,
 
     BYTECODE_REGISTER_RAX,
     BYTECODE_REGISTER_RBX,
     BYTECODE_REGISTER_RCX,
     BYTECODE_REGISTER_RDX,
-    BYTECODE_REGISTER_RBP,
-    BYTECODE_REGISTER_RSP,
-    BYTECODE_REGISTER_RSI,
-    BYTECODE_REGISTER_RDI,
 
+    BYTECODE_REGISTER_RDI,
+    BYTECODE_REGISTER_RSI,
     BYTECODE_REGISTER_R8,
     BYTECODE_REGISTER_R9,
     BYTECODE_REGISTER_R10,
@@ -72,6 +75,9 @@ enum bytecode_register
     BYTECODE_REGISTER_R13,
     BYTECODE_REGISTER_R14,
     BYTECODE_REGISTER_R15,
+    BYTECODE_REGISTER_R16,
+    BYTECODE_REGISTER_R17,
+    BYTECODE_REGISTER_R18,
 
     BYTECODE_REGISTER_COUNT
 };
@@ -81,12 +87,16 @@ static enum bytecode_register bytecode_call_registers[] =
     BYTECODE_REGISTER_RDI,
     BYTECODE_REGISTER_RSI,
     BYTECODE_REGISTER_R8,
+    BYTECODE_REGISTER_R9,
     BYTECODE_REGISTER_R10,
     BYTECODE_REGISTER_R11,
     BYTECODE_REGISTER_R12,
     BYTECODE_REGISTER_R13,
     BYTECODE_REGISTER_R14,
     BYTECODE_REGISTER_R15,
+    BYTECODE_REGISTER_R16,
+    BYTECODE_REGISTER_R17,
+    BYTECODE_REGISTER_R18,
 };
 
 static enum bytecode_register bytecode_internal_call_registers[] =
@@ -94,12 +104,16 @@ static enum bytecode_register bytecode_internal_call_registers[] =
     BYTECODE_REGISTER_RDI,
     BYTECODE_REGISTER_RSI,
     BYTECODE_REGISTER_R8,
+    BYTECODE_REGISTER_R9,
     BYTECODE_REGISTER_R10,
     BYTECODE_REGISTER_R11,
     BYTECODE_REGISTER_R12,
     BYTECODE_REGISTER_R13,
     BYTECODE_REGISTER_R14,
     BYTECODE_REGISTER_R15,
+    BYTECODE_REGISTER_R16,
+    BYTECODE_REGISTER_R17,
+    BYTECODE_REGISTER_R18,
 };
 
 struct bytecode_runner

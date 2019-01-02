@@ -51,12 +51,11 @@ void bytecode_runner_destroy(struct bytecode_runner *bcr)
 
 void bytecode_disassembler_run(struct bytecode_runner *bcr)
 {
-    uint64_t *end = bcr->text + bcr->text_size;
-    while (bcr->text < end) {
+    uint64_t eof = bcr->text_size / sizeof(*bcr->text);
+    while (bcr->reg[BYTECODE_REGISTER_RIP] < eof) {
         uint64_t raw_instr = fetch_instruction(bcr);
         struct bytecode_instruction instr = decode_instruction(raw_instr);
         disassemble_instruction(bcr, instr);
-        if (instr.op == BYTECODE_OPCODE_HALT) break;
     }
 }
 

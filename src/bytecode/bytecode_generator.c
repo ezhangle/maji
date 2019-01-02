@@ -1069,6 +1069,8 @@ void bytecode_emit_expression_call(struct bytecode_emitter *emitter, struct ast_
             bytecode_emit_expression(emitter, call.args[i]);
             if (call.args[i]->res.type->kind == TYPE_ARRAY) {
                 bytecode_emit(emitter, _mov_reg_reg(reg, BYTECODE_REGISTER_R9));
+            } else if (call.args[i]->res.type->kind == TYPE_STRUCT) {
+                bytecode_emit(emitter, _mov_reg_reg(reg, BYTECODE_REGISTER_R9));
             } else {
                 bytecode_emit(emitter, _mov_reg_reg(reg, BYTECODE_REGISTER_RCX));
             }
@@ -1561,8 +1563,16 @@ void bytecode_emit_function(struct bytecode_emitter *emitter, struct symbol *sym
 
     for (size_t i = 0; i < decl->params_count; ++i) {
         enum bytecode_register reg = bytecode_internal_call_registers[i];
-        bytecode_emit(emitter, _mov_lcl_reg(reg));
-        bytecode_emit(emitter, decl->params[i].address);
+        struct type *param_type = resolve_typespec(emitter->resolver, decl->params[i].type);
+        if (param_type->kind == TYPE_STRUCT) {
+            bytecode_emit(emitter, _lea_lcl_reg_imm(BYTECODE_REGISTER_R9));
+            bytecode_emit(emitter, decl->params[i].address);
+            bytecode_emit(emitter, _memc_reg_reg_imm(BYTECODE_REGISTER_R9, reg));
+            bytecode_emit(emitter, type_sizeof(param_type));
+        } else {
+            bytecode_emit(emitter, _mov_lcl_reg(reg));
+            bytecode_emit(emitter, decl->params[i].address);
+        }
     }
 
     bytecode_emit_stmt_block(emitter, symbol->decl->func_decl.block);

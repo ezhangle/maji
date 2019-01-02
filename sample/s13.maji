@@ -19,6 +19,11 @@ make_vec2 :: (x: float, y: float) -> vec2 {
     return v;
 }
 
+print_vec2 :: (v: vec2) {
+    v.x = v.x + 1;
+    printf("v.x = %.2f, v.y = %.2f\n", v.x, v.y);
+}
+
 global_a: vec3 = make_vec3(2.2, 3.3, 4.4);
 global_b := global_a;
 global_c: vec3;
@@ -61,6 +66,7 @@ main :: () -> int {
 
     c: vec2;
     c = b;
+    print_vec2(c);
     printf("c.x = %.2f, c.y = %.2f\n", c.x, c.y);
 
     return 0;

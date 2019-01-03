@@ -15,7 +15,7 @@ TransformProcessType :: (psn: proc_serial_number*, type: process_type) -> int #f
 
 GetEventDispatcherTarget :: () -> void* #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 SendEventToEventTarget :: (event: void*, event_target: void*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
-ReceiveNextEvent :: (num_types: int, typespec: void*, wait: float, pull_event: s8, event: void**) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+ReceiveNextEvent :: (num_types: int, typespec: void*, wait: f64, pull_event: s8, event: void**) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 AEProcessEvent :: (event: void*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 ReleaseEvent :: (event: void*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 GetEventClass :: (event: void*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
@@ -347,7 +347,7 @@ main :: () -> int {
     while (!should_quit) {
         event := null;
         event_target := GetEventDispatcherTarget();
-        while (ReceiveNextEvent(0, null, cast(float) kEventDurationNoWait, cast(s8) 1, &event) == noErr) {
+        while (ReceiveNextEvent(0, null, kEventDurationNoWait, cast(s8) 1, &event) == noErr) {
             event_class := GetEventClass(event);
 
             if (event_class == kEventClassKeyboard) {

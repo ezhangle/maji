@@ -1,0 +1,92 @@
+print_rect_int_value :: (r: rect_int) #foreign "/Users/Koe/test/testlib/test.so";
+print_rect_int_ptr :: (r: rect_int*) #foreign "/Users/Koe/test/testlib/test.so";
+
+print_rect_longlong_value :: (r: rect_longlong) #foreign "/Users/Koe/test/testlib/test.so";
+print_rect_longlong_ptr :: (r: rect_longlong*) #foreign "/Users/Koe/test/testlib/test.so";
+
+print_rect_float_value :: (r: rect_float) #foreign "/Users/Koe/test/testlib/test.so";
+print_rect_float_ptr :: (r: rect_float*) #foreign "/Users/Koe/test/testlib/test.so";
+
+print_rect_double_value :: (r: rect_double) #foreign "/Users/Koe/test/testlib/test.so";
+print_rect_double_ptr :: (r: rect_double*) #foreign "/Users/Koe/test/testlib/test.so";
+
+print_int :: (n: int) #foreign "/Users/Koe/test/testlib/test.so";
+print_longlong :: (n: s64) #foreign "/Users/Koe/test/testlib/test.so";
+print_float :: (n: float) #foreign "/Users/Koe/test/testlib/test.so";
+print_double :: (n: f64) #foreign "/Users/Koe/test/testlib/test.so";
+
+printf :: (fmt: char*, args: var_args) #foreign "/usr/lib/libc.dylib";
+
+point :: struct
+{
+    x: int;
+    y: int;
+}
+
+rect_int :: struct {
+    /*
+    x: int = 1;
+    y: int = 2;
+    w: int = 3;
+    h: int = 4;
+    */
+    a: point;
+    b: point;
+}
+
+rect_longlong :: struct {
+    x: s64 = 1;
+    y: s64 = 2;
+    w: s64 = 3;
+    h: s64 = 4;
+}
+
+rect_float :: struct {
+    x: float = 1.1;
+    y: float = 2.2;
+    w: float = 3.3;
+    h: float = 4.4;
+}
+
+double_point :: struct {
+    x: f64;
+    y: f64;
+}
+
+rect_double :: struct {
+    a: double_point;
+    b: double_point;
+}
+
+main :: () -> int {
+    print_int(5);
+    print_longlong(cast(s64)5);
+    print_float(cast(float)5.5);
+    print_double(5.5);
+
+    ri: rect_int;
+    ri.a.x = 1;
+    ri.a.y = 2;
+    ri.b.x = 3;
+    ri.b.y = 4;
+    print_rect_int_value(ri);
+    print_rect_int_ptr(&ri);
+
+    rl: rect_longlong;
+    print_rect_longlong_value(rl);
+    print_rect_longlong_ptr(&rl);
+
+    rf: rect_float;
+    print_rect_float_value(rf);
+    print_rect_float_ptr(&rf);
+
+    rd: rect_double;
+    rd.a.x = 1.1;
+    rd.a.y = 2.2;
+    rd.b.x = 3.3;
+    rd.b.y = 4.4;
+    print_rect_double_value(rd);
+    print_rect_double_ptr(&rd);
+
+    return 0;
+}

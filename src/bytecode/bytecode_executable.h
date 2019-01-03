@@ -11,6 +11,7 @@ struct bytecode_header
     uint64_t stack_size;
     uint64_t data_size;
     uint64_t text_size;
+    uint64_t type_size;
 };
 
 struct bytecode_executable
@@ -18,6 +19,7 @@ struct bytecode_executable
     struct bytecode_header *header;
     char *data_segment;
     uint64_t *text_segment;
+    char *type_segment;
 };
 #pragma pack(pop)
 

@@ -11,6 +11,7 @@ bool bytecode_write_executable(const char *absolutepath, struct bytecode_executa
     fwrite(exe->header, sizeof(struct bytecode_header), 1, handle);
     fwrite(exe->data_segment, exe->header->data_size, 1, handle);
     fwrite(exe->text_segment, exe->header->text_size, 1, handle);
+    fwrite(exe->type_segment, exe->header->type_size, 1, handle);
 
     fclose(handle);
     return true;
@@ -44,6 +45,7 @@ bool bytecode_load_executable(const char *absolutepath, struct bytecode_executab
     exe->header = header;
     exe->data_segment = contents + sizeof(struct bytecode_header);
     exe->text_segment = (uint64_t *)((char *)exe->data_segment + exe->header->data_size);
+    exe->type_segment = (char *)((char *)exe->text_segment + exe->header->text_size);
 
     return true;
 }

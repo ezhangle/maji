@@ -12,32 +12,32 @@ bytecode_instruction_handler_(disasm_op_nop)
 bytecode_instruction_handler_(disasm_op_mov_int8_reg_imm)
 {
     uint64_t raw = fetch_instruction(bcr);
-    printf("\t0x%llx", raw);
+    printf("\t%3s, 0x%llx", bytecode_register_str[reg1], raw);
 }
 bytecode_instruction_handler_(disasm_op_mov_int16_reg_imm)
 {
     uint64_t raw = fetch_instruction(bcr);
-    printf("\t0x%llx", raw);
+    printf("\t%3s, 0x%llx", bytecode_register_str[reg1], raw);
 }
 bytecode_instruction_handler_(disasm_op_mov_int32_reg_imm)
 {
     uint64_t raw = fetch_instruction(bcr);
-    printf("\t0x%llx", raw);
+    printf("\t%3s, 0x%llx", bytecode_register_str[reg1], raw);
 }
 bytecode_instruction_handler_(disasm_op_mov_int64_reg_imm)
 {
     uint64_t raw = fetch_instruction(bcr);
-    printf("\t0x%llx", raw);
+    printf("\t%3s, 0x%llx", bytecode_register_str[reg1], raw);
 }
 bytecode_instruction_handler_(disasm_op_mov_flt32_reg_imm)
 {
     uint64_t raw = fetch_instruction(bcr);
-    printf("\t0x%llx", raw);
+    printf("\t%3s, 0x%llx", bytecode_register_str[reg1], raw);
 }
 bytecode_instruction_handler_(disasm_op_mov_flt64_reg_imm)
 {
     uint64_t raw = fetch_instruction(bcr);
-    printf("\t0x%llx", raw);
+    printf("\t%3s, 0x%llx", bytecode_register_str[reg1], raw);
 }
 bytecode_instruction_handler_(disasm_op_mov_reg_reg)
 {

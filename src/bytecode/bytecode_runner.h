@@ -99,6 +99,19 @@ static enum bytecode_register bytecode_call_registers[] =
     BYTECODE_REGISTER_R18,
 };
 
+enum bytecode_type
+{
+    BYTECODE_TYPE_I8,
+    BYTECODE_TYPE_I16,
+    BYTECODE_TYPE_I32,
+    BYTECODE_TYPE_I64,
+    BYTECODE_TYPE_F32,
+    BYTECODE_TYPE_F64,
+    BYTECODE_TYPE_ARRAY,
+    BYTECODE_TYPE_PTR,
+    BYTECODE_TYPE_STRUCT
+};
+
 struct bytecode_runner
 {
     bool verbose;
@@ -110,6 +123,9 @@ struct bytecode_runner
 
     char *data;
     uint64_t data_size;
+
+    char *type;
+    uint64_t type_size;
 
     uint64_t *text;
     uint64_t text_size;

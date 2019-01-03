@@ -341,9 +341,15 @@ struct bytecode_emitter
     char *data_cursor;
     char *program_data;
     uint64_t data_size;
+
     uint64_t *text_cursor;
     uint64_t *program_text;
     uint64_t text_size;
+
+    char *type_cursor;
+    char *program_type;
+    uint64_t type_size;
+
     uint64_t *break_patches[12];
     uint64_t break_patches_count;
     uint64_t *continue_patches[12];
@@ -380,6 +386,7 @@ int find_field_offset(struct type *type, const uint8_t *field_name)
 void bytecode_emit_expression(struct bytecode_emitter *emitter, struct ast_expr *expr);
 void bytecode_emit_stmt_block(struct bytecode_emitter *emitter, struct ast_stmt_block block);
 void bytecode_emit_stmt(struct bytecode_emitter *emitter, struct ast_stmt *stmt);
+int bytecode_type_find_entry(struct bytecode_emitter *emitter, const uint8_t *name);
 
 //
 // function return value = BYTECODE_REGISTER_RAX
@@ -1012,11 +1019,30 @@ void bytecode_emit_expression_call(struct bytecode_emitter *emitter, struct ast_
             struct ast_expr *arg = call.args[i];
             enum bytecode_register reg = bytecode_call_registers[i+is_return_type_struct];
             bytecode_emit_expression(emitter, arg);
+            bytecode_emit_load_convert(emitter, arg->res.type);
             if (arg->res.type->kind == TYPE_ARRAY) {
                 // NOTE: if we pass an array to a foreign function, we auto-decay to the address of the first element
                 bytecode_emit(emitter, _mov_reg_reg(reg, BYTECODE_REGISTER_RBX));
+            } else if (arg->res.type->kind == TYPE_STRUCT) {
+                // NOTE: if we pass a struct by value to a foreign function, we pass the address
+                bytecode_emit(emitter, _mov_reg_reg(reg, BYTECODE_REGISTER_RBX));
             } else {
                 bytecode_emit(emitter, _mov_reg_reg(reg, BYTECODE_REGISTER_RCX));
+            }
+        }
+
+        for (int i = call.args_count - 1; i >= 0; --i) {
+            struct ast_expr *arg = call.args[i];
+            if (arg->res.type->kind == TYPE_PTR) {
+                int type_info_pos = bytecode_type_find_entry(emitter, intern_string(u8"s64"));
+                bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RBX));
+                bytecode_emit(emitter, type_info_pos);
+                bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RBX));
+            } else {
+                int type_info_pos = bytecode_type_find_entry(emitter, arg->res.type->symbol->name);
+                bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RBX));
+                bytecode_emit(emitter, type_info_pos);
+                bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RBX));
             }
         }
 
@@ -1650,6 +1676,103 @@ void bytecode_emit_var(struct bytecode_emitter *emitter, struct symbol *symbol)
     }
 }
 
+struct bytecode_type_entry
+{
+    const uint8_t *name;
+    char *storage;
+};
+struct bytecode_type_entry *bytecode_type_table;
+
+int bytecode_type_find_entry(struct bytecode_emitter *emitter, const uint8_t *name)
+{
+    for (size_t i = 0; i < buf_len(bytecode_type_table); ++i) {
+        struct bytecode_type_entry type_entry = bytecode_type_table[i];
+        if (type_entry.name == name) {
+            return type_entry.storage - emitter->program_type;
+        }
+    }
+    return -1;
+}
+
+void bytecode_type_add_entry(struct bytecode_emitter *emitter, const uint8_t *name)
+{
+    char *storage = emitter->type_cursor;
+    buf_push(bytecode_type_table, ((struct bytecode_type_entry) {
+            .name = name,
+            .storage = storage
+    }));
+}
+
+int bytecode_type_kind_to_type_info_kind(enum type_kind kind)
+{
+    switch (kind) {
+    case TYPE_INT8:
+        return BYTECODE_TYPE_I8;
+    case TYPE_INT16:
+        return BYTECODE_TYPE_I16;
+    case TYPE_INT32:
+        return BYTECODE_TYPE_I32;
+    case TYPE_INT64:
+        return BYTECODE_TYPE_I64;
+    case TYPE_FLOAT32:
+        return BYTECODE_TYPE_F32;
+    case TYPE_FLOAT64:
+        return BYTECODE_TYPE_F64;
+    case TYPE_ENUM:
+        return BYTECODE_TYPE_I32;
+    case TYPE_ARRAY:
+        return BYTECODE_TYPE_ARRAY;
+    case TYPE_PTR:
+        return BYTECODE_TYPE_PTR;
+    case TYPE_STRUCT:
+        return BYTECODE_TYPE_STRUCT;
+    default:
+        assert(0);
+        return 0;
+    }
+}
+
+void bytecode_emit_type_info(struct bytecode_emitter *emitter, struct symbol *symbol)
+{
+    assert(bytecode_type_find_entry(emitter, symbol->name) == -1);
+    bytecode_type_add_entry(emitter, symbol->name);
+
+    struct type *type = symbol->type;
+    bool is_struct_type = type->kind == TYPE_STRUCT;
+
+    *(int *)emitter->type_cursor = bytecode_type_kind_to_type_info_kind(type->kind);
+    emitter->type_cursor += sizeof(int);
+
+    *(int *)emitter->type_cursor = (int)type_sizeof(type);
+    emitter->type_cursor += sizeof(int);
+
+    *(int *)emitter->type_cursor = (int)type_alignof(type);
+    emitter->type_cursor += sizeof(int);
+
+    if (is_struct_type) {
+        *(int *)emitter->type_cursor = (int)type->aggregate.fields_count;
+        emitter->type_cursor += sizeof(int);
+
+        for (int i = 0; i < type->aggregate.fields_count; ++i) {
+            struct type_field field = type->aggregate.fields[i];
+            struct type *field_type = field.type;
+
+            if (field.type->kind == TYPE_PTR) {
+                field_type = __type_ptr;
+            }
+
+            int field_pos = bytecode_type_find_entry(emitter, field_type->symbol->name);
+            assert(field_pos != -1);
+
+            *(int *)emitter->type_cursor = field_pos;
+            emitter->type_cursor += sizeof(int);
+        }
+    } else {
+        *(int *)emitter->type_cursor = (int)0;
+        emitter->type_cursor += sizeof(int);
+    }
+}
+
 void bytecode_emit_entry_point(struct bytecode_emitter *emitter)
 {
     bytecode_emit(emitter, _call_imm());
@@ -1669,13 +1792,17 @@ void bytecode_emitter_init(struct bytecode_emitter *emitter, struct resolver *re
     memset(emitter, 0, sizeof(struct bytecode_emitter));
     emitter->data_size = 4096;
     emitter->text_size = 4096;
+    emitter->type_size = 4096;
     emitter->resolver = resolver;
     emitter->program_data = malloc(emitter->data_size * sizeof(char));
     memset(emitter->program_data, 0, emitter->data_size * sizeof(char));
     emitter->program_text = malloc(emitter->text_size * sizeof(uint64_t));
     memset(emitter->program_text, 0, emitter->text_size * sizeof(uint64_t));
+    emitter->program_type = malloc(emitter->type_size * sizeof(char));
+    memset(emitter->program_type, 0, emitter->type_size * sizeof(char));
     emitter->data_cursor = emitter->program_data;
     emitter->text_cursor = emitter->program_text;
+    emitter->type_cursor = emitter->program_type;
     emitter->entry_point = intern_string(u8"main");
 }
 
@@ -1695,6 +1822,18 @@ void bytecode_generate(struct resolver *resolver, struct compiler_options *optio
 {
     struct bytecode_emitter emitter;
     bytecode_emitter_init(&emitter, resolver);
+
+    //
+    // EMIT TYPE INFO
+    //
+
+    for (int i = 0; i < buf_len(resolver->ordered_symbols); ++i) {
+        struct symbol *symbol = resolver->ordered_symbols[i];
+
+        if (symbol->kind == SYMBOL_TYPE) {
+            bytecode_emit_type_info(&emitter, symbol);
+        }
+    }
 
     //
     // ---- ALLOCATE AND INITIALIZE GLOBAL VARIABLES ----
@@ -1742,6 +1881,7 @@ void bytecode_generate(struct resolver *resolver, struct compiler_options *optio
         }
     }
 
+
     //
     // ---- GENERATE EXECUTABLE ----
     //
@@ -1751,17 +1891,20 @@ void bytecode_generate(struct resolver *resolver, struct compiler_options *optio
         .abi_version = 0x1,
         .stack_size = 4096,
         .data_size = (emitter.data_cursor - emitter.program_data) * sizeof(*emitter.program_data),
-        .text_size = (emitter.text_cursor - emitter.program_text) * sizeof(*emitter.program_text)
+        .text_size = (emitter.text_cursor - emitter.program_text) * sizeof(*emitter.program_text),
+        .type_size = (emitter.type_cursor - emitter.program_type) * sizeof(*emitter.program_type)
     };
 
     struct bytecode_executable program = {
         .header = &program_header,
         .data_segment = emitter.program_data,
-        .text_segment = emitter.program_text
+        .text_segment = emitter.program_text,
+        .type_segment = emitter.program_type,
     };
 
     printf("text size: %" PRIu64 " bytes\n", program_header.text_size);
     printf("data size: %" PRIu64 " bytes\n", program_header.data_size);
+    printf("type size: %" PRIu64 " bytes\n", program_header.type_size);
     printf("generated: %" PRIu64 " instructions\n", program_header.text_size / sizeof(*emitter.program_text));
 
     if (emitter.entry_point_patched) {

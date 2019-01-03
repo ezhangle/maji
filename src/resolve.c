@@ -43,6 +43,8 @@ struct type *type_float64 = &(struct type){TYPE_FLOAT64, 8, 8, false};
 const size_t PTR_SIZE  = 8;
 const size_t PTR_ALIGN = 8;
 
+struct type *__type_ptr = &(struct type){TYPE_PTR, PTR_SIZE, PTR_ALIGN, false};
+
 void *memdup(void *src, size_t size)
 {
     void *dest = malloc(size);
@@ -1437,4 +1439,21 @@ void resolver_init(struct resolver *resolver)
     type_float64->symbol = symbol_type(resolver, intern_string(u8"f64"), type_float64);
 
     type_variadic->symbol = symbol_type(resolver, intern_string(u8"var_args"), type_variadic);
+
+    __type_ptr->symbol = symbol_type(resolver, intern_string(u8"__builtin_type_ptr__"), __type_ptr);
+
+    buf_push(resolver->ordered_symbols, __type_ptr->symbol);
+    buf_push(resolver->ordered_symbols, type_char->symbol);
+    buf_push(resolver->ordered_symbols, type_int->symbol);
+    buf_push(resolver->ordered_symbols, type_int8->symbol);
+    buf_push(resolver->ordered_symbols, type_int16->symbol);
+    buf_push(resolver->ordered_symbols, type_int32->symbol);
+    buf_push(resolver->ordered_symbols, type_int64->symbol);
+    buf_push(resolver->ordered_symbols, type_uint8->symbol);
+    buf_push(resolver->ordered_symbols, type_uint16->symbol);
+    buf_push(resolver->ordered_symbols, type_uint32->symbol);
+    buf_push(resolver->ordered_symbols, type_uint64->symbol);
+    buf_push(resolver->ordered_symbols, type_float->symbol);
+    buf_push(resolver->ordered_symbols, type_float32->symbol);
+    buf_push(resolver->ordered_symbols, type_float64->symbol);
 }

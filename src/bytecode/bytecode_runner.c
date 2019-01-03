@@ -31,6 +31,9 @@ void bytecode_runner_init(struct bytecode_runner *bcr, struct bytecode_executabl
     bcr->data = program->data_segment;
     bcr->data_size = program->header->data_size;
 
+    bcr->type = program->type_segment;
+    bcr->type_size = program->header->type_size;
+
     bcr->stack_size = program->header->stack_size;
     bcr->stack = malloc(bcr->stack_size);
     memset(bcr->stack, 0, bcr->stack_size);

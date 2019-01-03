@@ -3,6 +3,7 @@
 
 #include <dlfcn.h>
 #include <dyncall.h>
+#include <dyncall_signature.h>
 #include <assert.h>
 #include <string.h>
 
@@ -846,6 +847,127 @@ bytecode_instruction_handler_(exec_op_call_reg)
     bcr->reg_type[BYTECODE_REGISTER_RIP] = bcr->reg_type[reg1];
 }
 
+int bytecode_type_to_dyncall_type(int type)
+{
+    switch (type) {
+    case BYTECODE_TYPE_I8:
+        return DC_SIGCHAR_CHAR;
+    case BYTECODE_TYPE_I16:
+        return DC_SIGCHAR_SHORT;
+    case BYTECODE_TYPE_I32:
+        return DC_SIGCHAR_LONG;
+    case BYTECODE_TYPE_I64:
+        return DC_SIGCHAR_LONGLONG;
+    case BYTECODE_TYPE_F32:
+        return DC_SIGCHAR_FLOAT;
+    case BYTECODE_TYPE_F64:
+        return DC_SIGCHAR_DOUBLE;
+    case BYTECODE_TYPE_ARRAY:
+        return DC_SIGCHAR_LONGLONG;
+    case BYTECODE_TYPE_PTR:
+        return DC_SIGCHAR_LONGLONG;
+    default:
+        assert(0);
+        return 0;
+    }
+}
+
+static inline int type_info_get_kind(struct bytecode_runner *bcr, int type_info)
+{
+    return *(int*)(bcr->type + type_info);
+}
+
+static inline int type_info_get_size(struct bytecode_runner *bcr, int type_info)
+{
+    return *(int*)(bcr->type + type_info + 4);
+}
+
+static inline int type_info_get_align(struct bytecode_runner *bcr, int type_info)
+{
+    return *(int*)(bcr->type + type_info + 8);
+}
+
+static inline int type_info_get_field_count(struct bytecode_runner *bcr, int type_info)
+{
+    return *(int*)(bcr->type + type_info + 12);
+}
+
+static inline int type_info_get_field(struct bytecode_runner *bcr, int type_info, int field_index)
+{
+    return *(int*)(bcr->type + type_info + 12 + (4 * (field_index + 1)));
+}
+
+struct bytecode_runner_type_info
+{
+    int kind;
+    int size;
+    int align;
+    int fields;
+};
+
+static inline struct bytecode_runner_type_info create_type_info(struct bytecode_runner *bcr, int type_info_pos)
+{
+    struct bytecode_runner_type_info info = {
+        .kind = type_info_get_kind(bcr, type_info_pos),
+        .size = type_info_get_size(bcr, type_info_pos),
+        .align = type_info_get_align(bcr, type_info_pos),
+        .fields = type_info_get_field_count(bcr, type_info_pos)
+    };
+    return info;
+}
+
+static inline void bytecode_add_dyncall_arg_substruct(struct bytecode_runner *bcr, DCstruct *s, int arg_type_info_pos, struct bytecode_runner_type_info arg_type_info)
+{
+    assert(arg_type_info.kind == BYTECODE_TYPE_STRUCT);
+    // printf("ARG is of type %d, size %d, align %d, fields %d\n", arg_type_info.kind, arg_type_info.size, arg_type_info.align, arg_type_info.fields);
+
+    dcSubStruct(s, arg_type_info.fields, arg_type_info.align, 1);
+    for (int field_index = 0; field_index < arg_type_info.fields; ++field_index) {
+        int field_type_info_pos = type_info_get_field(bcr, arg_type_info_pos, field_index);
+        struct bytecode_runner_type_info field_type_info = create_type_info(bcr, field_type_info_pos);
+        if (field_type_info.kind == BYTECODE_TYPE_STRUCT) {
+            bytecode_add_dyncall_arg_substruct(bcr, s, field_type_info_pos, field_type_info);
+        } else {
+            // printf("field: type %d, size %d, align %d\n", field_type_info.kind, field_type_info.size, field_type_info.align);
+            dcStructField(s, bytecode_type_to_dyncall_type(field_type_info.kind), field_type_info.align, 1);
+        }
+    }
+    dcCloseStruct(s);
+}
+
+static inline void bytecode_add_dyncall_arg(struct bytecode_runner *bcr, DCCallVM *vm, uint64_t reg, enum bytecode_register_kind reg_type, int arg_type_info_pos)
+{
+    struct bytecode_runner_type_info arg_type_info = create_type_info(bcr, arg_type_info_pos);
+    // printf("ARG is of type %d, size %d, align %d, fields %d\n", arg_type_info.kind, arg_type_info.size, arg_type_info.align, arg_type_info.fields);
+
+    if (arg_type_info.kind == BYTECODE_TYPE_STRUCT) {
+        DCstruct *s = dcNewStruct(arg_type_info.fields, arg_type_info.align);
+        for (int field_index = 0; field_index < arg_type_info.fields; ++field_index) {
+            int field_type_info_pos = type_info_get_field(bcr, arg_type_info_pos, field_index);
+            struct bytecode_runner_type_info field_type_info = create_type_info(bcr, field_type_info_pos);
+            if (field_type_info.kind == BYTECODE_TYPE_STRUCT) {
+                bytecode_add_dyncall_arg_substruct(bcr, s, field_type_info_pos, field_type_info);
+            } else {
+                // printf("field: type %d, size %d, align %d\n", field_type_info.kind, field_type_info.size, field_type_info.align);
+                dcStructField(s, bytecode_type_to_dyncall_type(field_type_info.kind), field_type_info.align, 1);
+            }
+        }
+        dcCloseStruct(s);
+        dcArgStruct(vm, s, (void*)reg);
+        dcFreeStruct(s);
+    } else {
+        switch (reg_type) {
+        case BYTECODE_REGISTER_KIND_I64: dcArgLongLong(vm, as_i64(reg)); break;
+        case BYTECODE_REGISTER_KIND_I32: dcArgLong(vm, as_i32(reg));      break;
+        case BYTECODE_REGISTER_KIND_I16: dcArgShort(vm, as_i16(reg));    break;
+        case BYTECODE_REGISTER_KIND_I8:  dcArgChar(vm, as_i8(reg));      break;
+        case BYTECODE_REGISTER_KIND_F64: dcArgDouble(vm, as_f64(reg));   break;
+        case BYTECODE_REGISTER_KIND_F32: dcArgFloat(vm, as_f32(reg));   break;
+        default: break;
+        }
+    }
+}
+
 bytecode_instruction_handler_(exec_op_call_foreign)
 {
     int64_t *stack = as_i64_ptr(bcr->stack[bcr->reg[BYTECODE_REGISTER_RSP]]);
@@ -874,15 +996,13 @@ bytecode_instruction_handler_(exec_op_call_foreign)
 
     for (unsigned i = 0; i < reg_arg_count; ++i) {
         uint64_t reg = bcr->reg[bytecode_call_registers[i]];
-        switch (bcr->reg_type[bytecode_call_registers[i]]) {
-        case BYTECODE_REGISTER_KIND_I64: dcArgLongLong(vm, as_i64(reg)); break;
-        case BYTECODE_REGISTER_KIND_I32: dcArgInt(vm, as_i32(reg));      break;
-        case BYTECODE_REGISTER_KIND_I16: dcArgShort(vm, as_i16(reg));    break;
-        case BYTECODE_REGISTER_KIND_I8:  dcArgChar(vm, as_i8(reg));      break;
-        case BYTECODE_REGISTER_KIND_F64: dcArgDouble(vm, as_f64(reg));   break;
-        case BYTECODE_REGISTER_KIND_F32: dcArgDouble(vm, as_f32(reg));   break;
-        default: break;
-        }
+        enum bytecode_register_kind reg_type = bcr->reg_type[bytecode_call_registers[i]];
+
+        int arg_type_info_pos = (int)((int64_t)*--stack);
+        bcr->reg[BYTECODE_REGISTER_RSP] -= sizeof(int64_t);
+        --bcr->stack_info;
+
+        bytecode_add_dyncall_arg(bcr, vm, reg, reg_type, arg_type_info_pos);
     }
 
     switch (ret_kind) {

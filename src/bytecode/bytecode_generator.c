@@ -1033,7 +1033,8 @@ void bytecode_emit_expression_call(struct bytecode_emitter *emitter, struct ast_
 
         for (int i = call.args_count - 1; i >= 0; --i) {
             struct ast_expr *arg = call.args[i];
-            if (arg->res.type->kind == TYPE_PTR) {
+            if ((arg->res.type->kind == TYPE_PTR) ||
+                (arg->res.type->kind == TYPE_ARRAY)) {
                 int type_info_pos = bytecode_type_find_entry(emitter, intern_string(u8"s64"));
                 bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RBX));
                 bytecode_emit(emitter, type_info_pos);

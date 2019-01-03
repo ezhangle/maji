@@ -1,5 +1,19 @@
+//
+// general functions from libc
+//
+
+usleep :: (n: int) #foreign "/usr/lib/libc.dylib";
+sleep :: (n: int) #foreign "/usr/lib/libc.dylib";
+printf :: (format: char*, args: var_args) -> int #foreign "/usr/lib/libc.dylib";
+malloc :: (size: int) -> void* #foreign "/usr/lib/libc.dylib";
+free :: (ptr: void*) #foreign "/usr/lib/libc.dylib";
+
+//
+// cgswindow.maji
+//
+
 CGSMainConnectionID :: () -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
-CGSNewWindow :: (cid: int, type: backing_type, x: float, y: float, region: void*, wid: int*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+CGSNewWindow :: (cid: int, type: backing_type, x: f64, y: f64, region: void*, wid: int*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 CGSNewRegionWithRect :: (rect: cg_rect*, region: void**) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 CGSReleaseWindow :: (cid: int, wid: int) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 CGSAddDragRegion :: (cid: int, wid: int, region: void*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
@@ -8,6 +22,9 @@ CGSOrderWindow :: (cid: int, wid: int, mode: ordering_mode, rel_wid: int) -> int
 CGSSetWindowLevel :: (cid: int, wid: int, window_level: int) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 CGSSetWindowOpacity :: (cid: int, wid: int, opaque: int) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 CGWindowLevelForKey :: (level: window_level) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+CGWindowContextCreate :: (cid: int, wid: int, options: void*) -> void* #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+CGContextClearRect :: (context: void*, rect: cg_rect) #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+CGContextRelease :: (context: void*) #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 
 GetCurrentProcess :: (psn: proc_serial_number*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 SetFrontProcess :: (psn: proc_serial_number*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
@@ -22,11 +39,142 @@ GetEventClass :: (event: void*) -> int #foreign "/System/Library/Frameworks/Carb
 GetEventKind :: (event: void*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 GetEventParameter :: (event: void*, name: int, type: int, out_type: int*, in_size: int, out_size: int*, out_data: void*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 
-usleep :: (n: int) #foreign "/usr/lib/libc.dylib";
-sleep :: (n: int) #foreign "/usr/lib/libc.dylib";
-printf :: (format: char*, args: var_args) -> int #foreign "/usr/lib/libc.dylib";
-malloc :: (size: int) -> void* #foreign "/usr/lib/libc.dylib";
-free :: (ptr: void*) #foreign "/usr/lib/libc.dylib";
+//
+// cgl.maji
+//
+
+CGSAddSurface :: (cid: int, wid: int, surface_id: int*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+CGSSetSurfaceBounds :: (cid: int, wid: int, surface_id: int, rect: cg_rect2) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+CGSOrderSurface :: (cid: int, wid: int, surface_id: int, one: int, zero: int) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+CGSRemoveSurface :: (cid: int, wid: int, surface_id: int) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+
+CGLChoosePixelFormat :: (attributes: cgl_pixelformat_attribute*, pixelformat: void*, num: int*) -> int #foreign "/System/Library/Frameworks/OpenGL.framework/OpenGL";
+CGLDestroyPixelFormat :: (pixelformat: void*) -> int #foreign "/System/Library/Frameworks/OpenGL.framework/OpenGL";
+CGLCreateContext :: (pixelformat: void*, share: void*, ctx: void*) -> int #foreign "/System/Library/Frameworks/OpenGL.framework/OpenGL";
+CGLDestroyContext :: (ctx: void*) -> int #foreign "/System/Library/Frameworks/OpenGL.framework/OpenGL";
+CGLSetCurrentContext :: (ctx: void*) -> int #foreign "/System/Library/Frameworks/OpenGL.framework/OpenGL";
+CGLGetCurrentContext :: () -> void* #foreign "/System/Library/Frameworks/OpenGL.framework/OpenGL";
+CGLFlushDrawable :: (ctx: void*) -> int #foreign "/System/Library/Frameworks/OpenGL.framework/OpenGL";
+CGLSetParameter :: (ctx: void*, param: cgl_context_parameter, params: int*) -> int #foreign "/System/Library/Frameworks/OpenGL.framework/OpenGL";
+CGLGetParameter :: (ctx: void*, param: cgl_context_parameter, params: int*) -> int #foreign "/System/Library/Frameworks/OpenGL.framework/OpenGL";
+CGLSetSurface :: (ctx: void*, cid: int, wid: int, surface_id: int) -> int #foreign "/System/Library/Frameworks/OpenGL.framework/OpenGL";
+
+cgl_pixelformat_attribute :: enum {
+    ALL_RENDERERS                         ::   1; /* choose from all available renderers          */
+    TRIPLE_BUFFER                         ::   3; /* choose a triple buffered pixel format        */
+    DOUBLE_BUFFER                         ::   5; /* choose a double buffered pixel format        */
+    COLOR_SIZE                            ::   8; /* number of color buffer bits                  */
+    ALPHA_SIZE                            ::  11; /* number of alpha component bits               */
+    DEPTH_SIZE                            ::  12; /* number of depth buffer bits                  */
+    STENCIL_SIZE                          ::  13; /* number of stencil buffer bits                */
+    MINIMUM_POLICY                        ::  51; /* never choose smaller buffers than requested  */
+    MAXIMUM_POLICY                        ::  52; /* choose largest buffers of type requested     */
+    SAMPLE_BUFFERS                        ::  55; /* number of multi sample buffers               */
+    SAMPLES                               ::  56; /* number of samples per multi sample buffer    */
+    COLOR_FLOAT                           ::  58; /* color buffers store floating point pixels    */
+    MULTI_SAMPLE                          ::  59; /* choose multisampling                         */
+    SUPER_SAMPLE                          ::  60; /* choose supersampling                         */
+    SAMPLE_ALPHA                          ::  61; /* request alpha filtering                      */
+    RENDERER_ID                           ::  70; /* request renderer by ID                       */
+    NO_RECOVERY                           ::  72; /* disable all failure recovery systems         */
+    ACCELERATED                           ::  73; /* choose a hardware accelerated renderer       */
+    CLOSEST_POLICY                        ::  74; /* choose the closest color buffer to request   */
+    BACKING_STORE                         ::  76; /* back buffer contents are valid after swap    */
+    BACKING_VOLATILE                      ::  77; /* back buffer contents are volatile after swap */
+    DISPLAY_MASK                          ::  84; /* mask limiting supported displays             */
+    ALLOW_OFFLINE_RENDERERS               ::  96; /* show offline renderers in pixel formats      */
+    ACCELERATED_COMPUTE                   ::  97; /* choose a hardware accelerated compute device */
+    OPENGL_PROFILE                        ::  99; /* specify an OpenGL Profile to use             */
+    SUPPORTS_AUTOMATIC_GRAPHICS_SWITCHING :: 101; /* responds to display changes                  */
+    VIRTUAL_SCREEN_COUNT                  :: 128; /* number of virtual screens in this format     */
+
+    /* NOTE: the following attributes are deprecated in Core Profile */
+    AUX_BUFFERS       ::   7; /* number of aux buffers */
+    ACCUM_SIZE        ::  14; /* number of accum buffer bits */
+    AUX_DEPTH_STENCIL ::  57; /* each aux buffer has its own depth stencil */
+    STEREO            ::   6;
+    OFF_SCREEN        ::  53;
+    WINDOW            ::  80;
+    COMPLIANT         ::  83;
+    PBUFFER           ::  90;
+    REMOTE_PBUFFER    ::  91;
+    SINGLE_RENDERER   ::  71;
+    ROBUST            ::  75;
+    MPSAFE            ::  78;
+    MULTI_SCREEN      ::  81;
+    FULL_SCREEN       ::  54;
+}
+
+cgl_context_parameter :: enum {
+    SWAP_RECTANGLE                          :: 200; /* 4 params. Set or get the swap rectangle {x, y, w, h}             */
+    SWAP_INTERVAL                           :: 222; /* 1 param.  0 -> Don't sync, 1 -> Sync to vertical retrace         */
+    DISPATCH_TABLE_SIZE                     :: 224; /* 1 param.  Get the dispatch table size                            */
+    /* Note: kCGLCPClientStorage is always a pointer-sized parameter, even though the API claims GLint.                 */
+    CLIENT_STORAGE                          :: 226; /* 1 param.  Context specific generic storage                       */
+    SURFACE_TEXTURE                         :: 228; /* 3 params. Context, target, internal_format                       */
+    /*  USED BY AGL                                                                                                     */
+    /*  AGL_STATE_VALIDATION                   230                                                                      */
+    /*  AGL_BUFFER_NAME                        231                                                                      */
+    /*  AGL_ORDER_CONTEXT_TO_FRONT             232                                                                      */
+    /*  AGL_CONTEXT_SURFACE_ID                 233                                                                      */
+    /*  AGL_CONTEXT_DISPLAY_ID                 234                                                                      */
+    SURFACE_ORDER                           :: 235; /* 1 param.  1 -> Above window, -1 -> Below Window                  */
+    SURFACE_OPACITY                         :: 236; /* 1 param.  1 -> Surface is opaque (default), 0 -> non-opaque      */
+    /*  USED BY AGL                                                                                                     */
+    /*  AGL_CLIP_REGION                        254                                                                      */
+    /*  AGL_FS_CAPTURE_SINGLE                  255                                                                      */
+    SURFACE_BACKING_SIZE                    :: 304; /* 2 params. Width/height of surface backing size                   */
+    /*  AGL_SURFACE_VOLATILE                   306                                                                      */
+    SURFACE_SURFACE_VOLATILE                :: 306; /* 1 param.  Surface volatile state                                 */
+    RECLAIM_RESOURCES                       :: 308; /* 0 params.                                                        */
+    CURRENT_RENDERER_ID                     :: 309; /* 1 param.  Retrieves the current renderer ID                      */
+    GPU_VERTEX_PROCESSING                   :: 310; /* 1 param.  Currently processing vertices with GPU (get)           */
+    GPU_FRAGMENT_PROCESSING                 :: 311; /* 1 param.  Currently processing fragments with GPU (get)          */
+    HAS_DRAWABLE                            :: 314; /* 1 param.  Boolean returned if drawable is attached			    */
+    MP_SWAPS_IN_FLIGHT                      :: 315; /* 1 param.  Max number of swaps queued by the MP GL engine	        */
+    GPU_RESTART_STATUS                      :: 317; /* 1 param.  Retrieves and clears the current CGLGPURestartStatus   */
+    ABORT_ON_GPU_RESTART_STATUS_BLACKLISTED :: 318; /* 1 param.  Establish action to take upon blacklisting             */
+    SUPPORT_GPU_RESTART                     :: 319; /* 1 param.  Does driver support auto-restart of GPU on hang/crash? */
+    SUPPORT_SEPARATE_ADDRESS_SPACE          :: 320; /* 1 param.  Does context get its own GPU address space?            */
+    CONTEXT_PRIORITY_REQUEST                :: 608; /* 1 param.  kCGLCPContextPriorityRequest[High|Normal|Low] 0|1|2    */
+}
+
+cgl_opengl_profile :: enum {
+    VERSION_LEGACY   :: 0x1000; /* choose a renderer compatible with GL1.0       */
+    VERSION_3_2_CORE :: 0x3200; /* choose a renderer capable of GL3.2 or later   */
+    VERSION_GL3_CORE :: 0x3200; /* choose a renderer capable of GL3.2 or later   */
+    VERSION_GL4_CORE :: 0x4100; /* choose a renderer capable of GL4.1 or later   */
+}
+
+glBegin :: (mode: gl_begin_mode) #foreign "/System/Library/Frameworks/OpenGL.framework/OpenGL";
+glEnd :: () #foreign "/System/Library/Frameworks/OpenGL.framework/OpenGL";
+glLoadIdentity :: () #foreign "/System/Library/Frameworks/OpenGL.framework/OpenGL";
+glMatrixMode :: (mode: gl_matrix_mode) #foreign "/System/Library/Frameworks/OpenGL.framework/OpenGL";
+
+glClear :: (mask: int) #foreign "/System/Library/Frameworks/OpenGL.framework/OpenGL";
+glClearColor :: (red: float, green: float, blue: float, alpha: float) #foreign "/System/Library/Frameworks/OpenGL.framework/OpenGL";
+glRotatef :: (angle: float, x: float, y: float, z: float) #foreign "/System/Library/Frameworks/OpenGL.framework/OpenGL";
+glVertex2f :: (x: float, y: float) #foreign "/System/Library/Frameworks/OpenGL.framework/OpenGL";
+glColor4f :: (red: float, green: float, blue: float, alpha: float) #foreign "/System/Library/Frameworks/OpenGL.framework/OpenGL";
+
+gl_begin_mode :: enum {
+    POINTS         :: 0x0000;
+    LINES          :: 0x0001;
+    LINE_LOOP      :: 0x0002;
+    LINE_STRIP     :: 0x0003;
+    TRIANGLES      :: 0x0004;
+    TRIANGLE_STRIP :: 0x0005;
+    TRIANGLE_FAN   :: 0x0006;
+    QUADS          :: 0x0007;
+    QUAD_STRIP     :: 0x0008;
+    POLYGON        :: 0x0009;
+}
+
+gl_matrix_mode :: enum {
+    MODELVIEW  :: 0x1700;
+    PROJECTION :: 0x1701;
+    TEXTURE    :: 0x1702;
+}
 
 noErr :: 0;
 kEventDurationNoWait :: 0.0;
@@ -227,11 +375,21 @@ cgl_window :: struct {
     psn: proc_serial_number;
     rect: cg_rect;
     region: void*;
+    surface: int;
+    context: void *;
+    v_sync: int;
 }
 
 cg_rect :: struct {
     origin: cg_point;
     size: cg_size;
+}
+
+cg_rect2 :: struct {
+    x: f64;
+    y: f64;
+    w: f64;
+    h: f64;
 }
 
 cg_point :: struct {
@@ -249,6 +407,15 @@ proc_serial_number :: struct {
     low_long: int;
 }
 
+make_rect2 :: (x: f64, y: f64, w: f64, h: f64) -> cg_rect2 {
+    rect: cg_rect2;
+    rect.x = x;
+    rect.y = y;
+    rect.w = w;
+    rect.h = h;
+    return rect;
+}
+
 make_rect :: (x: f64, y: f64, w: f64, h: f64) -> cg_rect {
     rect: cg_rect;
     rect.origin.x = x;
@@ -258,14 +425,51 @@ make_rect :: (x: f64, y: f64, w: f64, h: f64) -> cg_rect {
     return rect;
 }
 
+cgl_window_surface_init :: (win: cgl_window *) {
+    surface_opacity := 0;
+    CGLSetParameter(win.context, cgl_context_parameter.SURFACE_OPACITY, &surface_opacity);
+    CGSAddSurface(win.connection, win.id, &win.surface);
+
+    // printf("SETTING BOUNDS FOR CGL SURFACE: %d\n", win.surface);
+    rect := make_rect2(0.0, 0.0, win.rect.size.width, win.rect.size.height);
+    CGSSetSurfaceBounds(win.connection, win.id, win.surface, rect);
+
+    CGSOrderSurface(win.connection, win.id, win.surface, 1, 0);
+    CGLSetSurface(win.context, win.connection, win.id, win.surface);
+}
+
+cgl_window_context_init :: (win: cgl_window *) {
+    pixelformat: void *;
+    drawable: int;
+    num: int;
+
+    attributes: cgl_pixelformat_attribute[5];
+    attributes[0] = cgl_pixelformat_attribute.DOUBLE_BUFFER;
+    attributes[1] = cgl_pixelformat_attribute.ACCELERATED;
+    attributes[2] = cgl_pixelformat_attribute.OPENGL_PROFILE;
+    attributes[3] = cgl_opengl_profile.VERSION_LEGACY;
+    attributes[4] = 0;
+
+    CGLChoosePixelFormat(attributes, &pixelformat, &num);
+
+    CGLCreateContext(pixelformat, null, &win.context);
+    CGLSetParameter(win.context, cgl_context_parameter.SWAP_INTERVAL, &win.v_sync);
+
+    cgl_window_surface_init(win);
+
+    CGLGetParameter(win.context, cgl_context_parameter.HAS_DRAWABLE, &drawable);
+
+    CGLDestroyPixelFormat(pixelformat);
+}
+
 cgl_window_init :: (win: cgl_window *) {
     GetCurrentProcess(&win.psn);
 
     win.connection = CGSMainConnectionID();
 
-    win.rect = make_rect(20.0, 20.0, 300.0, 200.0);
+    win.rect = make_rect(200.0, 200.0, 500.0, 500.0);
     CGSNewRegionWithRect(&win.rect, &win.region);
-    CGSNewWindow(win.connection, backing_type.BUFFERED, cast(float) win.rect.origin.x, cast(float) win.rect.origin.y, win.region, &win.id);
+    CGSNewWindow(win.connection, backing_type.BUFFERED, win.rect.origin.x, win.rect.origin.y, win.region, &win.id);
 
     CGSAddActivationRegion(win.connection, win.id, win.region);
 
@@ -274,15 +478,33 @@ cgl_window_init :: (win: cgl_window *) {
 
     TransformProcessType(&win.psn, process_type.FOREGROUND);
     cgl_window_bring_to_front(win);
+
+    /*
+    context := CGWindowContextCreate(win.connection, win.id, null);
+    printf("CLEAR CONTEXT: %p\n", context);
+    CGContextClearRect(context, win.rect);
+    CGContextRelease(context);
+    */
+
+    cgl_window_context_init(win);
 }
 
 cgl_window_destroy :: (win: cgl_window *) {
+    CGLDestroyContext(win.context);
     CGSReleaseWindow(win.connection, win.id);
 }
 
 cgl_window_bring_to_front :: (win: cgl_window *) {
     CGSOrderWindow(win.connection, win.id, ordering_mode.ABOVE, 0);
     SetFrontProcess(&win.psn);
+}
+
+cgl_window_make_current :: (win: cgl_window *) {
+    CGLSetCurrentContext(win.context);
+}
+
+cgl_window_flush :: (win: cgl_window *) {
+    CGLFlushDrawable(win.context);
 }
 
 cgl_window_add_drag_region :: (win: cgl_window *, x: f64, y: f64, width: f64, height: f64) {
@@ -339,10 +561,15 @@ mouse_handler :: (event: void *) {
 
 should_quit := 0;
 
+GL_COLOR_BUFFER_BIT :: 0x00004000;
+
 main :: () -> int {
     win: cgl_window;
     cgl_window_init(&win);
-    cgl_window_add_drag_region(&win, 0.0, 0.0, win.rect.size.width, 20.0);
+    cgl_window_add_drag_region(&win, 0.0, 0.0, win.rect.size.width, win.rect.size.height);
+    cgl_window_make_current(&win);
+
+    angle := cast(float)0.0;
 
     while (!should_quit) {
         event := null;
@@ -361,6 +588,32 @@ main :: () -> int {
             SendEventToEventTarget(event, event_target);
             ReleaseEvent(event);
         }
+
+        glClearColor(cast(float)0.0, cast(float)0.0, cast(float)0.0, cast(float)1.0);
+        glClear(cast(int)GL_COLOR_BUFFER_BIT);
+
+        glMatrixMode(gl_matrix_mode.PROJECTION);
+        glLoadIdentity();
+        glMatrixMode(gl_matrix_mode.MODELVIEW);
+        glLoadIdentity();
+
+        angle = angle + cast(float)0.001;
+        if (cast(int)(angle > cast(float)1.5)) {
+            angle = cast(float)0.0;
+        }
+
+        printf("ANGLE = %.4f\n", cast(f64)angle);
+        glRotatef(angle * cast(float)1000.0, cast(float)0.0, cast(float)0.0, cast(float)1.0);
+
+        glBegin(gl_begin_mode.QUADS);
+        glColor4f(cast(float)1.0, cast(float)1.0, cast(float)0.0, cast(float)1.0);
+        glVertex2f(cast(float)0.25, cast(float)0.25);
+        glVertex2f(cast(float)0.75, cast(float)0.25);
+        glVertex2f(cast(float)0.75, cast(float)0.75);
+        glVertex2f(cast(float)0.25, cast(float)0.75);
+        glEnd();
+
+        cgl_window_flush(&win);
     }
 
     cgl_window_destroy(&win);

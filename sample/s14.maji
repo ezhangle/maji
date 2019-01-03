@@ -7,7 +7,7 @@ print_rect_longlong_ptr :: (r: rect_longlong*) #foreign "/Users/Koe/test/testlib
 print_rect_float_value :: (r: rect_float) #foreign "/Users/Koe/test/testlib/test.so";
 print_rect_float_ptr :: (r: rect_float*) #foreign "/Users/Koe/test/testlib/test.so";
 
-print_rect_double_value :: (r: rect_double) #foreign "/Users/Koe/test/testlib/test.so";
+print_rect_double_value :: (a: int, b: int, c: int, r: rect_double) #foreign "/Users/Koe/test/testlib/test.so";
 print_rect_double_ptr :: (r: rect_double*) #foreign "/Users/Koe/test/testlib/test.so";
 
 print_int :: (n: int) #foreign "/Users/Koe/test/testlib/test.so";
@@ -80,12 +80,13 @@ main :: () -> int {
     print_rect_float_value(rf);
     print_rect_float_ptr(&rf);
 
+    n: int = 3;
     rd: rect_double;
-    rd.a.x = 1.1;
-    rd.a.y = 2.2;
-    rd.b.x = 3.3;
-    rd.b.y = 4.4;
-    print_rect_double_value(rd);
+    rd.a.x = 5.1;
+    rd.a.y = 5.2;
+    rd.b.x = 5.3;
+    rd.b.y = 5.4;
+    print_rect_double_value(3, 2, 1, rd);
     print_rect_double_ptr(&rd);
 
     return 0;

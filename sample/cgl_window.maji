@@ -465,6 +465,7 @@ cgl_window_context_init :: (win: cgl_window *) {
 cgl_window_init :: (win: cgl_window *) {
     GetCurrentProcess(&win.psn);
 
+    win.v_sync = 1;
     win.connection = CGSMainConnectionID();
 
     win.rect = make_rect(200.0, 200.0, 500.0, 500.0);
@@ -559,6 +560,32 @@ mouse_handler :: (event: void *) {
     }
 }
 
+angle := cast(float)0.0;
+render_triangle :: (win: cgl_window *) {
+    glClearColor(cast(float)0.0, cast(float)0.0, cast(float)0.0, cast(float)1.0);
+    glClear(cast(int)GL_COLOR_BUFFER_BIT);
+
+    glMatrixMode(gl_matrix_mode.PROJECTION);
+    glLoadIdentity();
+    glMatrixMode(gl_matrix_mode.MODELVIEW);
+    glLoadIdentity();
+
+    glRotatef(angle * cast(float)1000.0, cast(float)0.0, cast(float)0.0, cast(float)1.0);
+
+    angle = angle + cast(float)0.001;
+    if (cast(int)(angle > cast(float)1.5)) {
+        angle = cast(float)0.0;
+    }
+
+    glBegin(gl_begin_mode.QUADS);
+    glColor4f(angle, cast(float)1.0, cast(float)0.0, cast(float)1.0);
+    glVertex2f(cast(float)0.25, cast(float)0.25);
+    glVertex2f(cast(float)0.75, cast(float)0.25);
+    glVertex2f(cast(float)0.75, cast(float)0.75);
+    glVertex2f(cast(float)0.25, cast(float)0.75);
+    glEnd();
+}
+
 should_quit := 0;
 
 GL_COLOR_BUFFER_BIT :: 0x00004000;
@@ -569,11 +596,10 @@ main :: () -> int {
     cgl_window_add_drag_region(&win, 0.0, 0.0, win.rect.size.width, win.rect.size.height);
     cgl_window_make_current(&win);
 
-    angle := cast(float)0.0;
-
     while (!should_quit) {
         event := null;
         event_target := GetEventDispatcherTarget();
+
         while (ReceiveNextEvent(0, null, kEventDurationNoWait, cast(s8) 1, &event) == noErr) {
             event_class := GetEventClass(event);
 
@@ -589,29 +615,7 @@ main :: () -> int {
             ReleaseEvent(event);
         }
 
-        glClearColor(cast(float)0.0, cast(float)0.0, cast(float)0.0, cast(float)1.0);
-        glClear(cast(int)GL_COLOR_BUFFER_BIT);
-
-        glMatrixMode(gl_matrix_mode.PROJECTION);
-        glLoadIdentity();
-        glMatrixMode(gl_matrix_mode.MODELVIEW);
-        glLoadIdentity();
-
-        angle = angle + cast(float)0.001;
-        if (cast(int)(angle > cast(float)1.5)) {
-            angle = cast(float)0.0;
-        }
-
-        printf("ANGLE = %.4f\n", cast(f64)angle);
-        glRotatef(angle * cast(float)1000.0, cast(float)0.0, cast(float)0.0, cast(float)1.0);
-
-        glBegin(gl_begin_mode.QUADS);
-        glColor4f(cast(float)1.0, cast(float)1.0, cast(float)0.0, cast(float)1.0);
-        glVertex2f(cast(float)0.25, cast(float)0.25);
-        glVertex2f(cast(float)0.75, cast(float)0.25);
-        glVertex2f(cast(float)0.75, cast(float)0.75);
-        glVertex2f(cast(float)0.25, cast(float)0.75);
-        glEnd();
+        render_triangle(&win);
 
         cgl_window_flush(&win);
     }

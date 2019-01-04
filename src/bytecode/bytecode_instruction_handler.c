@@ -2,10 +2,10 @@
 #include "bytecode_runner.h"
 
 #include <dlfcn.h>
-#include <dyncall.h>
-#include <dyncall_signature.h>
+#include <ffi.h>
 #include <assert.h>
 #include <string.h>
+#include <stdlib.h>
 
 #define as_i8_ptr(val) (int8_t*)&val
 #define as_i16_ptr(val) (int16_t*)&val
@@ -847,31 +847,6 @@ bytecode_instruction_handler_(exec_op_call_reg)
     bcr->reg_type[BYTECODE_REGISTER_RIP] = bcr->reg_type[reg1];
 }
 
-int bytecode_type_to_dyncall_type(int type)
-{
-    switch (type) {
-    case BYTECODE_TYPE_I8:
-        return DC_SIGCHAR_CHAR;
-    case BYTECODE_TYPE_I16:
-        return DC_SIGCHAR_SHORT;
-    case BYTECODE_TYPE_I32:
-        return DC_SIGCHAR_LONG;
-    case BYTECODE_TYPE_I64:
-        return DC_SIGCHAR_LONGLONG;
-    case BYTECODE_TYPE_F32:
-        return DC_SIGCHAR_FLOAT;
-    case BYTECODE_TYPE_F64:
-        return DC_SIGCHAR_DOUBLE;
-    case BYTECODE_TYPE_ARRAY:
-        return DC_SIGCHAR_LONGLONG;
-    case BYTECODE_TYPE_PTR:
-        return DC_SIGCHAR_LONGLONG;
-    default:
-        assert(0);
-        return 0;
-    }
-}
-
 static inline int type_info_get_kind(struct bytecode_runner *bcr, int type_info)
 {
     return *(int*)(bcr->type + type_info);
@@ -916,55 +891,71 @@ static inline struct bytecode_runner_type_info create_type_info(struct bytecode_
     return info;
 }
 
-static inline void bytecode_add_dyncall_arg_substruct(struct bytecode_runner *bcr, DCstruct *s, int arg_type_info_pos, struct bytecode_runner_type_info arg_type_info)
-{
-    assert(arg_type_info.kind == BYTECODE_TYPE_STRUCT);
-    // printf("ARG is of type %d, size %d, align %d, fields %d\n", arg_type_info.kind, arg_type_info.size, arg_type_info.align, arg_type_info.fields);
 
-    dcSubStruct(s, arg_type_info.fields, arg_type_info.align, 1);
-    for (int field_index = 0; field_index < arg_type_info.fields; ++field_index) {
-        int field_type_info_pos = type_info_get_field(bcr, arg_type_info_pos, field_index);
-        struct bytecode_runner_type_info field_type_info = create_type_info(bcr, field_type_info_pos);
-        if (field_type_info.kind == BYTECODE_TYPE_STRUCT) {
-            bytecode_add_dyncall_arg_substruct(bcr, s, field_type_info_pos, field_type_info);
-        } else {
-            // printf("field: type %d, size %d, align %d\n", field_type_info.kind, field_type_info.size, field_type_info.align);
-            dcStructField(s, bytecode_type_to_dyncall_type(field_type_info.kind), field_type_info.align, 1);
-        }
-    }
-    dcCloseStruct(s);
-}
-
-static inline void bytecode_add_dyncall_arg(struct bytecode_runner *bcr, DCCallVM *vm, uint64_t reg, enum bytecode_register_kind reg_type, int arg_type_info_pos)
+static inline ffi_type *bytecode_create_libffi_type(struct bytecode_runner *bcr, int arg_type_info_pos)
 {
     struct bytecode_runner_type_info arg_type_info = create_type_info(bcr, arg_type_info_pos);
-    // printf("ARG is of type %d, size %d, align %d, fields %d\n", arg_type_info.kind, arg_type_info.size, arg_type_info.align, arg_type_info.fields);
 
     if (arg_type_info.kind == BYTECODE_TYPE_STRUCT) {
-        DCstruct *s = dcNewStruct(arg_type_info.fields, arg_type_info.align);
+        ffi_type **struct_elements = malloc(sizeof(ffi_type) * (arg_type_info.fields+1));
         for (int field_index = 0; field_index < arg_type_info.fields; ++field_index) {
             int field_type_info_pos = type_info_get_field(bcr, arg_type_info_pos, field_index);
-            struct bytecode_runner_type_info field_type_info = create_type_info(bcr, field_type_info_pos);
-            if (field_type_info.kind == BYTECODE_TYPE_STRUCT) {
-                bytecode_add_dyncall_arg_substruct(bcr, s, field_type_info_pos, field_type_info);
-            } else {
-                // printf("field: type %d, size %d, align %d\n", field_type_info.kind, field_type_info.size, field_type_info.align);
-                dcStructField(s, bytecode_type_to_dyncall_type(field_type_info.kind), field_type_info.align, 1);
-            }
+            struct_elements[field_index] = bytecode_create_libffi_type(bcr, field_type_info_pos);
         }
-        dcCloseStruct(s);
-        dcArgStruct(vm, s, (void*)reg);
-        dcFreeStruct(s);
+        struct_elements[arg_type_info.fields] = NULL;
+        ffi_type *struct_type = malloc(sizeof(ffi_type));
+        struct_type->size = 0;
+        struct_type->alignment = 0;
+        struct_type->type = FFI_TYPE_STRUCT;
+        struct_type->elements = struct_elements;
+        return struct_type;
+    } else if (arg_type_info.kind == BYTECODE_TYPE_PTR) {
+        return &ffi_type_pointer;
+    } else if (arg_type_info.kind == BYTECODE_TYPE_I64) {
+        return &ffi_type_sint64;
+    } else if (arg_type_info.kind == BYTECODE_TYPE_I32) {
+        return &ffi_type_sint32;
+    } else if (arg_type_info.kind == BYTECODE_TYPE_I16) {
+        return &ffi_type_sint16;
+    } else if (arg_type_info.kind == BYTECODE_TYPE_I8) {
+        return &ffi_type_sint8;
+    } else if (arg_type_info.kind == BYTECODE_TYPE_F64) {
+        return &ffi_type_double;
+    } else if (arg_type_info.kind == BYTECODE_TYPE_F32) {
+        return &ffi_type_float;
+    } else if (arg_type_info.kind == BYTECODE_TYPE_VOID) {
+        return &ffi_type_void;
     } else {
-        switch (reg_type) {
-        case BYTECODE_REGISTER_KIND_I64: dcArgLongLong(vm, as_i64(reg)); break;
-        case BYTECODE_REGISTER_KIND_I32: dcArgLong(vm, as_i32(reg));      break;
-        case BYTECODE_REGISTER_KIND_I16: dcArgShort(vm, as_i16(reg));    break;
-        case BYTECODE_REGISTER_KIND_I8:  dcArgChar(vm, as_i8(reg));      break;
-        case BYTECODE_REGISTER_KIND_F64: dcArgDouble(vm, as_f64(reg));   break;
-        case BYTECODE_REGISTER_KIND_F32: dcArgFloat(vm, as_f32(reg));   break;
-        default: break;
+        printf("UNKNOWN RETURN TYPE %d SUPPLIED TO FOREIGN FUNCTION\n", arg_type_info.kind);
+        assert(0);
+        return 0;
+    }
+}
+
+static inline void bytecode_destroy_libffi_type(ffi_type *type)
+{
+    if (type->type == FFI_TYPE_STRUCT) {
+        for (ffi_type **elements = type->elements; *elements; ++elements) {
+            bytecode_destroy_libffi_type(*elements);
         }
+        free(type->elements);
+        free(type);
+    }
+}
+
+int bytecode_type_info_kind_to_reg_type_kind(enum bytecode_type kind)
+{
+    switch (kind) {
+    case BYTECODE_TYPE_VOID:   return BYTECODE_REGISTER_KIND_I64;
+    case BYTECODE_TYPE_I8:     return BYTECODE_REGISTER_KIND_I8;
+    case BYTECODE_TYPE_I16:    return BYTECODE_REGISTER_KIND_I16;
+    case BYTECODE_TYPE_I32:    return BYTECODE_REGISTER_KIND_I32;
+    case BYTECODE_TYPE_I64:    return BYTECODE_REGISTER_KIND_I64;
+    case BYTECODE_TYPE_F32:    return BYTECODE_REGISTER_KIND_F32;
+    case BYTECODE_TYPE_F64:    return BYTECODE_REGISTER_KIND_F64;
+    case BYTECODE_TYPE_PTR:    return BYTECODE_REGISTER_KIND_I64;
+    case BYTECODE_TYPE_STRUCT: return BYTECODE_REGISTER_KIND_I64;
+    default: assert(0); return 0;
     }
 }
 
@@ -987,36 +978,50 @@ bytecode_instruction_handler_(exec_op_call_foreign)
     assert(func);
 
     uint64_t reg_arg_count = fetch_instruction(bcr);
-    uint64_t ret_kind = fetch_instruction(bcr);
-    bcr->reg_type[BYTECODE_REGISTER_RAX] = ret_kind;
+    uint64_t ret_type_info_pos = fetch_instruction(bcr);
 
-    DCCallVM *vm = dcNewCallVM(8192);
-    dcMode(vm, DC_CALL_C_DEFAULT);
-    dcReset(vm);
+    struct bytecode_runner_type_info ret_type_info = create_type_info(bcr, ret_type_info_pos);
+    bcr->reg_type[BYTECODE_REGISTER_RAX] = bytecode_type_info_kind_to_reg_type_kind(ret_type_info.kind);
 
-    for (unsigned i = 0; i < reg_arg_count; ++i) {
-        uint64_t reg = bcr->reg[bytecode_call_registers[i]];
-        enum bytecode_register_kind reg_type = bcr->reg_type[bytecode_call_registers[i]];
+    int return_type_is_struct = ret_type_info.kind == BYTECODE_TYPE_STRUCT ? 1 : 0;
+
+    void *values[reg_arg_count-return_type_is_struct];
+    ffi_type *args[reg_arg_count-return_type_is_struct];
+
+    for (int i = return_type_is_struct; i < reg_arg_count; ++i) {
+        int index = i - return_type_is_struct;
 
         int arg_type_info_pos = (int)((int64_t)*--stack);
         bcr->reg[BYTECODE_REGISTER_RSP] -= sizeof(int64_t);
         --bcr->stack_info;
 
-        bytecode_add_dyncall_arg(bcr, vm, reg, reg_type, arg_type_info_pos);
+        args[index] = bytecode_create_libffi_type(bcr, arg_type_info_pos);
+        values[index] = args[index]->type == FFI_TYPE_STRUCT
+                      ? (void*)bcr->reg[bytecode_call_registers[i]]
+                      : &bcr->reg[bytecode_call_registers[i]];
     }
 
-    switch (ret_kind) {
-    case BYTECODE_REGISTER_KIND_I64: *as_i64_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = dcCallLongLong(vm, func); break;
-    case BYTECODE_REGISTER_KIND_I32: *as_i32_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = dcCallInt(vm, func);      break;
-    case BYTECODE_REGISTER_KIND_I16: *as_i16_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = dcCallShort(vm, func);    break;
-    case BYTECODE_REGISTER_KIND_I8:  *as_i8_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = dcCallChar(vm, func);      break;
-    case BYTECODE_REGISTER_KIND_F64: *as_f64_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = dcCallDouble(vm, func);   break;
-    case BYTECODE_REGISTER_KIND_F32: *as_f32_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = dcCallFloat(vm, func);    break;
-    default: dcCallVoid(vm, func); break;
+    ffi_type *return_type = bytecode_create_libffi_type(bcr, ret_type_info_pos);
+
+    ffi_cif cif;
+    if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, reg_arg_count - return_type_is_struct, return_type, args) != FFI_OK) {
+        fprintf(stderr, "ffi_prep_cif failed\n");
+        exit(1);
     }
 
-    dcFree(vm);
-    dlclose(handle);
+    if (return_type->type == FFI_TYPE_STRUCT) {
+        ffi_call(&cif, FFI_FN(func), (void*)bcr->reg[BYTECODE_REGISTER_RDI], values);
+        *as_i64_ptr(bcr->reg[BYTECODE_REGISTER_RAX]) = as_i64(bcr->reg[BYTECODE_REGISTER_RDI]);
+    } else {
+        ffi_call(&cif, FFI_FN(func), &bcr->reg[BYTECODE_REGISTER_RAX], values);
+    }
+
+    for (int i = return_type_is_struct; i < reg_arg_count; ++i) {
+        int index = i - return_type_is_struct;
+        bytecode_destroy_libffi_type(args[index]);
+    }
+
+    bytecode_destroy_libffi_type(return_type);
 }
 
 bytecode_instruction_handler_(exec_op_begin_call_frame)

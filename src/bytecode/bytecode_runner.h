@@ -101,6 +101,7 @@ static enum bytecode_register bytecode_call_registers[] =
 
 enum bytecode_type
 {
+    BYTECODE_TYPE_VOID,
     BYTECODE_TYPE_I8,
     BYTECODE_TYPE_I16,
     BYTECODE_TYPE_I32,

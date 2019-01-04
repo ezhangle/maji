@@ -44,7 +44,7 @@ GetEventParameter :: (event: void*, name: int, type: int, out_type: int*, in_siz
 //
 
 CGSAddSurface :: (cid: int, wid: int, surface_id: int*) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
-CGSSetSurfaceBounds :: (cid: int, wid: int, surface_id: int, rect: cg_rect2) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
+CGSSetSurfaceBounds :: (cid: int, wid: int, surface_id: int, rect: cg_rect) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 CGSOrderSurface :: (cid: int, wid: int, surface_id: int, one: int, zero: int) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 CGSRemoveSurface :: (cid: int, wid: int, surface_id: int) -> int #foreign "/System/Library/Frameworks/Carbon.framework/Carbon";
 
@@ -385,13 +385,6 @@ cg_rect :: struct {
     size: cg_size;
 }
 
-cg_rect2 :: struct {
-    x: f64;
-    y: f64;
-    w: f64;
-    h: f64;
-}
-
 cg_point :: struct {
     x: f64;
     y: f64;
@@ -405,15 +398,6 @@ cg_size :: struct {
 proc_serial_number :: struct {
     high_long: int;
     low_long: int;
-}
-
-make_rect2 :: (x: f64, y: f64, w: f64, h: f64) -> cg_rect2 {
-    rect: cg_rect2;
-    rect.x = x;
-    rect.y = y;
-    rect.w = w;
-    rect.h = h;
-    return rect;
 }
 
 make_rect :: (x: f64, y: f64, w: f64, h: f64) -> cg_rect {
@@ -430,8 +414,7 @@ cgl_window_surface_init :: (win: cgl_window *) {
     CGLSetParameter(win.context, cgl_context_parameter.SURFACE_OPACITY, &surface_opacity);
     CGSAddSurface(win.connection, win.id, &win.surface);
 
-    // printf("SETTING BOUNDS FOR CGL SURFACE: %d\n", win.surface);
-    rect := make_rect2(0.0, 0.0, win.rect.size.width, win.rect.size.height);
+    rect := make_rect(0.0, 0.0, win.rect.size.width, win.rect.size.height);
     CGSSetSurfaceBounds(win.connection, win.id, win.surface, rect);
 
     CGSOrderSurface(win.connection, win.id, win.surface, 1, 0);
@@ -480,12 +463,9 @@ cgl_window_init :: (win: cgl_window *) {
     TransformProcessType(&win.psn, process_type.FOREGROUND);
     cgl_window_bring_to_front(win);
 
-    /*
     context := CGWindowContextCreate(win.connection, win.id, null);
-    printf("CLEAR CONTEXT: %p\n", context);
     CGContextClearRect(context, win.rect);
     CGContextRelease(context);
-    */
 
     cgl_window_context_init(win);
 }
@@ -510,11 +490,7 @@ cgl_window_flush :: (win: cgl_window *) {
 
 cgl_window_add_drag_region :: (win: cgl_window *, x: f64, y: f64, width: f64, height: f64) {
     region: void*;
-    rect: cg_rect;
-    rect.origin.x = x;
-    rect.origin.y = y;
-    rect.size.width = width;
-    rect.size.height = height;
+    rect: cg_rect = make_rect(x, y, width, height);
     CGSNewRegionWithRect(&rect, &region);
     CGSAddDragRegion(win.connection, win.id, region);
 }

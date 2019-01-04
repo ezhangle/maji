@@ -1002,25 +1002,23 @@ void bytecode_emit_expression_call(struct bytecode_emitter *emitter, struct ast_
 
         int return_type_info_pos = bytecode_type_find_type_info(emitter, return_type);
         int return_type_info_kind = bytecode_type_kind_to_type_info_kind(return_type->kind);
-        int is_return_type_struct = return_type_info_kind == BYTECODE_TYPE_STRUCT;
-
-        // NOTE: push registers to the stack so that we don't trash the state !!!
-        for (size_t i = 0; i < call.args_count + is_return_type_struct; ++i) {
-            enum bytecode_register reg = bytecode_call_registers[i];
-            bytecode_emit(emitter, _push_reg(reg));
-        }
+        bool is_return_type_struct = return_type_info_kind == BYTECODE_TYPE_STRUCT;
 
         if (is_return_type_struct) {
-            bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RDI, BYTECODE_REGISTER_RSP));
-            bytecode_emit(emitter, _lea_lcl_reg_reg(BYTECODE_REGISTER_RDI, BYTECODE_REGISTER_RDI));
-            bytecode_emit(emitter, _add_i64_reg_imm(BYTECODE_REGISTER_RSP));
-            bytecode_emit(emitter, type_sizeof(return_type));
+            printf("error: returning structs by value is currently not supported through FFI!\n");
+            exit(1);
+        }
+
+        // NOTE: push registers to the stack so that we don't trash the state !!!
+        for (size_t i = 0; i < call.args_count; ++i) {
+            enum bytecode_register reg = bytecode_call_registers[i];
+            bytecode_emit(emitter, _push_reg(reg));
         }
 
         // emit code for arguments
         for (size_t i = 0; i < call.args_count; ++i) {
             struct ast_expr *arg = call.args[i];
-            enum bytecode_register reg = bytecode_call_registers[i+is_return_type_struct];
+            enum bytecode_register reg = bytecode_call_registers[i];
             bytecode_emit_expression(emitter, arg);
 
             if (func_type->func.is_variadic && arg->res.type->kind == TYPE_FLOAT32) {
@@ -1069,18 +1067,13 @@ void bytecode_emit_expression_call(struct bytecode_emitter *emitter, struct ast_
         bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RBX));
 
         bytecode_emit(emitter, _call_foreign());
-        bytecode_emit(emitter, call.args_count + is_return_type_struct);
+        bytecode_emit(emitter, call.args_count);
         bytecode_emit(emitter, return_type_info_pos);
         bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_RAX));
         bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RBX, BYTECODE_REGISTER_RAX));
 
-        if (is_return_type_struct) {
-            bytecode_emit(emitter, _sub_i64_reg_imm(BYTECODE_REGISTER_RSP));
-            bytecode_emit(emitter, type_sizeof(return_type));
-        }
-
         // NOTE: pop registers from the stack so that we don't trash the state !!!
-        for (size_t i = 0; i < call.args_count + is_return_type_struct; ++i) {
+        for (size_t i = 0; i < call.args_count; ++i) {
             enum bytecode_register reg = bytecode_call_registers[call.args_count - i - 1];
             bytecode_emit(emitter, _pop_reg(reg));
         }

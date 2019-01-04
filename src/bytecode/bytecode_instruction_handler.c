@@ -983,20 +983,16 @@ bytecode_instruction_handler_(exec_op_call_foreign)
     struct bytecode_runner_type_info ret_type_info = create_type_info(bcr, ret_type_info_pos);
     bcr->reg_type[BYTECODE_REGISTER_RAX] = bytecode_type_info_kind_to_reg_type_kind(ret_type_info.kind);
 
-    int return_type_is_struct = ret_type_info.kind == BYTECODE_TYPE_STRUCT ? 1 : 0;
+    void *values[reg_arg_count];
+    ffi_type *args[reg_arg_count];
 
-    void *values[reg_arg_count-return_type_is_struct];
-    ffi_type *args[reg_arg_count-return_type_is_struct];
-
-    for (int i = return_type_is_struct; i < reg_arg_count; ++i) {
-        int index = i - return_type_is_struct;
-
+    for (int i = 0; i < reg_arg_count; ++i) {
         int arg_type_info_pos = (int)((int64_t)*--stack);
         bcr->reg[BYTECODE_REGISTER_RSP] -= sizeof(int64_t);
         --bcr->stack_info;
 
-        args[index] = bytecode_create_libffi_type(bcr, arg_type_info_pos);
-        values[index] = args[index]->type == FFI_TYPE_STRUCT
+        args[i]   = bytecode_create_libffi_type(bcr, arg_type_info_pos);
+        values[i] = args[i]->type == FFI_TYPE_STRUCT
                       ? (void*)bcr->reg[bytecode_call_registers[i]]
                       : &bcr->reg[bytecode_call_registers[i]];
     }
@@ -1004,7 +1000,7 @@ bytecode_instruction_handler_(exec_op_call_foreign)
     ffi_type *return_type = bytecode_create_libffi_type(bcr, ret_type_info_pos);
 
     ffi_cif cif;
-    if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, reg_arg_count - return_type_is_struct, return_type, args) != FFI_OK) {
+    if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, reg_arg_count, return_type, args) != FFI_OK) {
         fprintf(stderr, "ffi_prep_cif failed\n");
         exit(1);
     }
@@ -1016,9 +1012,8 @@ bytecode_instruction_handler_(exec_op_call_foreign)
         ffi_call(&cif, FFI_FN(func), &bcr->reg[BYTECODE_REGISTER_RAX], values);
     }
 
-    for (int i = return_type_is_struct; i < reg_arg_count; ++i) {
-        int index = i - return_type_is_struct;
-        bytecode_destroy_libffi_type(args[index]);
+    for (int i = 0; i < reg_arg_count; ++i) {
+        bytecode_destroy_libffi_type(args[i]);
     }
 
     bytecode_destroy_libffi_type(return_type);

@@ -386,7 +386,8 @@ int find_field_offset(struct type *type, const uint8_t *field_name)
 void bytecode_emit_expression(struct bytecode_emitter *emitter, struct ast_expr *expr);
 void bytecode_emit_stmt_block(struct bytecode_emitter *emitter, struct ast_stmt_block block);
 void bytecode_emit_stmt(struct bytecode_emitter *emitter, struct ast_stmt *stmt);
-int bytecode_type_find_entry(struct bytecode_emitter *emitter, const uint8_t *name);
+int bytecode_type_find_type_info(struct bytecode_emitter *emitter, struct type *type);
+int bytecode_type_kind_to_type_info_kind(enum type_kind kind);
 
 //
 // function return value = BYTECODE_REGISTER_RAX
@@ -999,7 +1000,9 @@ void bytecode_emit_expression_call(struct bytecode_emitter *emitter, struct ast_
         bytecode_emit_expression_immediate_string(emitter, call.expr);
         bytecode_emit_expression_immediate_string_(emitter, symbol->decl->foreign_func_decl.lib);
 
-        int is_return_type_struct = return_type->kind == TYPE_STRUCT ? 1 : 0;
+        int return_type_info_pos = bytecode_type_find_type_info(emitter, return_type);
+        int return_type_info_kind = bytecode_type_kind_to_type_info_kind(return_type->kind);
+        int is_return_type_struct = return_type_info_kind == BYTECODE_TYPE_STRUCT;
 
         // NOTE: push registers to the stack so that we don't trash the state !!!
         for (size_t i = 0; i < call.args_count + is_return_type_struct; ++i) {
@@ -1033,18 +1036,10 @@ void bytecode_emit_expression_call(struct bytecode_emitter *emitter, struct ast_
 
         for (int i = call.args_count - 1; i >= 0; --i) {
             struct ast_expr *arg = call.args[i];
-            if ((arg->res.type->kind == TYPE_PTR) ||
-                (arg->res.type->kind == TYPE_ARRAY)) {
-                int type_info_pos = bytecode_type_find_entry(emitter, intern_string(u8"s64"));
-                bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RBX));
-                bytecode_emit(emitter, type_info_pos);
-                bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RBX));
-            } else {
-                int type_info_pos = bytecode_type_find_entry(emitter, arg->res.type->symbol->name);
-                bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RBX));
-                bytecode_emit(emitter, type_info_pos);
-                bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RBX));
-            }
+            int type_info_pos = bytecode_type_find_type_info(emitter, arg->res.type);
+            bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RBX));
+            bytecode_emit(emitter, type_info_pos);
+            bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RBX));
         }
 
         //
@@ -1065,7 +1060,7 @@ void bytecode_emit_expression_call(struct bytecode_emitter *emitter, struct ast_
 
         bytecode_emit(emitter, _call_foreign());
         bytecode_emit(emitter, call.args_count + is_return_type_struct);
-        bytecode_emit(emitter, BYTECODE_REGISTER_KIND_I64);
+        bytecode_emit(emitter, return_type_info_pos);
         bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RCX, BYTECODE_REGISTER_RAX));
         bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RBX, BYTECODE_REGISTER_RAX));
 
@@ -1089,6 +1084,7 @@ void bytecode_emit_expression_call(struct bytecode_emitter *emitter, struct ast_
         for (size_t i = 0; i < call.args_count; ++i) {
             enum bytecode_register reg = bytecode_call_registers[i];
             bytecode_emit_expression(emitter, call.args[i]);
+            bytecode_emit_load_convert(emitter, call.args[i]->res.type);
             if (call.args[i]->res.type->kind == TYPE_ARRAY) {
                 bytecode_emit(emitter, _mov_reg_reg(reg, BYTECODE_REGISTER_RBX));
             } else if (call.args[i]->res.type->kind == TYPE_STRUCT) {
@@ -1695,6 +1691,14 @@ int bytecode_type_find_entry(struct bytecode_emitter *emitter, const uint8_t *na
     return -1;
 }
 
+int bytecode_type_find_type_info(struct bytecode_emitter *emitter, struct type *type)
+{
+    if ((type->kind == TYPE_PTR) || (type->kind == TYPE_ARRAY)) {
+        return bytecode_type_find_entry(emitter, __type_ptr->symbol->name);
+    }
+    return bytecode_type_find_entry(emitter, type->symbol->name);
+}
+
 void bytecode_type_add_entry(struct bytecode_emitter *emitter, const uint8_t *name)
 {
     char *storage = emitter->type_cursor;
@@ -1707,6 +1711,8 @@ void bytecode_type_add_entry(struct bytecode_emitter *emitter, const uint8_t *na
 int bytecode_type_kind_to_type_info_kind(enum type_kind kind)
 {
     switch (kind) {
+    case TYPE_VOID:
+        return BYTECODE_TYPE_VOID;
     case TYPE_INT8:
         return BYTECODE_TYPE_I8;
     case TYPE_INT16:
@@ -1722,7 +1728,7 @@ int bytecode_type_kind_to_type_info_kind(enum type_kind kind)
     case TYPE_ENUM:
         return BYTECODE_TYPE_I32;
     case TYPE_ARRAY:
-        return BYTECODE_TYPE_ARRAY;
+        return BYTECODE_TYPE_PTR;
     case TYPE_PTR:
         return BYTECODE_TYPE_PTR;
     case TYPE_STRUCT:
@@ -1736,6 +1742,8 @@ int bytecode_type_kind_to_type_info_kind(enum type_kind kind)
 void bytecode_emit_type_info(struct bytecode_emitter *emitter, struct symbol *symbol)
 {
     assert(bytecode_type_find_entry(emitter, symbol->name) == -1);
+
+    printf("emitting type_info for type '%s'\n", symbol->name);
     bytecode_type_add_entry(emitter, symbol->name);
 
     struct type *type = symbol->type;
@@ -1756,13 +1764,8 @@ void bytecode_emit_type_info(struct bytecode_emitter *emitter, struct symbol *sy
 
         for (int i = 0; i < type->aggregate.fields_count; ++i) {
             struct type_field field = type->aggregate.fields[i];
-            struct type *field_type = field.type;
 
-            if (field.type->kind == TYPE_PTR) {
-                field_type = __type_ptr;
-            }
-
-            int field_pos = bytecode_type_find_entry(emitter, field_type->symbol->name);
+            int field_pos = bytecode_type_find_type_info(emitter, field.type);
             assert(field_pos != -1);
 
             *(int *)emitter->type_cursor = field_pos;

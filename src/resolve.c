@@ -77,14 +77,14 @@ struct type *type_copy(struct type *type)
 size_t type_sizeof(struct type *type)
 {
     assert(type->kind > TYPE_COMPLETING);
-    assert(type->size != 0);
+    assert(type == type_void ? 1 : type->size != 0);
     return type->size;
 }
 
 size_t type_alignof(struct type *type)
 {
     assert(type->kind > TYPE_COMPLETING);
-    assert(IS_POW2(type->align));
+    assert(type == type_void ? 1 : IS_POW2(type->align));
     return type->align;
 }
 
@@ -1443,6 +1443,7 @@ void resolver_init(struct resolver *resolver)
     __type_ptr->symbol = symbol_type(resolver, intern_string(u8"__builtin_type_ptr__"), __type_ptr);
 
     buf_push(resolver->ordered_symbols, __type_ptr->symbol);
+    buf_push(resolver->ordered_symbols, type_void->symbol);
     buf_push(resolver->ordered_symbols, type_char->symbol);
     buf_push(resolver->ordered_symbols, type_int->symbol);
     buf_push(resolver->ordered_symbols, type_int8->symbol);

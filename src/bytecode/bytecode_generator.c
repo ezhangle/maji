@@ -1022,12 +1022,17 @@ void bytecode_emit_expression_call(struct bytecode_emitter *emitter, struct ast_
             struct ast_expr *arg = call.args[i];
             enum bytecode_register reg = bytecode_call_registers[i+is_return_type_struct];
             bytecode_emit_expression(emitter, arg);
-            bytecode_emit_load_convert(emitter, arg->res.type);
+
+            if (func_type->func.is_variadic && arg->res.type->kind == TYPE_FLOAT32) {
+                // NOTE: 32bit floats are promoted to 64bit when passed as an argument to a variadic function !!!
+                bytecode_emit_load_convert(emitter, type_float64);
+            } else {
+                bytecode_emit_load_convert(emitter, arg->res.type);
+            }
+
             if (arg->res.type->kind == TYPE_ARRAY) {
-                // NOTE: if we pass an array to a foreign function, we auto-decay to the address of the first element
                 bytecode_emit(emitter, _mov_reg_reg(reg, BYTECODE_REGISTER_RBX));
             } else if (arg->res.type->kind == TYPE_STRUCT) {
-                // NOTE: if we pass a struct by value to a foreign function, we pass the address
                 bytecode_emit(emitter, _mov_reg_reg(reg, BYTECODE_REGISTER_RBX));
             } else {
                 bytecode_emit(emitter, _mov_reg_reg(reg, BYTECODE_REGISTER_RCX));
@@ -1036,7 +1041,12 @@ void bytecode_emit_expression_call(struct bytecode_emitter *emitter, struct ast_
 
         for (int i = call.args_count - 1; i >= 0; --i) {
             struct ast_expr *arg = call.args[i];
-            int type_info_pos = bytecode_type_find_type_info(emitter, arg->res.type);
+
+            // NOTE: 32bit floats are promoted to 64bit when passed as an argument to a variadic function !!!
+            int type_info_pos = func_type->func.is_variadic && arg->res.type->kind == TYPE_FLOAT32
+                              ? bytecode_type_find_type_info(emitter, type_float64)
+                              : bytecode_type_find_type_info(emitter, arg->res.type);
+
             bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RBX));
             bytecode_emit(emitter, type_info_pos);
             bytecode_emit(emitter, _push_reg(BYTECODE_REGISTER_RBX));

@@ -553,6 +553,8 @@ render_triangle :: (win: cgl_window *) {
         angle = cast(float)0.0;
     }
 
+    printf("angle = %.4f\n", angle);
+
     glBegin(gl_begin_mode.QUADS);
     glColor4f(angle, cast(float)1.0, cast(float)0.0, cast(float)1.0);
     glVertex2f(cast(float)0.25, cast(float)0.25);

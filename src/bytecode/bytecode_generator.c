@@ -11,6 +11,8 @@
 #include "bytecode_executable.h"
 #include "bytecode_executable.c"
 
+#define array_count(arr) (sizeof(arr) / sizeof(*(arr)))
+
 uint64_t _lshift_reg_reg(enum bytecode_register reg1, enum bytecode_register reg2)
 {
     return encode_instruction_r2(BYTECODE_OPCODE_LSHIFT_REG_REG, reg1, reg2);
@@ -350,13 +352,13 @@ struct bytecode_emitter
     char *program_type;
     uint64_t type_size;
 
-    uint64_t *break_patches[12];
+    uint64_t break_patches[255];
     uint64_t break_patches_count;
-    uint64_t *continue_patches[12];
+    uint64_t continue_patches[255];
     uint64_t continue_patches_count;
-    uint64_t *return_patches[12];
+    uint64_t return_patches[255];
     uint64_t return_patches_count;
-    uint64_t **call_patches;
+    uint64_t *call_patches;
     struct symbol **call_patches_symbol;
     const uint8_t *entry_point;
     bool entry_point_patched;
@@ -420,14 +422,19 @@ void bytecode_emit(struct bytecode_emitter *emitter, uint64_t raw_instr)
     *emitter->text_cursor++ = raw_instr;
 }
 
-uint64_t *bytecode_emitter_mark_patch_source(struct bytecode_emitter *emitter)
+uint64_t bytecode_emitter_mark_patch_source(struct bytecode_emitter *emitter)
 {
-    return emitter->text_cursor;
+    return emitter->text_cursor - emitter->program_text;
 }
 
 uint64_t bytecode_emitter_mark_patch_target(struct bytecode_emitter *emitter)
 {
     return emitter->text_cursor - emitter->program_text;
+}
+
+void bytecode_emitter_apply_patch(struct bytecode_emitter *emitter, uint64_t source, uint64_t target)
+{
+    emitter->program_text[source] = target;
 }
 
 void bytecode_emit_load_convert(struct bytecode_emitter *emitter, struct type *to_type)
@@ -539,23 +546,23 @@ void bytecode_emit_expression_cmp(struct bytecode_emitter *emitter, struct ast_e
     bytecode_emit(emitter, _cmp_reg_reg(BYTECODE_REGISTER_RDX, BYTECODE_REGISTER_RCX));
     bytecode_emit(emitter, cmp_jmp_instruction);
 
-    uint64_t *true_patch = bytecode_emitter_mark_patch_source(emitter);
+    uint64_t true_patch = bytecode_emitter_mark_patch_source(emitter);
     bytecode_emit(emitter, -1);
 
     bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
     bytecode_emit(emitter, 0);
     bytecode_emit(emitter, _jmp_imm());
-    uint64_t *end_patch = bytecode_emitter_mark_patch_source(emitter);
+    uint64_t end_patch = bytecode_emitter_mark_patch_source(emitter);
     bytecode_emit(emitter, -1);
 
     int true_target = bytecode_emitter_mark_patch_target(emitter);
-    *true_patch = true_target;
+    bytecode_emitter_apply_patch(emitter, true_patch, true_target);
 
     bytecode_emit(emitter, _mov_i64_reg_imm(BYTECODE_REGISTER_RCX));
     bytecode_emit(emitter, 1);
 
     int end_target = bytecode_emitter_mark_patch_target(emitter);
-    *end_patch = end_target;
+    bytecode_emitter_apply_patch(emitter, end_patch, end_target);
 }
 
 void bytecode_emit_expression_and(struct bytecode_emitter *emitter, struct ast_expr *left, struct ast_expr *right)
@@ -565,13 +572,13 @@ void bytecode_emit_expression_and(struct bytecode_emitter *emitter, struct ast_e
     bytecode_emit(emitter, 0);
     bytecode_emit(emitter, _jz_imm());
 
-    uint64_t *patch = bytecode_emitter_mark_patch_source(emitter);
+    uint64_t patch = bytecode_emitter_mark_patch_source(emitter);
     bytecode_emit(emitter, -1);
 
     bytecode_emit_expression(emitter, right);
 
     int target = bytecode_emitter_mark_patch_target(emitter);
-    *patch = target;
+    bytecode_emitter_apply_patch(emitter, patch, target);
 }
 
 void bytecode_emit_expression_or(struct bytecode_emitter *emitter, struct ast_expr *left, struct ast_expr *right)
@@ -581,13 +588,13 @@ void bytecode_emit_expression_or(struct bytecode_emitter *emitter, struct ast_ex
     bytecode_emit(emitter, 0);
     bytecode_emit(emitter, _jnz_imm());
 
-    uint64_t *patch = bytecode_emitter_mark_patch_source(emitter);
+    uint64_t patch = bytecode_emitter_mark_patch_source(emitter);
     bytecode_emit(emitter, -1);
 
     bytecode_emit_expression(emitter, right);
 
     int target = bytecode_emitter_mark_patch_target(emitter);
-    *patch = target;
+    bytecode_emitter_apply_patch(emitter, patch, target);
 }
 
 void bytecode_emit_expression_assign(struct bytecode_emitter *emitter, struct ast_expr *left_expr, struct ast_expr *right_expr)
@@ -879,21 +886,21 @@ void bytecode_emit_expression_ternary(struct bytecode_emitter *emitter, struct a
     bytecode_emit(emitter, 0);
     bytecode_emit(emitter, _jz_imm());
 
-    uint64_t *else_branch_patch = bytecode_emitter_mark_patch_source(emitter);
+    uint64_t else_branch_patch = bytecode_emitter_mark_patch_source(emitter);
     bytecode_emit(emitter, -1);
 
     bytecode_emit_expression(emitter, expr->ternary.then_expr);
     bytecode_emit(emitter, _jmp_imm());
 
-    uint64_t *end_branch_patch = bytecode_emitter_mark_patch_source(emitter);
+    uint64_t end_branch_patch = bytecode_emitter_mark_patch_source(emitter);
     bytecode_emit(emitter, -1);
 
     int else_mark = bytecode_emitter_mark_patch_target(emitter);
     bytecode_emit_expression(emitter, expr->ternary.else_expr);
     int end_mark = bytecode_emitter_mark_patch_target(emitter);
 
-    *else_branch_patch = else_mark;
-    *end_branch_patch  = end_mark;
+    bytecode_emitter_apply_patch(emitter, else_branch_patch, else_mark);
+    bytecode_emitter_apply_patch(emitter, end_branch_patch, end_mark);
 }
 
 void bytecode_emit_expression_inc(struct bytecode_emitter *emitter, struct ast_expr *expr)
@@ -1099,7 +1106,7 @@ void bytecode_emit_expression_call(struct bytecode_emitter *emitter, struct ast_
 
         bytecode_emit(emitter, _call_imm());
 
-        uint64_t *call_patch = bytecode_emitter_mark_patch_source(emitter);
+        uint64_t call_patch = bytecode_emitter_mark_patch_source(emitter);
         bytecode_emit(emitter, -1);
 
         // NOTE: pop registers from the stack so that we don't trash the state !!!
@@ -1352,25 +1359,25 @@ void bytecode_emit_stmt_decl_local(struct bytecode_emitter *emitter, struct ast_
 
 void bytecode_emit_stmt_if(struct bytecode_emitter *emitter, struct ast_stmt_if stmt)
 {
-    uint64_t **end_branch_patches = NULL;
+    uint64_t *end_branch_patches = NULL;
 
     bytecode_emit_expression(emitter, stmt.condition);
     bytecode_emit(emitter, _cmp_reg_imm(BYTECODE_REGISTER_RCX));
     bytecode_emit(emitter, 0);
     bytecode_emit(emitter, _jz_imm());
-    uint64_t *elseif_branch_patch = bytecode_emitter_mark_patch_source(emitter);
+    uint64_t elseif_branch_patch = bytecode_emitter_mark_patch_source(emitter);
     bytecode_emit(emitter, -1);
 
     bytecode_emit_stmt_block(emitter, stmt.then_block);
     bytecode_emit(emitter, _jmp_imm());
-    uint64_t *end_branch_patch = bytecode_emitter_mark_patch_source(emitter);
+    uint64_t end_branch_patch = bytecode_emitter_mark_patch_source(emitter);
     buf_push(end_branch_patches, end_branch_patch);
     bytecode_emit(emitter, -1);
 
     int elseif_mark = bytecode_emitter_mark_patch_target(emitter);
 
     for (int i = 0; i < stmt.else_ifs_count; ++i) {
-        *elseif_branch_patch = elseif_mark;
+        bytecode_emitter_apply_patch(emitter, elseif_branch_patch, elseif_mark);
 
         struct ast_else_if elseif = stmt.else_ifs[i];
         bytecode_emit_expression(emitter, elseif.condition);
@@ -1388,13 +1395,13 @@ void bytecode_emit_stmt_if(struct bytecode_emitter *emitter, struct ast_stmt_if 
 
         elseif_mark = bytecode_emitter_mark_patch_target(emitter);
     }
-    *elseif_branch_patch = elseif_mark;
+    bytecode_emitter_apply_patch(emitter, elseif_branch_patch, elseif_mark);
 
     bytecode_emit_stmt_block(emitter, stmt.else_block);
     int end_mark = bytecode_emitter_mark_patch_target(emitter);
 
     for (int i = 0; i < buf_len(end_branch_patches); ++i) {
-        *end_branch_patches[i] = end_mark;
+        bytecode_emitter_apply_patch(emitter, end_branch_patches[i], end_mark);
     }
 }
 
@@ -1420,7 +1427,7 @@ void bytecode_emit_stmt_for(struct bytecode_emitter *emitter, struct ast_stmt_fo
     bytecode_emit(emitter, 0);
     bytecode_emit(emitter, _jz_imm());
 
-    uint64_t *end_patch = bytecode_emitter_mark_patch_source(emitter);
+    uint64_t end_patch = bytecode_emitter_mark_patch_source(emitter);
     bytecode_emit(emitter, -1);
 
     bytecode_emit_stmt_block(emitter, stmt.block);
@@ -1434,17 +1441,17 @@ void bytecode_emit_stmt_for(struct bytecode_emitter *emitter, struct ast_stmt_fo
     bytecode_emit(emitter, cond_mark);
 
     int end_mark = bytecode_emitter_mark_patch_target(emitter);
-    *end_patch = end_mark;
+    bytecode_emitter_apply_patch(emitter, end_patch, end_mark);
 
     for (int i = break_patches_count_old; i < emitter->break_patches_count; ++i) {
-        uint64_t *break_patch = emitter->break_patches[i];
-        *break_patch = end_mark;
+        uint64_t break_patch = emitter->break_patches[i];
+        bytecode_emitter_apply_patch(emitter, break_patch, end_mark);
     }
     emitter->break_patches_count = break_patches_count_old;
 
     for (int i = continue_patches_count_old; i < emitter->continue_patches_count; ++i) {
-        uint64_t *continue_patch = emitter->continue_patches[i];
-        *continue_patch = next_mark;
+        uint64_t continue_patch = emitter->continue_patches[i];
+        bytecode_emitter_apply_patch(emitter, continue_patch, next_mark);
     }
     emitter->continue_patches_count = continue_patches_count_old;
 }
@@ -1461,7 +1468,7 @@ void bytecode_emit_stmt_while(struct bytecode_emitter *emitter, struct ast_stmt_
     bytecode_emit(emitter, 0);
     bytecode_emit(emitter, _jz_imm());
 
-    uint64_t *end_patch = bytecode_emitter_mark_patch_source(emitter);
+    uint64_t end_patch = bytecode_emitter_mark_patch_source(emitter);
     bytecode_emit(emitter, -1);
 
     bytecode_emit_stmt_block(emitter, stmt.block);
@@ -1472,48 +1479,48 @@ void bytecode_emit_stmt_while(struct bytecode_emitter *emitter, struct ast_stmt_
     bytecode_emit(emitter, cond_mark);
 
     int end_mark = bytecode_emitter_mark_patch_target(emitter);
-    *end_patch = end_mark;
+    bytecode_emitter_apply_patch(emitter, end_patch, end_mark);
 
     for (int i = break_patches_count_old; i < emitter->break_patches_count; ++i) {
-        uint64_t *break_patch = emitter->break_patches[i];
-        *break_patch = end_mark;
+        uint64_t break_patch = emitter->break_patches[i];
+        bytecode_emitter_apply_patch(emitter, break_patch, end_mark);
     }
     emitter->break_patches_count = break_patches_count_old;
 
     for (int i = continue_patches_count_old; i < emitter->continue_patches_count; ++i) {
-        uint64_t *continue_patch = emitter->continue_patches[i];
-        *continue_patch = next_mark;
+        uint64_t continue_patch = emitter->continue_patches[i];
+        bytecode_emitter_apply_patch(emitter, continue_patch, next_mark);
     }
     emitter->continue_patches_count = continue_patches_count_old;
 }
 
 void bytecode_emit_stmt_break(struct bytecode_emitter *emitter)
 {
-    assert(emitter->break_patches_count < 12);
+    assert(emitter->break_patches_count < array_count(emitter->break_patches));
     bytecode_emit(emitter, _jmp_imm());
-    uint64_t *break_patch = bytecode_emitter_mark_patch_source(emitter);
+    uint64_t break_patch = bytecode_emitter_mark_patch_source(emitter);
     emitter->break_patches[emitter->break_patches_count++] = break_patch;
     bytecode_emit(emitter, -1);
 }
 
 void bytecode_emit_stmt_continue(struct bytecode_emitter *emitter)
 {
-    assert(emitter->continue_patches_count < 12);
+    assert(emitter->continue_patches_count < array_count(emitter->continue_patches));
     bytecode_emit(emitter, _jmp_imm());
-    uint64_t *continue_patch = bytecode_emitter_mark_patch_source(emitter);
+    uint64_t continue_patch = bytecode_emitter_mark_patch_source(emitter);
     emitter->continue_patches[emitter->continue_patches_count++] = continue_patch;
     bytecode_emit(emitter, -1);
 }
 
 void bytecode_emit_stmt_return(struct bytecode_emitter *emitter, struct ast_stmt_return stmt)
 {
-    assert(emitter->return_patches_count < 12);
+    assert(emitter->return_patches_count < array_count(emitter->return_patches));
     if (stmt.expr) {
         bytecode_emit_expression(emitter, stmt.expr);
         bytecode_emit(emitter, _mov_reg_reg(BYTECODE_REGISTER_RAX, BYTECODE_REGISTER_RCX));
     }
     bytecode_emit(emitter, _jmp_imm());
-    uint64_t *return_patch = bytecode_emitter_mark_patch_source(emitter);
+    uint64_t return_patch = bytecode_emitter_mark_patch_source(emitter);
     emitter->return_patches[emitter->return_patches_count++] = return_patch;
     bytecode_emit(emitter, -1);
 }
@@ -1605,8 +1612,8 @@ void bytecode_emit_function(struct bytecode_emitter *emitter, struct symbol *sym
     bytecode_emit(emitter, _ret());
 
     for (int i = 0; i < emitter->return_patches_count; ++i) {
-        uint64_t *return_patch = emitter->return_patches[i];
-        *return_patch = end_mark;
+        uint64_t return_patch = emitter->return_patches[i];
+        bytecode_emitter_apply_patch(emitter, return_patch, end_mark);
     }
     emitter->return_patches_count = 0;
 }
@@ -1783,7 +1790,7 @@ void bytecode_emit_type_info(struct bytecode_emitter *emitter, struct symbol *sy
 void bytecode_emit_entry_point(struct bytecode_emitter *emitter)
 {
     bytecode_emit(emitter, _call_imm());
-    uint64_t *call_patch = bytecode_emitter_mark_patch_source(emitter);
+    uint64_t call_patch = bytecode_emitter_mark_patch_source(emitter);
     bytecode_emit(emitter, -1);
     bytecode_emit(emitter, _halt());
 
@@ -1880,8 +1887,8 @@ void bytecode_generate(struct resolver *resolver, struct compiler_options *optio
     assert(buf_len(emitter.call_patches) == buf_len(emitter.call_patches_symbol));
     for (int i = 0; i < buf_len(emitter.call_patches); ++i) {
         struct symbol *symbol = emitter.call_patches_symbol[i];
-        uint64_t *call_patch = emitter.call_patches[i];
-        *call_patch = symbol->address;
+        uint64_t call_patch = emitter.call_patches[i];
+        bytecode_emitter_apply_patch(&emitter, call_patch, symbol->address);
 
         if (symbol->name == emitter.entry_point) {
             emitter.entry_point_patched = true;

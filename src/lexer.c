@@ -427,6 +427,16 @@ struct token lexer_get_token(struct lexer *lexer)
             lexer_advance(lexer);
             token.length = lexer->at - token.text;
             token.kind = TOKEN_KIND_LOAD;
+        } else if ((lexer->at[0] && lexer->at[0] == 'p') &&
+                   (lexer->at[1] && lexer->at[1] == 'a') &&
+                   (lexer->at[2] && lexer->at[2] == 'c') &&
+                   (lexer->at[3] && lexer->at[3] == 'k')) {
+            lexer_advance(lexer);
+            lexer_advance(lexer);
+            lexer_advance(lexer);
+            lexer_advance(lexer);
+            token.length = lexer->at - token.text;
+            token.kind = TOKEN_KIND_PACK;
         } else {
             token.kind = TOKEN_KIND_UNKNOWN;
         }

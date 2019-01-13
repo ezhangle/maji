@@ -6,6 +6,7 @@
 #include <inttypes.h>
 #include <stddef.h>
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define IS_POW2(x) (((x) != 0) && ((x) & ((x)-1)) == 0)
 #define ALIGN_DOWN(n, a) ((n) & ~((a) - 1))
 #define ALIGN_UP(n, a) ALIGN_DOWN((n) + (a) - 1, (a))
@@ -381,7 +382,11 @@ void complete_type_struct(struct resolver *resolver, struct ast_decl *decl, stru
     type->align = 0;
 
     for (struct type_field *it = fields; it != fields + fields_count; ++it) {
-        type->size = type_sizeof(it->type) + ALIGN_UP(type->size, type_alignof(it->type));
+        if (decl->struct_decl.pack == 0) {
+            type->size = type_sizeof(it->type) + ALIGN_UP(type->size, type_alignof(it->type));
+        } else {
+            type->size = type_sizeof(it->type) + ALIGN_UP(type->size, MIN(decl->struct_decl.pack, type_alignof(it->type)));
+        }
         type->align = MAX(type->align, type_alignof(it->type));
     }
 

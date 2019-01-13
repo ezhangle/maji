@@ -1,0 +1,87 @@
+printf :: (fmt: char*, args: var_args) -> int #foreign "/usr/lib/libc.dylib";
+malloc :: (size: int) -> void* #foreign "/usr/lib/libc.dylib";
+free :: (ptr: void*) #foreign "/usr/lib/libc.dylib";
+
+fopen :: (filename: char*, mode: char*) -> void* #foreign "/usr/lib/libc.dylib";
+fwrite :: (buffer: void*, size: int, chunks: int, handle: void*) -> int #foreign "/usr/lib/libc.dylib";
+fclose :: (handle: void*) #foreign "/usr/lib/libc.dylib";
+
+bitmap_header :: struct #pack 1 {
+    file_type: u16;
+    file_size: u32;
+    reserved1: u16;
+    reserved2: u16;
+    bitmap_offset: u32;
+    size: u32;
+    width: s32;
+    height: s32;
+    planes: u16;
+    bits_per_pixel: u16;
+    compression: u32;
+    size_of_bitmap: u32;
+    horz_resolution: s32;
+    vert_resolution: s32;
+    colors_used: u32;
+    colors_important: u32;
+}
+
+bitmap_image :: struct {
+    width: u32;
+    height: u32;
+    pixels: u32*;
+}
+
+get_output_pixel_size :: (img: bitmap_image) -> int {
+    result :int= img.width * img.height * size_of(u32);
+    return result;
+}
+
+alloc_image :: (width: s32, height: s32) -> bitmap_image {
+    img: bitmap_image;
+    img.width = width;
+    img.height = height;
+    output_pixel_size := get_output_pixel_size(img);
+    img.pixels = malloc(output_pixel_size);
+    return img;
+}
+
+write_image :: (img: bitmap_image, output_file: char *) {
+    output_pixel_size := get_output_pixel_size(img);
+
+    header: bitmap_header;
+    header.file_type = 0x4d42;
+    header.file_size = size_of(bitmap_header) + cast(u32)output_pixel_size;
+    header.bitmap_offset = size_of(bitmap_header);
+    header.size = size_of(bitmap_header) - 14;
+    header.width = img.width;
+    header.height = img.height;
+    header.planes = 1;
+    header.bits_per_pixel = 32;
+    header.compression = 0;
+    header.size_of_bitmap = output_pixel_size;
+    header.horz_resolution = 0;
+    header.vert_resolution = 0;
+    header.colors_used = 0;
+    header.colors_important = 0;
+
+    handle := fopen(output_file, "wb");
+    fwrite(&header, size_of(bitmap_header), 1, handle);
+    fwrite(img.pixels, output_pixel_size, 1, handle);
+    fclose(handle);
+}
+
+main :: () {
+    printf("size_of(bitmap_header) = %d\n", size_of(bitmap_header));
+
+    img := alloc_image(cast(s32)1280, cast(s32)720);
+    pixels := img.pixels;
+
+    for (y := 0; y < img.height; ++y) {
+        for (x := 0; x < img.width; ++x) {
+            *pixels = y < 32 ? 0xffff0000 : 0xff0000ff;
+            pixels = pixels + cast(void*)size_of(u32);
+        }
+    }
+
+    write_image(img, "test.bmp");
+}

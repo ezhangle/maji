@@ -499,13 +499,19 @@ struct ast_struct_item parse_decl_struct_item(struct parser *parser)
 
 struct ast_decl *parse_decl_struct(struct parser *parser, struct token identifier)
 {
+    int pack = 0;
+    if (parser_match(parser, TOKEN_KIND_PACK)) {
+        parser_consume(parser, TOKEN_KIND_INT_LITERAL);
+        pack = parser_previous(parser).as.int_val;
+    }
+
     parser_consume(parser, '{');
     struct ast_struct_item *items = NULL;
     while (!parser_eof(parser) && !parser_check(parser, '}')) {
         buf_push(items, parse_decl_struct_item(parser));
     }
     parser_consume(parser, '}');
-    return ast_decl_struct(identifier.as.name, items, buf_len(items));
+    return ast_decl_struct(identifier.as.name, items, buf_len(items), pack);
 }
 
 struct ast_enum_item parse_decl_enum_item(struct parser *parser)

@@ -165,6 +165,7 @@ struct ast_decl_struct
 {
     struct ast_struct_item *items;
     size_t items_count;
+    int pack;
 };
 
 struct ast_decl_var
@@ -212,11 +213,12 @@ ast_decl_enum(const uint8_t *name, struct ast_enum_item *items, size_t items_cou
 }
 
 static inline struct ast_decl *
-ast_decl_struct(const uint8_t *name, struct ast_struct_item *items, size_t items_count)
+ast_decl_struct(const uint8_t *name, struct ast_struct_item *items, size_t items_count, int pack)
 {
     struct ast_decl *decl = ast_decl_alloc(AST_DECL_STRUCT, name);
     decl->struct_decl.items = items;
     decl->struct_decl.items_count = items_count;
+    decl->struct_decl.pack = pack;
     return decl;
 }
 

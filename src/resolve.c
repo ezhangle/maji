@@ -377,17 +377,33 @@ void complete_type_struct(struct resolver *resolver, struct ast_decl *decl, stru
         exit(1);
     }
 
+    if ((decl->struct_decl.pack != -1) &&
+        (decl->struct_decl.pack !=  1) &&
+        (decl->struct_decl.pack !=  2) &&
+        (decl->struct_decl.pack !=  4) &&
+        (decl->struct_decl.pack !=  8) &&
+        (decl->struct_decl.pack != 16)) {
+        // TODO: error handling
+        printf("invalid packing (%d) specified for struct %s. pack must be one of the following: 1, 2, 4, 8, 16\n", decl->struct_decl.pack, type->symbol->name);
+        exit(1);
+    }
+
     type->kind = TYPE_STRUCT;
     type->size = 0;
     type->align = 0;
+    type->aggregate.pack = decl->struct_decl.pack;
 
     for (struct type_field *it = fields; it != fields + fields_count; ++it) {
-        if (decl->struct_decl.pack == 0) {
+        if (type->aggregate.pack == -1) {
             type->size = type_sizeof(it->type) + ALIGN_UP(type->size, type_alignof(it->type));
         } else {
-            type->size = type_sizeof(it->type) + ALIGN_UP(type->size, MIN(decl->struct_decl.pack, type_alignof(it->type)));
+            type->size = type_sizeof(it->type) + ALIGN_UP(type->size, MIN(type->aggregate.pack, type_alignof(it->type)));
         }
         type->align = MAX(type->align, type_alignof(it->type));
+    }
+
+    if (type->aggregate.pack != -1) {
+        type->size += type->size % MIN(type->aggregate.pack, type->align);
     }
 
     type->aggregate.fields = memdup(fields, fields_count * sizeof(*fields));

@@ -367,13 +367,21 @@ struct bytecode_emitter
 
 int find_field_offset_and_type(struct type *type, const uint8_t *field_name, struct type **field_type)
 {
+    bool unpacked = type->aggregate.pack == -1;
     int field_offset = 0;
     for (size_t i = 0; i < type->aggregate.fields_count; ++i) {
         struct type_field field = type->aggregate.fields[i];
+        if (unpacked) {
+            field_offset += field_offset % type_alignof(field.type);
+        } else {
+            field_offset += field_offset % MIN(type->aggregate.pack, type_alignof(field.type));
+        }
+
         if (field.name == field_name) {
             *field_type = field.type;
             break;
         }
+
         field_offset += type_sizeof(field.type);
     }
     return field_offset;

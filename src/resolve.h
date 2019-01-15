@@ -44,6 +44,7 @@ struct type
         struct {
             struct type_field *fields;
             size_t fields_count;
+            int pack;
         } aggregate;
         struct {
             struct type **params;

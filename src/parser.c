@@ -499,7 +499,7 @@ struct ast_struct_item parse_decl_struct_item(struct parser *parser)
 
 struct ast_decl *parse_decl_struct(struct parser *parser, struct token identifier)
 {
-    int pack = 0;
+    int pack = -1;
     if (parser_match(parser, TOKEN_KIND_PACK)) {
         parser_consume(parser, TOKEN_KIND_INT_LITERAL);
         pack = parser_previous(parser).as.int_val;

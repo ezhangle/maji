@@ -51,6 +51,8 @@ write_image :: (img: bitmap_image, output_file: char *) {
     header: bitmap_header;
     header.file_type = 0x4d42;
     header.file_size = size_of(bitmap_header) + cast(u32)output_pixel_size;
+    header.reserved1 = 0;
+    header.reserved2 = 0;
     header.bitmap_offset = size_of(bitmap_header);
     header.size = size_of(bitmap_header) - 14;
     header.width = img.width;

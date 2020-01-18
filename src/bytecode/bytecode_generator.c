@@ -1930,7 +1930,7 @@ void bytecode_generate(struct resolver *resolver, struct compiler_options *optio
     printf("generated: %" PRIu64 " instructions\n", program_header.text_size / sizeof(*emitter.program_text));
 
     if (emitter.entry_point_patched) {
-        const char *output_file = options->output_file ? (char*)options->output_file : "./sample.bcr";
+        const char *output_file = options->output_file ? (char*)options->output_file : "./a.bcr";
         bytecode_write_executable(output_file, &program);
     } else {
         printf("fatal error: could not locate entry point 'main'\n");

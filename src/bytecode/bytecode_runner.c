@@ -75,17 +75,8 @@ struct bytecode_result bytecode_runner_run(struct bytecode_runner *bcr)
         struct bytecode_instruction instr = decode_instruction(raw_instr);
         bytecode_runner_print_instruction(bcr, &instr);
 
-#ifdef OPCODE_PROFILE
-        clock_t timed_block_begin = clock();
-        bytecode_instruction_execute(bcr, instr);
-        clock_t timed_block_end = clock();
-        double timed_block_elapsed = ((timed_block_end - timed_block_begin) / (double)CLOCKS_PER_SEC) * 1000.0f;
-        printf("instruction %s took %.4fms\n", bytecode_opcode_str[instr.op], timed_block_elapsed);
-        if (bcr->single_step) getchar();
-#else
         bytecode_instruction_execute(bcr, instr);
         if (bcr->single_step) getchar();
-#endif
     }
 
     clock_t timed_block_end = clock();

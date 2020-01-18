@@ -1,0 +1,20 @@
+printf :: (format: char*, args: var_args) -> int #foreign "/usr/lib/libc.dylib";
+
+mem: s64[100];
+factorial :: (n: s64) -> s64 {
+    n1 := n-1;
+
+    if (mem[n1] == 0) {
+        mem[n1] == factorial(n1);
+    }
+
+    mem[n] = mem[n1] * n;
+    return mem[n];
+}
+
+main :: () {
+    mem[0] = 1;
+    for (n: s64 = 1; n <= 10; ++n) {
+        printf("%2lld factorial is %lld\n", n, factorial(n));
+    }
+}

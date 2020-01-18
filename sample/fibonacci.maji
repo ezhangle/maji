@@ -1,4 +1,4 @@
-printf :: (format: char*, a: int, b: int) -> int #foreign "/usr/lib/libc.dylib";
+printf :: (format: char*, args: var_args) -> int #foreign "/usr/lib/libc.dylib";
 
 mem: int[40];
 fib :: (n: int) -> int {
@@ -28,7 +28,7 @@ fib :: (n: int) -> int {
 */
 
 main :: () {
-    for (i :int= 1; i < 40; ++i) {
+    for (i := 1; i < 40; ++i) {
         printf("the %2d'th fibonacci number is %2d\n", i, fib(i));
     }
 }

@@ -1,0 +1,50 @@
+printf :: (fmt: char*, args: var_args) #foreign "/usr/lib/libc.dylib";
+make_vec3 :: (x: f64, y: f64, z: f64) -> vec3 #foreign "/Users/Koe/test/testlib/test.so";
+
+vec3 :: struct {
+    x: f64;
+    y: f64;
+    z: f64;
+}
+
+vec2 :: struct {
+    x: float;
+    y: float;
+}
+
+make_vec2 :: (x: float, y: float) -> vec2 {
+    v: vec2;
+    v.x = x;
+    v.y = y;
+    return v;
+}
+
+main :: () -> int {
+    a: vec2 = make_vec2(cast(float)2.5, cast(float)4.5);
+    printf("a.x = %.2f, a.y = %.2f\n", a.x, a.y);
+
+    x: vec3 = make_vec3(1.1, 4.4, 9.9);
+    printf("x.x = %.2f, x.y = %.2f, x.z = %.2f\n", x.x, x.y, x.z);
+
+    ti := type_of(a);
+    printf("'a' is a %d type named %s\n", ti.kind, ti.name);
+
+    return 0;
+}
+
+type_info_kind :: enum {
+    PRIMITIVE :: 1;
+    ENUM      :: 2;
+    STRUCT    :: 3;
+}
+
+type_info_field :: struct {
+    name: char**;
+    info: type_info*;
+}
+
+type_info :: struct {
+    kind: type_info_kind;
+    name: char**;
+    fields: type_info_field*;
+}

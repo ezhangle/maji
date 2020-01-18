@@ -10,7 +10,7 @@ The compiler currently takes one or more files as input argument, along with an 
 Build maji:
 ```
 # clone repo and build binary
-git clone https://github.com/koekeishiya/yabai
+git clone https://github.com/koekeishiya/maji
 make install      # release version
 make              # debug version
 ```

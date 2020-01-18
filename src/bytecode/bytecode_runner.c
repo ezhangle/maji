@@ -152,16 +152,14 @@ void bytecode_runner_print_instruction(struct bytecode_runner *bcr, struct bytec
             bytecode_register_kind_str[bcr->reg_type[instr->r2]]);
 }
 
-static int bcr_sample_exe = 1;
 static const char *program;
 void parse_arguments(int argc, char **argv, struct bytecode_runner *bcr)
 {
-    const char *short_opt = "vds:p:D";
+    const char *short_opt = "vdp:D";
     struct option long_opt[] = {
         { "verbose", no_argument, NULL, 'v' },
         { "disasm", no_argument, NULL, 'D' },
         { "debug", no_argument, NULL, 'd' },
-        { "sample", required_argument, NULL, 's' },
         { "program", required_argument, NULL, 'p' },
         { NULL, 0, NULL, 0 }
     };
@@ -179,9 +177,6 @@ void parse_arguments(int argc, char **argv, struct bytecode_runner *bcr)
         case 'D': {
             bcr->disassemble = true;
         } break;
-        case 's': {
-            sscanf(optarg, "%d", &bcr_sample_exe);
-        } break;
         case 'p': {
             program = strdup(optarg);
         }
@@ -196,7 +191,8 @@ int main(int argc, char **argv)
 
     char exe_path[255] = {};
     if (program == NULL) {
-        snprintf(exe_path, sizeof(exe_path), "./samples/%d/sample.bcr", bcr_sample_exe);
+        printf("please specify a program to run..\n");
+        return EXIT_FAILURE;
     } else {
         printf("loading program '%s'..\n", program);
         memcpy(exe_path, program, strlen(program)+1);
